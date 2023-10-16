@@ -5,9 +5,11 @@ pub static HTTP: Lazy<reqwest::Client> = Lazy::new(|| {
     let mut builder = reqwest::ClientBuilder::new();
 
     let mut headers = header::HeaderMap::new();
+
+    let user_agent = format!("valfisk/{}", env!("CARGO_PKG_VERSION"));
     headers.insert(
         "user-agent",
-        header::HeaderValue::from_static("valfisk/0.1.0"),
+        header::HeaderValue::from_str(&user_agent).unwrap(),
     );
     builder = builder.default_headers(headers);
 
