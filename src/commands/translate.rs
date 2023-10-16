@@ -1,26 +1,19 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use poise::{serenity_prelude as serenity, CreateReply};
 
 use crate::Context;
 
-#[derive(serde::Serialize, Debug)]
+#[derive(serde::Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-struct GoogleTranslateInput {
-    contents: Vec<String>,
-    target_language_code: String,
+struct GoogleTranslateSentence {
+    trans: Option<String>,
 }
 
 #[derive(serde::Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct GoogleTranslateResponse {
-    translations: Vec<GoogleTranslateTranslation>,
-}
-
-#[derive(serde::Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-struct GoogleTranslateTranslation {
-    translated_text: String,
-    detected_language_code: String,
+    src: String,
+    sentences: Vec<GoogleTranslateSentence>,
 }
 
 /// Translates a message
@@ -42,35 +35,38 @@ pub async fn translate(ctx: Context<'_>, message: serenity::Message) -> Result<(
         return Ok(());
     }
 
-    let project_id = std::env::var("GOOGLE_CLOUD_PROJECT_ID")?;
-    // TODO: use ephemeral access tokens retrieved via service account impersonation
-    let access_token = std::env::var("GOOGLE_CLOUD_ACCESS_TOKEN")?;
+    let mut api_url =
+        "https://translate.googleapis.com/translate_a/single".parse::<reqwest::Url>()?;
 
-    let resp = crate::reqwest_client::HTTP
-        .post(format!("https://translation.googleapis.com/v3beta1/projects/{project_id}/locations/global:translateText"))
-        .header("authorization", format!("Bearer {}", access_token))
-        .json(&GoogleTranslateInput {
-            contents: vec![content],
-            target_language_code: "en".to_owned(),
-        })
-        .send()
-        .await?;
+    api_url
+        .query_pairs_mut()
+        .append_pair("client", "gtx")
+        .append_pair("sl", "auto")
+        .append_pair("tl", "en")
+        .append_pair("dt", "t")
+        .append_pair("dj", "1")
+        .append_pair("source", "input")
+        .append_pair("q", &content);
+
+    let resp = crate::reqwest_client::HTTP.get(api_url).send().await?;
 
     let data: GoogleTranslateResponse = resp.json().await?;
     let translation = data
-        .translations
-        .first()
-        .ok_or_else(|| anyhow!("No translations available!"))?;
+        .sentences
+        .into_iter()
+        .filter_map(|s| s.trans)
+        .collect::<Vec<String>>()
+        .join("");
 
     ctx.send(
         CreateReply::new().embed(
             serenity::CreateEmbed::new()
                 .title("Translation")
-                .description(&translation.translated_text)
+                .description(&translation)
                 .color(0x34d399)
                 .footer(serenity::CreateEmbedFooter::new(format!(
                     "{} → en",
-                    translation.detected_language_code
+                    data.src
                 ))),
         ),
     )
