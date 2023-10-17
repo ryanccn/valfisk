@@ -1,7 +1,7 @@
 use anyhow::{Error, Result};
 use owo_colors::OwoColorize;
 use poise::{
-    serenity_prelude::{Client, GatewayIntents},
+    serenity_prelude::{Client, FullEvent, GatewayIntents},
     Framework, FrameworkOptions,
 };
 
@@ -11,6 +11,7 @@ pub struct Data {}
 pub type Context<'a> = poise::Context<'a, Data, Error>;
 
 mod commands;
+mod handlers;
 mod reqwest_client;
 mod utils;
 
@@ -26,6 +27,18 @@ async fn main() -> Result<()> {
     .framework(Framework::new(
         FrameworkOptions {
             commands: commands::vec(),
+            event_handler: |ev, _, _| {
+                Box::pin(async move {
+                    match ev {
+                        FullEvent::Message { new_message, ctx } => {
+                            handlers::handle(&new_message, &ctx).await?;
+                        }
+                        &_ => {}
+                    }
+
+                    Ok(())
+                })
+            },
             ..Default::default()
         },
         |ctx, ready, framework| {

@@ -14,6 +14,7 @@ num = "0.4.1"
 once_cell = "1.18.0"
 owo-colors = { version = "3.5.0", features = ["supports-colors"] }
 poise = { git = "https://github.com/serenity-rs/poise.git", branch = "serenity-next", version = "0.5.5" }
+regex = "1.10.2"
 reqwest = { version = "0.11.22", default-features = false, features = [
   "rustls-tls",
   "json",
