@@ -5,11 +5,14 @@ use poise::{
     Framework, FrameworkOptions,
 };
 
+use crate::utils::Pluralize;
+
 pub struct Data {}
 pub type Context<'a> = poise::Context<'a, Data, Error>;
 
 mod commands;
 mod reqwest_client;
+mod utils;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -34,10 +37,10 @@ async fn main() -> Result<()> {
 
                 poise::builtins::register_globally(&ctx, commands).await?;
                 println!(
-                    "{} {} command{}",
+                    "{} {} {}",
                     "Registered".blue(),
                     commands.len(),
-                    if commands.len() == 1 { "" } else { "s" }
+                    "command".pluralize(commands.len())
                 );
 
                 Ok(Data {})
