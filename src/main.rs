@@ -83,5 +83,7 @@ async fn main() -> Result<()> {
         _ = tokio::signal::ctrl_c() => {},
     };
 
+    println!("{} with SIGINT, exiting", "Interrupted".magenta());
+
     Ok(())
 }
