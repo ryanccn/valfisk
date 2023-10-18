@@ -12,15 +12,21 @@ pub type Context<'a> = poise::Context<'a, Data, Error>;
 
 mod commands;
 mod handlers;
+mod presence_api;
 mod reqwest_client;
 mod utils;
+
+async fn wrapped_start(mut client: Client) -> Result<()> {
+    client.start().await?;
+    Ok(())
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
     #[cfg(debug_assertions)]
     dotenvy::dotenv().ok();
 
-    let mut client = Client::builder(
+    let client = Client::builder(
         std::env::var("DISCORD_TOKEN").expect("missing DISCORD_TOKEN"),
         GatewayIntents::all(),
     )
@@ -33,6 +39,15 @@ async fn main() -> Result<()> {
                         FullEvent::Message { new_message, ctx } => {
                             handlers::handle(new_message, ctx).await?;
                         }
+
+                        FullEvent::PresenceUpdate { new_data, .. } => {
+                            let mut presence_store = presence_api::PRESENCE_STORE.lock().await;
+                            presence_store.insert(
+                                new_data.user.id,
+                                presence_api::ValfiskPresenceData::from_presence(new_data),
+                            );
+                        }
+
                         &_ => {}
                     }
 
@@ -44,7 +59,7 @@ async fn main() -> Result<()> {
         |ctx, ready, framework| {
             Box::pin(async move {
                 let tag = ready.user.tag();
-                println!("{} to Discord ({})", "Connected".green(), tag.cyan());
+                println!("{} to Discord as {}", "Connected".green(), tag.cyan());
 
                 let commands = &framework.options().commands;
 
@@ -62,7 +77,11 @@ async fn main() -> Result<()> {
     ))
     .await?;
 
-    client.start().await?;
+    tokio::select! {
+        _ = wrapped_start(client) => {},
+        _ = presence_api::serve() => {},
+        _ = tokio::signal::ctrl_c() => {},
+    };
 
     Ok(())
 }
