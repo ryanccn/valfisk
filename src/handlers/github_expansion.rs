@@ -53,7 +53,7 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
         let lines: Vec<String> = resp
             .text()
             .await?
-            .split("\n")
+            .split('\n')
             .map(|s| s.to_owned())
             .collect();
 

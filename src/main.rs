@@ -31,7 +31,7 @@ async fn main() -> Result<()> {
                 Box::pin(async move {
                     match ev {
                         FullEvent::Message { new_message, ctx } => {
-                            handlers::handle(&new_message, &ctx).await?;
+                            handlers::handle(new_message, ctx).await?;
                         }
                         &_ => {}
                     }
