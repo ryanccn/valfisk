@@ -11,7 +11,10 @@ struct SafebooruResponse {
 #[poise::command(slash_command)]
 pub async fn shiggy(ctx: Context<'_>) -> Result<()> {
     ctx.defer().await?;
-    let url = "https://safebooru.donmai.us/posts/random.json?tags=kemomimi-chan_(naga_u)+naga_u&only=file_url";
+    let mut url = "https://safebooru.donmai.us/posts/random.json".parse::<reqwest::Url>()?;
+    url.query_pairs_mut()
+        .append_pair("tags", "kemomimi-chan_(naga_u) naga_u")
+        .append_pair("only", "file_url");
 
     let resp = crate::reqwest_client::HTTP.get(url).send().await?;
 
