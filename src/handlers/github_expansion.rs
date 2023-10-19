@@ -28,10 +28,9 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
             .ok_or_else(|| anyhow!("Could not obtain `file`"))?
             .as_str();
 
-        let language = if let Some(m) = captures.name("language") {
-            m.as_str().to_owned()
-        } else {
-            "".to_owned()
+        let language = match captures.name("language") {
+            Some(m) => m.as_str().to_owned(),
+            None => "".to_owned(),
         };
 
         let start = captures
@@ -58,10 +57,9 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
             .collect();
 
         let idx_start = start - 1;
-        let idx_end = if let Some(end) = end {
-            end
-        } else {
-            lines.len()
+        let idx_end = match end {
+            Some(end) => end,
+            None => lines.len(),
         };
         let selected_lines = &lines[idx_start..idx_end];
 

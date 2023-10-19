@@ -45,10 +45,9 @@ async fn route_get_presence(path: web::Path<(u64,)>) -> impl Responder {
     let presence_data = store.get(&user_id).cloned();
     drop(store);
 
-    if let Some(presence_data) = presence_data {
-        HttpResponse::Ok().json(presence_data)
-    } else {
-        HttpResponse::NotFound().json(json!({"error": "User not found!"}))
+    match presence_data {
+        Some(presence_data) => HttpResponse::Ok().json(presence_data),
+        None => HttpResponse::NotFound().json(json!({"error": "User not found!"})),
     }
 }
 
