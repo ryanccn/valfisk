@@ -1,5 +1,6 @@
 use anyhow::{Error, Result};
 use owo_colors::OwoColorize;
+
 use poise::{
     serenity_prelude::{Client, FullEvent, GatewayIntents},
     Framework, FrameworkOptions,
@@ -73,12 +74,11 @@ async fn main() -> Result<()> {
     .await?;
 
     tokio::select! {
-        _ = client.start() => {},
-        _ = presence_api::serve() => {},
-        _ = tokio::signal::ctrl_c() => {},
-    };
-
-    println!("{} with SIGINT, exiting", "Interrupted".magenta());
-
-    Ok(())
+        result = client.start() => { result.map_err(anyhow::Error::from) },
+        result = presence_api::serve() => { result },
+        _ = tokio::signal::ctrl_c() => {
+            println!("{} with SIGINT, exiting", "Interrupted".magenta());
+            std::process::exit(130);
+        },
+    }
 }
