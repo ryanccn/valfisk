@@ -16,17 +16,12 @@ mod presence_api;
 mod reqwest_client;
 mod utils;
 
-async fn wrapped_start(mut client: Client) -> Result<()> {
-    client.start().await?;
-    Ok(())
-}
-
 #[tokio::main]
 async fn main() -> Result<()> {
     #[cfg(debug_assertions)]
     dotenvy::dotenv().ok();
 
-    let client = Client::builder(
+    let mut client = Client::builder(
         std::env::var("DISCORD_TOKEN").expect("missing DISCORD_TOKEN"),
         GatewayIntents::all(),
     )
@@ -78,7 +73,7 @@ async fn main() -> Result<()> {
     .await?;
 
     tokio::select! {
-        _ = wrapped_start(client) => {},
+        _ = client.start() => {},
         _ = presence_api::serve() => {},
         _ = tokio::signal::ctrl_c() => {},
     };
