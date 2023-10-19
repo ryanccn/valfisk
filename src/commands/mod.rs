@@ -4,6 +4,7 @@ mod ping;
 mod pomelo;
 mod presence;
 mod say;
+mod self_timeout;
 mod shiggy;
 mod translate;
 
@@ -18,6 +19,7 @@ pub fn vec() -> Vec<
         pomelo::pomelo(),
         presence::presence(),
         say::say(),
+        self_timeout::self_timeout(),
         shiggy::shiggy(),
         translate::translate(),
     ]
