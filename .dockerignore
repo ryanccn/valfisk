@@ -1,0 +1,10 @@
+# Rust
+/target
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# GitHub
+.github/
