@@ -18,6 +18,7 @@ jobs:
     strategy:
       matrix:
         platform:
+          - linux/arm64
           - linux/amd64
 
     steps:
