@@ -3,9 +3,10 @@ name = "valfisk"
 version = "0.1.0"
 edition = "2021"
 
-license = "AGPL-3.0-only"
+description = "Next generation Ryanland Discord bot"
 authors = ["Ryan Cao <hello@ryanccn.dev>"]
-
+license = "AGPL-3.0-only"
+publish = false
 
 [dependencies]
 actix-web = "4.4.0"
