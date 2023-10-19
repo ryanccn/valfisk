@@ -12,6 +12,6 @@ RUN cargo fetch --target x86_64-unknown-linux-musl --locked
 RUN cargo build --target x86_64-unknown-linux-musl --release --locked
 
 FROM gcr.io/distroless/static:latest
-COPY --from=builder /build/target/x86_64-unknown-linux-musl/valfisk /valfisk
+COPY --from=builder /build/target/x86_64-unknown-linux-musl/release/valfisk /valfisk
 
 CMD ["/valfisk"]
