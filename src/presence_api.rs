@@ -1,6 +1,6 @@
 use poise::serenity_prelude as serenity;
 
-use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
 use serde_json::json;
 
 use anyhow::Result;
@@ -63,10 +63,27 @@ pub async fn serve() -> Result<()> {
         format!("http://{}:{}", host, port).dimmed()
     );
 
-    HttpServer::new(|| App::new().service(route_get_presence))
-        .bind((host, port))?
-        .run()
-        .await?;
+    HttpServer::new(|| {
+        let security_middleware = middleware::DefaultHeaders::new()
+            .add(("access-control-allow-origin", "*"))
+            .add(("cross-origin-opener-policy", "same-origin"))
+            .add(("cross-origin-resource-policy", "same-origin"))
+            .add(("origin-agent-cluster", "?1"))
+            .add(("referrer-policy", "no-referrer"))
+            .add(("x-content-type-options", "nosniff"))
+            .add(("x-dns-prefetch-control", "off"))
+            .add(("x-download-options", "noopen"))
+            .add(("x-frame-options", "SAMEORIGIN"))
+            .add(("x-permitted-cross-domain-policies", "none"))
+            .add(("x-xss-protection", "0"));
+
+        App::new()
+            .wrap(security_middleware)
+            .service(route_get_presence)
+    })
+    .bind((host, port))?
+    .run()
+    .await?;
 
     Ok(())
 }
