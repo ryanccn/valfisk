@@ -94,6 +94,7 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
                 &ctx,
                 serenity::CreateMessage::new()
                     .embeds(embeds)
+                    .allowed_mentions(serenity::CreateAllowedMentions::new().replied_user(false))
                     .reference_message(&message),
             )
             .await?;
