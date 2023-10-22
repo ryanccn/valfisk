@@ -51,7 +51,8 @@ pub async fn presence(
         CreateReply::new().embed(
             serenity::CreateEmbed::new()
                 .title("Presence set!")
-                .description(format!("Presence set to **{} {}**", &type_, &content))
+                .field("Type", type_.to_string(), false)
+                .field("Content", content, false)
                 .color(0x4ade80),
         ),
     )
