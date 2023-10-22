@@ -2,8 +2,8 @@ use anyhow::{Error, Result};
 use owo_colors::OwoColorize;
 
 use poise::{
-    serenity_prelude::{Client, FullEvent, GatewayIntents},
-    Framework, FrameworkOptions,
+    serenity_prelude::{Client, CreateEmbed, FullEvent, GatewayIntents},
+    CreateReply, Framework, FrameworkError, FrameworkOptions,
 };
 
 use crate::utils::Pluralize;
@@ -48,6 +48,40 @@ async fn main() -> Result<()> {
                     }
 
                     Ok(())
+                })
+            },
+            on_error: |err| {
+                Box::pin(async move {
+                    match err {
+                        FrameworkError::Setup { error, .. } => eprintln!("{}", error),
+                        FrameworkError::Command { error, ctx, .. } => {
+                            eprintln!(
+                                "Encountered error handling command {}: {}",
+                                ctx.invoked_command_name(),
+                                error
+                            );
+
+                            ctx.send(
+                                CreateReply::new().embed(
+                                    CreateEmbed::new()
+                                        .title("An error occurred!")
+                                        .description(format!("```\n{}\n```", error)),
+                                ),
+                            )
+                            .await
+                            .ok();
+                        }
+                        FrameworkError::EventHandler { error, .. } => {
+                            eprintln!("{}", error);
+                        }
+                        FrameworkError::CommandPanic {
+                            payload: Some(payload),
+                            ..
+                        } => {
+                            eprintln!("{}", payload);
+                        }
+                        _ => {}
+                    }
                 })
             },
             ..Default::default()
