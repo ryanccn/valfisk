@@ -82,6 +82,7 @@ pub async fn serve() -> Result<()> {
 
         App::new()
             .wrap(security_middleware)
+            .service(route_ping)
             .service(route_get_presence)
     })
     .bind((host, port))?
