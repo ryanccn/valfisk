@@ -86,7 +86,18 @@ impl ValfiskError<'_> {
                 .description(format!("```\n{:#?}\n```", self.error_or_panic))
                 .footer(CreateEmbedFooter::new(&self.error_id))
                 .timestamp(Timestamp::now())
-                .color(0xef4444);
+                .color(0xef4444)
+                .field(
+                    "Command",
+                    format!("`{}`", self.ctx.invoked_command_name()),
+                    false,
+                )
+                .field(
+                    "Channel",
+                    format!("<#{}>", self.ctx.channel_id().get()),
+                    false,
+                )
+                .field("User", format!("<@{}>", self.ctx.author().id.get()), false);
 
             channel
                 .send_message(&self.ctx, CreateMessage::new().embed(embed))
