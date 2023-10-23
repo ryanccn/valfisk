@@ -1,9 +1,12 @@
 use anyhow::Result;
 use poise::serenity_prelude as serenity;
 
+mod error;
 mod github_expansion;
 
-pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Result<()> {
+pub use error::handle_error;
+
+pub async fn handle_message(message: &serenity::Message, ctx: &serenity::Context) -> Result<()> {
     tokio::try_join!(github_expansion::handle(message, ctx))?;
 
     Ok(())
