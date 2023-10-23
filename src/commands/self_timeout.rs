@@ -4,7 +4,7 @@ use poise::serenity_prelude as serenity;
 use crate::Context;
 
 /// Time yourself out for a specific duration
-#[poise::command(rename = "self-timeout", slash_command)]
+#[poise::command(rename = "self-timeout", slash_command, guild_only)]
 pub async fn self_timeout(
     ctx: Context<'_>,
     #[description = "The duration to time yourself out for"] duration: String,

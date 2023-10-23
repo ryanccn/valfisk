@@ -4,7 +4,7 @@ use poise::{serenity_prelude as serenity, CreateReply};
 use crate::Context;
 
 /// Get information on the username migration within the server
-#[poise::command(slash_command)]
+#[poise::command(slash_command, guild_only)]
 pub async fn pomelo(ctx: Context<'_>) -> Result<()> {
     if let Some(guild) = ctx.guild_id() {
         ctx.defer().await?;

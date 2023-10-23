@@ -2,10 +2,10 @@ use anyhow::Result;
 
 use crate::Context;
 
-/// Pong! And also get the gateway heartbeat latency.
-#[poise::command(slash_command)]
+/// Pong!
+#[poise::command(slash_command, guild_only)]
 pub async fn ping(ctx: Context<'_>) -> Result<()> {
-    ctx.say("Pong").await?;
+    ctx.say("Pong!").await?;
 
     Ok(())
 }

@@ -11,7 +11,7 @@ struct SafebooruResponse {
 }
 
 /// Fetch a random shiggy
-#[poise::command(slash_command)]
+#[poise::command(slash_command, guild_only)]
 pub async fn shiggy(
     ctx: Context<'_>,
 

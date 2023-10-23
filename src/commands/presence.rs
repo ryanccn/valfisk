@@ -33,7 +33,12 @@ fn make_activity(content: &str, presence_type: &PresenceChoice) -> serenity::Act
 }
 
 /// Modify the Discord presence shown by the bot
-#[poise::command(slash_command, ephemeral)]
+#[poise::command(
+    slash_command,
+    ephemeral,
+    guild_only,
+    default_member_permissions = "MANAGE_GUILD"
+)]
 pub async fn presence(
     ctx: Context<'_>,
     #[description = "Text to display"] content: String,

@@ -17,7 +17,7 @@ struct GoogleTranslateResponse {
 }
 
 /// Translates a message
-#[poise::command(context_menu_command = "Translate")]
+#[poise::command(context_menu_command = "Translate", guild_only)]
 pub async fn translate(ctx: Context<'_>, message: serenity::Message) -> Result<()> {
     let serenity::Message { content, .. } = message;
 
