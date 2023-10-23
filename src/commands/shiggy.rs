@@ -34,7 +34,7 @@ pub async fn shiggy(
                 CreateReply::new().embed(
                     serenity::CreateEmbed::new()
                         .title(data.id.to_string())
-                        .field("Tags", data.tag_string.replace("_", "\\_"), false)
+                        .field("Tags", data.tag_string.replace('_', "\\_"), false)
                         .field("Source", data.source, false)
                         .url(format!("https://safebooru.donmai.us/posts/{}", data.id))
                         .image(data.file_url)
