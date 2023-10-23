@@ -70,7 +70,8 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
                 "```".to_owned() + &language + "\n" + &selected_lines.join("\n") + "\n```",
                 true,
             )
-            .footer(serenity::CreateEmbedFooter::new(ref_));
+            .footer(serenity::CreateEmbedFooter::new(ref_))
+            .timestamp(serenity::Timestamp::now());
 
         embeds.push(embed);
     }
