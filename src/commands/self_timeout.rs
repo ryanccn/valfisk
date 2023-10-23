@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use poise::serenity_prelude as serenity;
 
 use crate::Context;
@@ -13,13 +13,7 @@ pub async fn self_timeout(
     let duration = humantime::parse_duration(&duration);
 
     if let Ok(duration) = duration {
-        // this is a bit weird; `ctx.author_member()` exists but it isn't mutable
-        let member = ctx
-            .guild_id()
-            .ok_or_else(|| anyhow!("Unable to obtain guild"))?
-            .member(&ctx, ctx.author().id)
-            .await
-            .ok();
+        let member = ctx.author_member().await;
 
         if let Some(mut member) = member {
             let start = chrono::Utc::now();
@@ -27,6 +21,7 @@ pub async fn self_timeout(
             let end_serenity = serenity::Timestamp::from_unix_timestamp(end.timestamp())?;
 
             member
+                .to_mut()
                 .disable_communication_until_datetime(&ctx, end_serenity)
                 .await?;
 
