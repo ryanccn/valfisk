@@ -12,6 +12,18 @@ enum ErrorOrPanic<'a> {
     Panic(&'a Option<String>),
 }
 
+impl<'a> Into<ErrorOrPanic<'a>> for &'a anyhow::Error {
+    fn into(self) -> ErrorOrPanic<'a> {
+        ErrorOrPanic::Error(self)
+    }
+}
+
+impl<'a> Into<ErrorOrPanic<'a>> for &'a Option<String> {
+    fn into(self) -> ErrorOrPanic<'a> {
+        ErrorOrPanic::Panic(self)
+    }
+}
+
 impl ErrorOrPanic<'_> {
     fn type_(&self) -> String {
         match self {
@@ -28,17 +40,9 @@ struct ValfiskError<'a> {
 }
 
 impl ValfiskError<'_> {
-    fn from_error<'a>(error: &'a anyhow::Error, ctx: &'a Context) -> ValfiskError<'a> {
+    fn new<'a>(error_or_panic: impl Into<ErrorOrPanic<'a>>, ctx: &'a Context) -> ValfiskError<'a> {
         ValfiskError {
-            error_or_panic: ErrorOrPanic::Error(&error),
-            ctx,
-            error_id: nanoid!(8),
-        }
-    }
-
-    fn from_panic<'a>(panic_payload: &'a Option<String>, ctx: &'a Context) -> ValfiskError<'a> {
-        ValfiskError {
-            error_or_panic: ErrorOrPanic::Panic(&panic_payload),
+            error_or_panic: error_or_panic.into(),
             ctx,
             error_id: nanoid!(8),
         }
@@ -141,11 +145,11 @@ pub async fn handle_error(err: &FrameworkError<'_, Data, anyhow::Error>) {
         }
 
         FrameworkError::Command { error, ctx, .. } => {
-            ValfiskError::from_error(error, ctx).handle_all().await;
+            ValfiskError::new(error, ctx).handle_all().await;
         }
 
         FrameworkError::CommandPanic { payload, ctx, .. } => {
-            ValfiskError::from_panic(payload, ctx).handle_all().await;
+            ValfiskError::new(payload, ctx).handle_all().await;
         }
 
         _ => {}
