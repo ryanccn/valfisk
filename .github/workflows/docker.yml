@@ -55,6 +55,8 @@ jobs:
           provenance: false
           labels: ${{ steps.meta.outputs.labels }}
           platforms: ${{ matrix.platform }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
 
       - name: Export digests

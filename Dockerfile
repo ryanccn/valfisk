@@ -7,8 +7,11 @@ RUN rustup target add x86_64-unknown-linux-musl
 
 ENV CARGO_BUILD_RUSTFLAGS="-C target-feature=+crt-static"
 
-COPY . .
+COPY Cargo.toml Cargo.lock ./
+RUN mkdir -p src && touch src/main.rs
 RUN cargo fetch --target x86_64-unknown-linux-musl --locked
+
+COPY . ./
 RUN cargo build --target x86_64-unknown-linux-musl --release --locked
 
 FROM gcr.io/distroless/static:latest
