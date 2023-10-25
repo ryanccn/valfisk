@@ -5,9 +5,29 @@ use crate::Context;
 
 #[derive(poise::ChoiceParameter)]
 pub enum PresenceChoice {
+    Custom,
     Playing,
     Watching,
-    Custom,
+    Listening,
+    Competing,
+}
+
+impl PresenceChoice {
+    fn make_activity(&self, content: &str) -> serenity::ActivityData {
+        match self {
+            Self::Custom => serenity::ActivityData::custom(content),
+            Self::Playing => serenity::ActivityData::playing(content),
+            Self::Watching => serenity::ActivityData::watching(content),
+            Self::Listening => serenity::ActivityData::listening(content),
+            Self::Competing => serenity::ActivityData::competing(content),
+        }
+    }
+}
+
+impl Default for PresenceChoice {
+    fn default() -> Self {
+        Self::Custom
+    }
 }
 
 impl std::fmt::Display for PresenceChoice {
@@ -16,19 +36,13 @@ impl std::fmt::Display for PresenceChoice {
             f,
             "{}",
             match self {
-                PresenceChoice::Playing => "Playing".to_owned(),
-                PresenceChoice::Watching => "Watching".to_owned(),
-                PresenceChoice::Custom => "Custom".to_owned(),
+                Self::Custom => "Custom".to_owned(),
+                Self::Playing => "Playing".to_owned(),
+                Self::Watching => "Watching".to_owned(),
+                Self::Listening => "Listening".to_owned(),
+                Self::Competing => "Competing".to_owned(),
             }
         )
-    }
-}
-
-fn make_activity(content: &str, presence_type: &PresenceChoice) -> serenity::ActivityData {
-    match presence_type {
-        PresenceChoice::Playing => serenity::ActivityData::playing(content),
-        PresenceChoice::Watching => serenity::ActivityData::watching(content),
-        PresenceChoice::Custom => serenity::ActivityData::custom(content),
     }
 }
 
@@ -45,10 +59,12 @@ pub async fn presence(
 
     #[rename = "type"]
     #[description = "Type of presence"]
-    type_: PresenceChoice,
+    type_: Option<PresenceChoice>,
 ) -> Result<()> {
+    let type_ = type_.unwrap_or_default();
+
     ctx.serenity_context().set_presence(
-        Some(make_activity(&content, &type_)),
+        Some(type_.make_activity(&content)),
         serenity::OnlineStatus::Online,
     );
 
