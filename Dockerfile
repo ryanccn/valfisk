@@ -12,12 +12,12 @@ COPY . ./
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM common-build AS builder
+ENV CARGO_BUILD_RUSTFLAGS="-C target-feature=+crt-static"
 
 COPY --from=planner /build/recipe.json recipe.json
-RUN cargo chef cook --recipe-path recipe.json --release --locked --target x86_64-unknown-linux-musl --bin valfisk
+RUN cargo chef cook --recipe-path recipe.json --release --locked --target x86_64-unknown-linux-musl
 
 COPY . ./
-ENV CARGO_BUILD_RUSTFLAGS="-C target-feature=+crt-static"
 RUN cargo build --release --locked --target x86_64-unknown-linux-musl --bin valfisk
 
 FROM gcr.io/distroless/static:latest
