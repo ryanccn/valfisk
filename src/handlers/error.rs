@@ -12,15 +12,15 @@ enum ErrorOrPanic<'a> {
     Panic(&'a Option<String>),
 }
 
-impl<'a> Into<ErrorOrPanic<'a>> for &'a anyhow::Error {
-    fn into(self) -> ErrorOrPanic<'a> {
-        ErrorOrPanic::Error(self)
+impl<'a> From<&'a anyhow::Error> for ErrorOrPanic<'a> {
+    fn from(val: &'a anyhow::Error) -> Self {
+        ErrorOrPanic::Error(val)
     }
 }
 
-impl<'a> Into<ErrorOrPanic<'a>> for &'a Option<String> {
-    fn into(self) -> ErrorOrPanic<'a> {
-        ErrorOrPanic::Panic(self)
+impl<'a> From<&'a Option<String>> for ErrorOrPanic<'a> {
+    fn from(val: &'a Option<String>) -> Self {
+        ErrorOrPanic::Panic(val)
     }
 }
 
