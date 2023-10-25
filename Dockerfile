@@ -1,18 +1,24 @@
-FROM --platform=amd64 rust:1.72-alpine as builder
-WORKDIR /build
+FROM --platform=amd64 rust:1.72-alpine as common-build
 
-# RUN apt-get update && apt-get install -y build-essential musl-dev musl-tools gcc-x86-64-linux-gnu && apt-get clean && rm -rf /var/lib/apt/lists/*
 RUN apk update && apk upgrade && apk add --no-cache musl-dev
 RUN rustup target add x86_64-unknown-linux-musl
+RUN cargo install cargo-chef --locked
 
-ENV CARGO_BUILD_RUSTFLAGS="-C target-feature=+crt-static"
+WORKDIR /build
 
-COPY Cargo.toml Cargo.lock ./
-RUN mkdir -p src && touch src/main.rs
-RUN cargo fetch --target x86_64-unknown-linux-musl --locked
+FROM common-build AS planner
 
 COPY . ./
-RUN cargo build --target x86_64-unknown-linux-musl --release --locked
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM common-build AS builder
+
+COPY --from=planner /build/recipe.json recipe.json
+RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json
+
+COPY . ./
+ENV CARGO_BUILD_RUSTFLAGS="-C target-feature=+crt-static"
+RUN cargo build --release --locked --target x86_64-unknown-linux-musl --bin valfisk
 
 FROM gcr.io/distroless/static:latest
 COPY --from=builder /build/target/x86_64-unknown-linux-musl/release/valfisk /valfisk
