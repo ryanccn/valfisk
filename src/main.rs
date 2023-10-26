@@ -34,11 +34,16 @@ async fn main() -> Result<()> {
                             }
 
                             FullEvent::PresenceUpdate { new_data, .. } => {
-                                let mut presence_store = presence_api::PRESENCE_STORE.lock().await;
-                                presence_store.insert(
-                                    new_data.user.id,
-                                    presence_api::ValfiskPresenceData::from_presence(new_data),
-                                );
+                                if new_data.guild_id.and_then(|g| Some(g.to_string()))
+                                    == std::env::var("GUILD_ID").ok()
+                                {
+                                    let mut presence_store =
+                                        presence_api::PRESENCE_STORE.lock().await;
+                                    presence_store.insert(
+                                        new_data.user.id,
+                                        presence_api::ValfiskPresenceData::from_presence(new_data),
+                                    );
+                                }
                             }
 
                             &_ => {}
