@@ -34,7 +34,7 @@ async fn main() -> Result<()> {
                             }
 
                             FullEvent::PresenceUpdate { new_data, .. } => {
-                                if new_data.guild_id.and_then(|g| Some(g.to_string()))
+                                if new_data.guild_id.map(|g| g.to_string())
                                     == std::env::var("GUILD_ID").ok()
                                 {
                                     let mut presence_store =
