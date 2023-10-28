@@ -1,10 +1,10 @@
 use poise::serenity_prelude as serenity;
 
-use anyhow::{anyhow, Result};
-use once_cell::sync::Lazy;
+use crate::reqwest_client;
 use regex::Regex;
 
-use crate::reqwest_client;
+use anyhow::Result;
+use once_cell::sync::Lazy;
 
 static GITHUB: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"https?://github\.com/(?P<repo>[\w-]+/[\w.-]+)/blob/(?P<ref>.+?)/(?P<file>.*\.(?:(?P<language>\w+))?)#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
@@ -15,29 +15,16 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
     let mut embeds: Vec<serenity::CreateEmbed> = vec![];
 
     for captures in GITHUB.captures_iter(&message.content) {
-        let repo = captures
-            .name("repo")
-            .ok_or_else(|| anyhow!("Could not obtain `repo`"))?
-            .as_str();
-        let ref_ = captures
-            .name("ref")
-            .ok_or_else(|| anyhow!("Could not obtain `ref`"))?
-            .as_str();
-        let file = captures
-            .name("file")
-            .ok_or_else(|| anyhow!("Could not obtain `file`"))?
-            .as_str();
+        let repo = &captures["repo"];
+        let ref_ = &captures["ref"];
+        let file = &captures["file"];
 
         let language = match captures.name("language") {
             Some(m) => m.as_str().to_owned(),
             None => "".to_owned(),
         };
 
-        let start = captures
-            .name("start")
-            .ok_or_else(|| anyhow!("Could not obtain `start`"))?
-            .as_str()
-            .parse::<usize>()?;
+        let start = &captures["start"].parse::<usize>()?;
         let end = captures
             .name("end")
             .and_then(|end| end.as_str().parse::<usize>().ok());
