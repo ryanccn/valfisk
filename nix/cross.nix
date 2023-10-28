@@ -16,7 +16,7 @@ for a minimal docker image
         x86_64-linux = pkgs.pkgsStatic;
         aarch64-linux = pkgs.pkgsStatic;
         x86_64-darwin = pkgs.pkgsCross.gnu64.pkgsStatic;
-        aarch64-darwin = pkgs.pkgsCross.aarch64-multiplatform.pkgsStaitc;
+        aarch64-darwin = pkgs.pkgsCross.aarch64-multiplatform.pkgsStatic;
       };
 
       crossPkgs = crossPkgsFor.${system};
