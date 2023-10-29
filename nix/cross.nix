@@ -8,7 +8,7 @@ for a minimal docker image
     pkgs,
     system,
     inputs',
-    fromOverlay,
+    self',
     ...
   }: {
     legacyPackages = let
@@ -37,7 +37,7 @@ for a minimal docker image
 
       formattedConfig = lib.toUpper (builtins.replaceStrings ["-"] ["_"] config);
       linker = "${crossPkgs.stdenv.cc}/bin/${crossPkgs.stdenv.cc.targetPrefix}cc";
-      valfisk = (fromOverlay crossPkgs).valfisk.override {naersk = naersk';};
+      valfisk = self'.packages.valfisk.override {naersk = naersk';};
     in {
       valfisk-static = valfisk.overrideAttrs (_: {
         CARGO_BUILD_TARGET = config;

@@ -1,11 +1,11 @@
-{
+{self, ...}: {
   perSystem = {
+    lib,
     pkgs,
-    fromOverlay,
     ...
   }: {
     packages = let
-      pkgs' = fromOverlay pkgs;
+      pkgs' = lib.fix (final: self.overlays.default final pkgs);
     in {
       inherit (pkgs') valfisk;
       default = pkgs'.valfisk;
