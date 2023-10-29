@@ -11,6 +11,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
+        attr: [valfisk, valfisk-static]
 
     runs-on: ${{ matrix.os }}
 
@@ -23,8 +24,8 @@ jobs:
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@v2
 
-      - name: Build
-        run: nix build -L --accept-flake-config --fallback .#valfisk
+      - name: Build ${{ matrix.attr }}
+        run: nix build -L --accept-flake-config --fallback .#${{ matrix.attr }}
 
   check:
     runs-on: ubuntu-latest
