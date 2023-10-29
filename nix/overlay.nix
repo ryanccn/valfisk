@@ -1,6 +1,6 @@
 {inputs, ...}: {
   flake.overlays.default = final: prev: {
-    valfisk = prev.callPackage ./default.nix {
+    valfisk = prev.callPackage ./derivation.nix {
       /*
       the packages in this flake will use the pure `naersk.lib`,
       while users consuming this overlay directly will only fallback to it

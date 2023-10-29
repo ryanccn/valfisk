@@ -11,19 +11,9 @@
     parts.inputs.nixpkgs-lib.follows = "nixpkgs";
   };
 
-  outputs = {
-    self,
-    parts,
-    ...
-  } @ inputs:
+  outputs = {parts, ...} @ inputs:
     parts.lib.mkFlake {inherit inputs;} {
-      imports = [
-        ./nix/cross.nix
-        ./nix/docker.nix
-        ./nix/dev.nix
-        ./nix/overlay.nix
-        ./nix/packages.nix
-      ];
+      imports = [./nix];
 
       systems = [
         "x86_64-linux"
@@ -31,17 +21,5 @@
         "x86_64-darwin"
         "aarch64-darwin"
       ];
-
-      perSystem = {
-        pkgs,
-        lib,
-        ...
-      }: {
-        formatter = pkgs.alejandra;
-
-        _module.args = {
-          fromOverlay = p: lib.fix (final: self.overlays.default final p);
-        };
-      };
     };
 }

@@ -34,17 +34,15 @@ for a minimal docker image
         cargo = toolchain;
         rustc = toolchain;
       };
-    in {
-      valfisk-static = let
-        formattedConfig = lib.toUpper (builtins.replaceStrings ["-"] ["_"] config);
-        linker = "${crossPkgs.stdenv.cc}/bin/${crossPkgs.stdenv.cc.targetPrefix}cc";
 
-        valfisk = (fromOverlay crossPkgs).valfisk.override {naersk = naersk';};
-      in
-        valfisk.overrideAttrs (_: {
-          CARGO_BUILD_TARGET = config;
-          "CARGO_TARGET_${formattedConfig}_LINKER" = linker;
-        });
+      formattedConfig = lib.toUpper (builtins.replaceStrings ["-"] ["_"] config);
+      linker = "${crossPkgs.stdenv.cc}/bin/${crossPkgs.stdenv.cc.targetPrefix}cc";
+      valfisk = (fromOverlay crossPkgs).valfisk.override {naersk = naersk';};
+    in {
+      valfisk-static = valfisk.overrideAttrs (_: {
+        CARGO_BUILD_TARGET = config;
+        "CARGO_TARGET_${formattedConfig}_LINKER" = linker;
+      });
     };
   };
 }
