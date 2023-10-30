@@ -79,16 +79,16 @@ async fn main() -> Result<()> {
                     if let Ok(redis_url) = std::env::var("REDIS_URL") {
                         let client = redis::Client::open(redis_url)?;
 
-                        if let Err(err) = commands::presence::restore(&ctx, &client).await {
+                        if let Err(err) = commands::presence::restore(ctx, &client).await {
                             eprintln!("{}", err);
                         };
 
-                        return Ok(Data {
+                        Ok(Data {
                             redis: Some(client),
-                        });
+                        })
+                    } else {
+                        Ok(Data { redis: None })
                     }
-
-                    return Ok(Data { redis: None });
                 })
             },
         ))
