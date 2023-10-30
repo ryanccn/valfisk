@@ -8,7 +8,9 @@ use poise::{
 
 use crate::utils::Pluralize;
 
-pub struct Data {}
+pub struct Data {
+    pub redis: Option<redis::Client>,
+}
 pub type Context<'a> = poise::Context<'a, Data, Error>;
 
 mod commands;
@@ -74,7 +76,19 @@ async fn main() -> Result<()> {
                         "command".pluralize(commands.len())
                     );
 
-                    Ok(Data {})
+                    if let Ok(redis_url) = std::env::var("REDIS_URL") {
+                        let client = redis::Client::open(redis_url)?;
+
+                        if let Err(err) = commands::restore_presence(&ctx, &client).await {
+                            eprintln!("{}", err);
+                        };
+
+                        return Ok(Data {
+                            redis: Some(client),
+                        });
+                    }
+
+                    return Ok(Data { redis: None });
                 })
             },
         ))

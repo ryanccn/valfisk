@@ -24,3 +24,5 @@ pub fn vec() -> Vec<
         translate::translate(),
     ]
 }
+
+pub use presence::restore_presence;

@@ -1,9 +1,12 @@
-use anyhow::Result;
+use owo_colors::OwoColorize;
 use poise::{serenity_prelude as serenity, CreateReply};
+use redis::AsyncCommands;
 
 use crate::Context;
+use anyhow::Result;
 
-#[derive(poise::ChoiceParameter)]
+#[derive(poise::ChoiceParameter, serde::Serialize, serde::Deserialize, Clone, Copy)]
+#[serde(rename_all = "lowercase")]
 pub enum PresenceChoice {
     Custom,
     Playing,
@@ -46,6 +49,13 @@ impl std::fmt::Display for PresenceChoice {
     }
 }
 
+#[derive(serde::Serialize, serde::Deserialize)]
+struct PresencePersistence {
+    content: String,
+    #[serde(rename = "type")]
+    type_: PresenceChoice,
+}
+
 /// Modify the Discord presence shown by the bot
 #[poise::command(
     slash_command,
@@ -73,11 +83,36 @@ pub async fn presence(
             serenity::CreateEmbed::new()
                 .title("Presence set!")
                 .field("Type", type_.to_string(), false)
-                .field("Content", content, false)
+                .field("Content", &content, false)
                 .color(0x4ade80),
         ),
     )
     .await?;
+
+    if let Some(redis) = &ctx.data().redis {
+        let mut conn = redis.get_async_connection().await?;
+        conn.set(
+            "presence-v1",
+            serde_json::to_string(&PresencePersistence { content, type_ })?,
+        )
+        .await?;
+    }
+
+    Ok(())
+}
+
+pub async fn restore_presence(ctx: &serenity::Context, redis_client: &redis::Client) -> Result<()> {
+    let mut conn = redis_client.get_async_connection().await?;
+    let data: Option<String> = conn.get("presence-v1").await?;
+
+    if let Some(data) = data {
+        let data: PresencePersistence = serde_json::from_str(&data)?;
+        ctx.set_presence(
+            Some(data.type_.make_activity(&data.content)),
+            serenity::OnlineStatus::Online,
+        );
+        println!("{} presence from Redis", "Restored".cyan());
+    }
 
     Ok(())
 }
