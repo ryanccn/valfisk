@@ -1333,6 +1333,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "redis-macros"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60eb39e2b44d4c0f9c84e7c5fc4fc3adc8dd26ec48f1ac3a160033f7c03b18fd"
+dependencies = [
+ "redis",
+ "redis-macros-derive",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "redis-macros-derive"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "39550b9e94ce430a349c5490ca4efcae90ab8189603320f88c1d69f0326f169e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2034,6 +2057,7 @@ dependencies = [
  "owo-colors",
  "poise",
  "redis",
+ "redis-macros",
  "regex",
  "reqwest",
  "serde",

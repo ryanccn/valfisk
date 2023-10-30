@@ -1,9 +1,11 @@
-use owo_colors::OwoColorize;
-use poise::{serenity_prelude as serenity, CreateReply};
-use redis::AsyncCommands;
-
 use crate::Context;
+use poise::{serenity_prelude as serenity, CreateReply};
+
+use redis::AsyncCommands;
+use redis_macros::{FromRedisValue, ToRedisArgs};
+
 use anyhow::Result;
+use owo_colors::OwoColorize;
 
 #[derive(poise::ChoiceParameter, serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
 #[serde(rename_all = "lowercase")]
@@ -49,7 +51,7 @@ impl std::fmt::Display for PresenceChoice {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, FromRedisValue, ToRedisArgs, Clone, Debug)]
 struct PresenceData {
     content: String,
     #[serde(rename = "type")]
@@ -98,8 +100,7 @@ pub async fn presence(
 
     if let Some(redis) = &ctx.data().redis {
         let mut conn = redis.get_async_connection().await?;
-        conn.set("presence-v1", serde_json::to_string(&presence_data)?)
-            .await?;
+        conn.set("presence-v1", presence_data).await?;
     }
 
     Ok(())
@@ -107,10 +108,9 @@ pub async fn presence(
 
 pub async fn restore(ctx: &serenity::Context, redis_client: &redis::Client) -> Result<()> {
     let mut conn = redis_client.get_async_connection().await?;
-    let data: Option<String> = conn.get("presence-v1").await?;
+    let data: Option<PresenceData> = conn.get("presence-v1").await?;
 
     if let Some(data) = data {
-        let data: PresenceData = serde_json::from_str(&data)?;
         ctx.set_presence(Some(data.make_activity()), serenity::OnlineStatus::Online);
         println!("{} presence from Redis", "Restored".cyan());
     }
