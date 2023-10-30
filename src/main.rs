@@ -27,7 +27,7 @@ async fn main() -> Result<()> {
     let mut client = Client::builder(std::env::var("DISCORD_TOKEN")?, GatewayIntents::all())
         .framework(Framework::new(
             FrameworkOptions {
-                commands: commands::vec(),
+                commands: commands::to_vec(),
                 event_handler: |ev, _, _| {
                     Box::pin(async move {
                         match ev {
@@ -79,7 +79,7 @@ async fn main() -> Result<()> {
                     if let Ok(redis_url) = std::env::var("REDIS_URL") {
                         let client = redis::Client::open(redis_url)?;
 
-                        if let Err(err) = commands::restore_presence(&ctx, &client).await {
+                        if let Err(err) = commands::presence::restore(&ctx, &client).await {
                             eprintln!("{}", err);
                         };
 

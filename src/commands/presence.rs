@@ -105,7 +105,7 @@ pub async fn presence(
     Ok(())
 }
 
-pub async fn restore_presence(ctx: &serenity::Context, redis_client: &redis::Client) -> Result<()> {
+pub async fn restore(ctx: &serenity::Context, redis_client: &redis::Client) -> Result<()> {
     let mut conn = redis_client.get_async_connection().await?;
     let data: Option<String> = conn.get("presence-v1").await?;
 
