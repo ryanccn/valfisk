@@ -5,7 +5,7 @@ use redis::AsyncCommands;
 use crate::Context;
 use anyhow::Result;
 
-#[derive(poise::ChoiceParameter, serde::Serialize, serde::Deserialize, Clone, Copy)]
+#[derive(poise::ChoiceParameter, serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum PresenceChoice {
     Custom,
@@ -49,11 +49,17 @@ impl std::fmt::Display for PresenceChoice {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
-struct PresencePersistence {
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+struct PresenceData {
     content: String,
     #[serde(rename = "type")]
     type_: PresenceChoice,
+}
+
+impl PresenceData {
+    fn make_activity(&self) -> serenity::ActivityData {
+        self.type_.make_activity(&self.content)
+    }
 }
 
 /// Modify the Discord presence shown by the bot
@@ -72,9 +78,10 @@ pub async fn presence(
     type_: Option<PresenceChoice>,
 ) -> Result<()> {
     let type_ = type_.unwrap_or_default();
+    let presence_data = PresenceData { content, type_ };
 
     ctx.serenity_context().set_presence(
-        Some(type_.make_activity(&content)),
+        Some(presence_data.make_activity()),
         serenity::OnlineStatus::Online,
     );
 
@@ -82,8 +89,8 @@ pub async fn presence(
         CreateReply::new().embed(
             serenity::CreateEmbed::new()
                 .title("Presence set!")
-                .field("Type", type_.to_string(), false)
-                .field("Content", &content, false)
+                .field("Type", presence_data.type_.to_string(), false)
+                .field("Content", &presence_data.content, false)
                 .color(0x4ade80),
         ),
     )
@@ -91,11 +98,8 @@ pub async fn presence(
 
     if let Some(redis) = &ctx.data().redis {
         let mut conn = redis.get_async_connection().await?;
-        conn.set(
-            "presence-v1",
-            serde_json::to_string(&PresencePersistence { content, type_ })?,
-        )
-        .await?;
+        conn.set("presence-v1", serde_json::to_string(&presence_data)?)
+            .await?;
     }
 
     Ok(())
@@ -106,11 +110,8 @@ pub async fn restore_presence(ctx: &serenity::Context, redis_client: &redis::Cli
     let data: Option<String> = conn.get("presence-v1").await?;
 
     if let Some(data) = data {
-        let data: PresencePersistence = serde_json::from_str(&data)?;
-        ctx.set_presence(
-            Some(data.type_.make_activity(&data.content)),
-            serenity::OnlineStatus::Online,
-        );
+        let data: PresenceData = serde_json::from_str(&data)?;
+        ctx.set_presence(Some(data.make_activity()), serenity::OnlineStatus::Online);
         println!("{} presence from Redis", "Restored".cyan());
     }
 
