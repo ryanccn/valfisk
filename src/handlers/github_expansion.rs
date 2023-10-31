@@ -7,7 +7,7 @@ use anyhow::Result;
 use once_cell::sync::Lazy;
 
 static GITHUB: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"https?://github\.com/(?P<repo>[\w-]+/[\w.-]+)/blob/(?P<ref>.+?)/(?P<file>.*\.(?:(?P<language>\w+))?)#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
+    Regex::new(r"https?://github\.com/(?P<repo>[\w-]+/[\w.-]+)/blob/(?P<ref>.+?)/(?P<file>.*)#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
 });
 
 pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Result<()> {
@@ -15,16 +15,13 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
     let mut embeds: Vec<serenity::CreateEmbed> = vec![];
 
     for captures in GITHUB.captures_iter(&message.content) {
-        let repo = &captures["repo"];
-        let ref_ = &captures["ref"];
-        let file = &captures["file"];
+        let repo = captures["repo"].to_owned();
+        let ref_ = captures["ref"].to_owned();
+        let file = captures["file"].to_owned();
 
-        let language = match captures.name("language") {
-            Some(m) => m.as_str().to_owned(),
-            None => "".to_owned(),
-        };
+        let language = file.split('.').last().unwrap_or("").to_owned();
 
-        let start = &captures["start"].parse::<usize>()?;
+        let start = captures["start"].parse::<usize>()?;
         let end = captures
             .name("end")
             .and_then(|end| end.as_str().parse::<usize>().ok());
@@ -46,7 +43,7 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
         let idx_start = start - 1;
         let idx_end = match end {
             Some(end) => end,
-            None => lines.len(),
+            None => start,
         };
         let selected_lines = &lines[idx_start..idx_end];
 
