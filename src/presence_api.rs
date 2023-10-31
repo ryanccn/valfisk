@@ -3,14 +3,14 @@ use poise::serenity_prelude as serenity;
 use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
 use serde_json::json;
 
-use anyhow::Result;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use tokio::sync::Mutex;
 
+use crate::utils::actix_utils::ActixError;
 use owo_colors::OwoColorize;
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ValfiskPresenceData {
     pub status: serenity::OnlineStatus,
     pub client_status: Option<serenity::ClientStatus>,
@@ -33,25 +33,29 @@ pub static PRESENCE_STORE: Lazy<Mutex<HashMap<serenity::UserId, ValfiskPresenceD
 
 #[get("/")]
 async fn route_ping() -> impl Responder {
-    HttpResponse::Ok().json(json!({"ok": true}))
+    HttpResponse::Ok().json(json!({ "ok": true }))
 }
 
 #[get("/presence/{user}")]
-async fn route_get_presence(path: web::Path<(u64,)>) -> impl Responder {
+async fn route_get_presence(path: web::Path<(u64,)>) -> Result<impl Responder, ActixError> {
     let path = path.into_inner();
-    let user_id = serenity::UserId::new(path.0);
+    if path.0 == 0 {
+        return Ok(HttpResponse::BadRequest().json(json!({ "error": "User ID cannot be 0!" })));
+    }
+
+    let user_id = serenity::UserId::from(path.0);
 
     let store = PRESENCE_STORE.lock().await;
     let presence_data = store.get(&user_id).cloned();
     drop(store);
 
     match presence_data {
-        Some(presence_data) => HttpResponse::Ok().json(presence_data),
-        None => HttpResponse::NotFound().json(json!({"error": "User not found!"})),
+        Some(presence_data) => Ok(HttpResponse::Ok().json(presence_data)),
+        None => Ok(HttpResponse::NotFound().json(json!({ "error": "User not found!" }))),
     }
 }
 
-pub async fn serve() -> Result<()> {
+pub async fn serve() -> anyhow::Result<()> {
     let host = std::env::var("HOST").unwrap_or(match cfg!(debug_assertions) {
         true => "127.0.0.1".to_owned(),
         false => "0.0.0.0".to_owned(),
