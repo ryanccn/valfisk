@@ -5,7 +5,7 @@ use serde_json::json;
 
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
-use tokio::sync::Mutex;
+use std::sync::Mutex;
 
 use crate::utils::actix_utils::ActixError;
 use owo_colors::OwoColorize;
@@ -45,7 +45,7 @@ async fn route_get_presence(path: web::Path<(u64,)>) -> Result<impl Responder, A
 
     let user_id = serenity::UserId::from(path.0);
 
-    let store = PRESENCE_STORE.lock().await;
+    let store = PRESENCE_STORE.lock().unwrap();
     let presence_data = store.get(&user_id).cloned();
     drop(store);
 

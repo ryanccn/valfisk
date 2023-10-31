@@ -40,7 +40,7 @@ async fn main() -> Result<()> {
                                     == std::env::var("GUILD_ID").ok()
                                 {
                                     let mut presence_store =
-                                        presence_api::PRESENCE_STORE.lock().await;
+                                        presence_api::PRESENCE_STORE.lock().unwrap();
                                     presence_store.insert(
                                         new_data.user.id,
                                         presence_api::ValfiskPresenceData::from_presence(new_data),
