@@ -1,6 +1,7 @@
-use crate::Context;
-use anyhow::Result;
 use poise::{serenity_prelude as serenity, CreateReply};
+
+use crate::{utils::error_handling::ValfiskError, Context};
+use anyhow::Result;
 
 #[derive(serde::Deserialize)]
 struct SafebooruResponse {
@@ -46,15 +47,19 @@ pub async fn shiggy(
             ctx.say(data.file_url).await?;
         }
     } else {
-        ctx.send(
-            CreateReply::new().embed(
-                serenity::CreateEmbed::new()
-                    .title("Could not fetch shiggy!")
-                    .description("An error occurred while fetching from the API.")
-                    .color(0xef4444),
-            ),
-        )
-        .await?;
+        let mut embed = serenity::CreateEmbed::new()
+            .title("Could not fetch shiggy!")
+            .description("An error occurred while fetching from the API.")
+            .color(0xef4444);
+
+        if let Err(err) = resp.error_for_status_ref().map_err(anyhow::Error::from) {
+            let valfisk_err = ValfiskError::new(&err, &ctx);
+            valfisk_err.handle_log();
+            valfisk_err.handle_report().await;
+            embed = embed.footer(serenity::CreateEmbedFooter::new(valfisk_err.error_id))
+        };
+
+        ctx.send(CreateReply::new().embed(embed)).await?;
     }
 
     Ok(())

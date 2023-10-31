@@ -2,12 +2,12 @@ use nanoid::nanoid;
 use owo_colors::OwoColorize;
 use poise::{
     serenity_prelude::{ChannelId, CreateEmbed, CreateEmbedFooter, CreateMessage, Timestamp},
-    CreateReply, FrameworkError,
+    CreateReply,
 };
 
-use crate::{Context, Data};
+use crate::Context;
 
-enum ErrorOrPanic<'a> {
+pub enum ErrorOrPanic<'a> {
     Error(&'a anyhow::Error),
     Panic(&'a Option<String>),
 }
@@ -33,14 +33,17 @@ impl ErrorOrPanic<'_> {
     }
 }
 
-struct ValfiskError<'a> {
-    error_or_panic: ErrorOrPanic<'a>,
-    ctx: &'a Context<'a>,
-    error_id: String,
+pub struct ValfiskError<'a> {
+    pub error_or_panic: ErrorOrPanic<'a>,
+    pub ctx: &'a Context<'a>,
+    pub error_id: String,
 }
 
 impl ValfiskError<'_> {
-    fn new<'a>(error_or_panic: impl Into<ErrorOrPanic<'a>>, ctx: &'a Context) -> ValfiskError<'a> {
+    pub fn new<'a>(
+        error_or_panic: impl Into<ErrorOrPanic<'a>>,
+        ctx: &'a Context,
+    ) -> ValfiskError<'a> {
         ValfiskError {
             error_or_panic: error_or_panic.into(),
             ctx,
@@ -48,7 +51,7 @@ impl ValfiskError<'_> {
         }
     }
 
-    fn log(&self) {
+    pub fn handle_log(&self) {
         eprintln!(
             "{}\n  {} {}\n  {} {}\n{:#?}",
             format!("Encountered {}!", self.error_or_panic.type_()).red(),
@@ -60,7 +63,7 @@ impl ValfiskError<'_> {
         );
     }
 
-    async fn reply(&self) {
+    pub async fn handle_reply(&self) {
         self.ctx
             .send(
                 CreateReply::new().embed(
@@ -76,7 +79,7 @@ impl ValfiskError<'_> {
             .ok();
     }
 
-    async fn post(&self) {
+    pub async fn handle_report(&self) {
         let channel_id = match std::env::var("ERROR_LOGS_CHANNEL") {
             Ok(channel_id_str) => Some(channel_id_str.parse::<u64>()),
             Err(_) => None,
@@ -110,10 +113,10 @@ impl ValfiskError<'_> {
         }
     }
 
-    async fn handle_all(&self) {
-        self.log();
-        self.reply().await;
-        self.post().await;
+    pub async fn handle_all(&self) {
+        self.handle_log();
+        self.handle_reply().await;
+        self.handle_report().await;
     }
 }
 
@@ -123,35 +126,5 @@ impl std::fmt::Debug for ErrorOrPanic<'_> {
             Self::Error(e) => e.fmt(f),
             Self::Panic(p) => p.fmt(f),
         }
-    }
-}
-
-pub async fn handle_error(err: &FrameworkError<'_, Data, anyhow::Error>) {
-    match err {
-        FrameworkError::Setup { error, .. } => {
-            eprintln!(
-                "{} setting up client:\n  {}",
-                "Encountered error".red(),
-                error
-            );
-        }
-
-        FrameworkError::EventHandler { error, .. } => {
-            eprintln!(
-                "{} handling event!\n{:#?}",
-                "Encountered error".red(),
-                error
-            );
-        }
-
-        FrameworkError::Command { error, ctx, .. } => {
-            ValfiskError::new(error, ctx).handle_all().await;
-        }
-
-        FrameworkError::CommandPanic { payload, ctx, .. } => {
-            ValfiskError::new(payload, ctx).handle_all().await;
-        }
-
-        _ => {}
     }
 }
