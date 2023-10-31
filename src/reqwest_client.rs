@@ -1,17 +1,10 @@
 use once_cell::sync::Lazy;
-use reqwest::header;
 
 pub static HTTP: Lazy<reqwest::Client> = Lazy::new(|| {
-    let mut builder = reqwest::ClientBuilder::new();
+    let user_agent = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 
-    let mut headers = header::HeaderMap::new();
-
-    let user_agent = format!("valfisk/{}", env!("CARGO_PKG_VERSION"));
-    headers.insert(
-        "user-agent",
-        header::HeaderValue::from_str(&user_agent).unwrap(),
-    );
-    builder = builder.default_headers(headers);
-
-    builder.build().unwrap()
+    reqwest::ClientBuilder::new()
+        .user_agent(user_agent)
+        .build()
+        .unwrap()
 });
