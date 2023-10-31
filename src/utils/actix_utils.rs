@@ -13,7 +13,7 @@ impl std::fmt::Display for ActixError {
 impl actix_web::ResponseError for ActixError {
     fn error_response(&self) -> HttpResponse<BoxBody> {
         HttpResponse::InternalServerError()
-            .json(json!({"error": "An internal server error occurred!"}))
+            .json(json!({ "error": "An internal server error occurred!" }))
     }
 
     fn status_code(&self) -> StatusCode {
