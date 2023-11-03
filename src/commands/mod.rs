@@ -1,5 +1,6 @@
 use crate::Context;
 
+pub mod owo;
 pub mod ping;
 pub mod pomelo;
 pub mod presence;
@@ -15,6 +16,7 @@ pub fn to_vec() -> Vec<
     >,
 > {
     vec![
+        owo::owo(),
         ping::ping(),
         pomelo::pomelo(),
         presence::presence(),
