@@ -80,12 +80,10 @@ impl ValfiskError<'_> {
     }
 
     pub async fn handle_report(&self) {
-        let channel_id = match std::env::var("ERROR_LOGS_CHANNEL") {
-            Ok(channel_id_str) => Some(channel_id_str.parse::<u64>()),
-            Err(_) => None,
-        };
-
-        if let Some(Ok(channel_id)) = channel_id {
+        if let Ok(channel_id) = match std::env::var("ERROR_LOGS_CHANNEL") {
+            Ok(channel_id_str) => channel_id_str.parse::<u64>().map_err(anyhow::Error::from),
+            Err(err) => Err(anyhow::Error::from(err)),
+        } {
             let channel = ChannelId::new(channel_id);
 
             let embed = CreateEmbed::new()
@@ -113,6 +111,7 @@ impl ValfiskError<'_> {
         }
     }
 
+    /// Log the error to the console, send an error reply to the command, and report the error in the error channel
     pub async fn handle_all(&self) {
         self.handle_log();
         self.handle_reply().await;

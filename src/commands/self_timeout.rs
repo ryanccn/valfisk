@@ -10,12 +10,9 @@ pub async fn self_timeout(
     #[description = "The duration to time yourself out for"] duration: String,
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
-    let duration = humantime::parse_duration(&duration);
 
-    if let Ok(duration) = duration {
-        let member = ctx.author_member().await;
-
-        if let Some(mut member) = member {
+    if let Ok(duration) = humantime::parse_duration(&duration) {
+        if let Some(mut member) = ctx.author_member().await {
             let start = chrono::Utc::now();
             let end = start + duration;
             let end_serenity = serenity::Timestamp::from_unix_timestamp(end.timestamp())?;
@@ -41,10 +38,10 @@ pub async fn self_timeout(
             .await?;
         } else {
             ctx.say("Error: Member unavailable!").await?;
-        }
+        };
     } else {
         ctx.say("Error: Invalid duration!").await?;
-    }
+    };
 
     Ok(())
 }

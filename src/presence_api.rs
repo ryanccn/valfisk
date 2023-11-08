@@ -60,9 +60,7 @@ pub async fn serve() -> anyhow::Result<()> {
         true => "127.0.0.1".to_owned(),
         false => "0.0.0.0".to_owned(),
     });
-    let port = std::env::var("PORT")
-        .unwrap_or("8080".to_owned())
-        .parse::<u16>()?;
+    let port = std::env::var("PORT").map_or(Ok(8080), |v| v.parse::<u16>())?;
 
     println!(
         "{} API server {}",

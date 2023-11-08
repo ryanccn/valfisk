@@ -41,10 +41,8 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
             .collect();
 
         let idx_start = start - 1;
-        let idx_end = match end {
-            Some(end) => end,
-            None => start,
-        };
+        let idx_end = end.unwrap_or(start);
+
         let selected_lines = &lines[idx_start..idx_end];
 
         let embed = serenity::CreateEmbed::new()

@@ -9,12 +9,12 @@ pub async fn pomelo(ctx: Context<'_>) -> Result<()> {
     if let Some(guild) = ctx.guild_id() {
         ctx.defer().await?;
 
-        let members = guild
+        let members: Vec<_> = guild
             .members(&ctx, None, None)
             .await?
             .into_iter()
             .filter(|m| !m.user.bot)
-            .collect::<Vec<serenity::Member>>();
+            .collect();
 
         let mut nonmigrated_users: Vec<&serenity::UserId> = vec![];
 

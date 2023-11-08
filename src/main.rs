@@ -1,4 +1,4 @@
-use anyhow::{Error, Result};
+use anyhow::{Context as AnyhowContext, Error, Result};
 use owo_colors::OwoColorize;
 
 use poise::{
@@ -19,12 +19,16 @@ mod presence_api;
 mod reqwest_client;
 mod utils;
 
+#[deny(unsafe_code)]
 #[tokio::main]
 async fn main() -> Result<()> {
     #[cfg(debug_assertions)]
     dotenvy::dotenv().ok();
 
-    let mut client = Client::builder(std::env::var("DISCORD_TOKEN")?, GatewayIntents::all())
+    let token = std::env::var("DISCORD_TOKEN")
+        .context("Could not obtain DISCORD_TOKEN from environment!")?;
+
+    let mut client = Client::builder(token, GatewayIntents::all())
         .framework(Framework::new(
             FrameworkOptions {
                 commands: commands::to_vec(),
@@ -63,8 +67,11 @@ async fn main() -> Result<()> {
             },
             |ctx, ready, framework| {
                 Box::pin(async move {
-                    let tag = ready.user.tag();
-                    println!("{} to Discord as {}", "Connected".green(), tag.cyan());
+                    println!(
+                        "{} to Discord as {}",
+                        "Connected".green(),
+                        ready.user.tag().cyan()
+                    );
 
                     let commands = &framework.options().commands;
 
