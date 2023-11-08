@@ -6,6 +6,7 @@
   Security,
   SystemConfiguration,
   IOKit,
+  optimizeSize ? false,
 }:
 naersk.buildPackage {
   src = lib.cleanSource ./..;
@@ -16,6 +17,8 @@ naersk.buildPackage {
     SystemConfiguration
     IOKit
   ];
+
+  RUSTFLAGS = lib.optionalString optimizeSize " -C codegen-units=1 -C strip=symbols -C opt-level=z";
 
   meta = with lib; {
     mainProgram = "valfisk";

@@ -1,16 +1,17 @@
 {
   perSystem = {
     pkgs,
-    self',
+    config,
     ...
   }: {
     devShells = {
       default = pkgs.mkShell {
         packages = with pkgs; [
           rustfmt
+          clippy
         ];
 
-        inputsFrom = [self'.packages.default];
+        inputsFrom = [config.packages.default];
       };
     };
 
