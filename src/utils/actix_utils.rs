@@ -1,8 +1,13 @@
 use actix_web::{body::BoxBody, http::StatusCode, HttpResponse};
 use serde_json::json;
 
-#[derive(Debug)]
 pub struct ActixError(anyhow::Error);
+
+impl std::fmt::Debug for ActixError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
 
 impl std::fmt::Display for ActixError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

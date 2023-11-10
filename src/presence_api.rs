@@ -32,8 +32,8 @@ pub static PRESENCE_STORE: Lazy<Mutex<HashMap<serenity::UserId, ValfiskPresenceD
     Lazy::new(|| Mutex::new(HashMap::new()));
 
 #[get("/")]
-async fn route_ping() -> impl Responder {
-    HttpResponse::Ok().json(json!({ "ok": true }))
+async fn route_ping() -> Result<impl Responder, ActixError> {
+    Ok(HttpResponse::Ok().json(json!({ "ok": true })))
 }
 
 #[get("/presence/{user}")]
