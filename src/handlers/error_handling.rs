@@ -7,7 +7,7 @@ pub async fn handle_error(err: &FrameworkError<'_, Data, anyhow::Error>) {
     match err {
         FrameworkError::Setup { error, .. } => {
             eprintln!(
-                "{} setting up client:\n  {}",
+                "{} setting up client:\n{:#?}",
                 "Encountered error".red(),
                 error
             );
