@@ -65,7 +65,7 @@ pub async fn serve() -> anyhow::Result<()> {
     println!(
         "{} API server {}",
         "Started".green(),
-        format!("http://{}:{}", host, port).dimmed()
+        format!("http://{host}:{port}").dimmed()
     );
 
     HttpServer::new(|| {

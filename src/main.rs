@@ -87,7 +87,7 @@ async fn main() -> Result<()> {
                         let client = redis::Client::open(redis_url)?;
 
                         if let Err(err) = commands::presence::restore(ctx, &client).await {
-                            eprintln!("{}", err);
+                            eprintln!("{err}");
                         };
 
                         Ok(Data {
