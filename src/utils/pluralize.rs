@@ -3,8 +3,10 @@ use num::Integer;
 /// A trait that simplifies the pluralization of nouns.
 pub trait Pluralize {
     /// Pluralize a string by adding `"s"` to the end of it if `count` is not 1.
+    #[must_use]
     fn pluralize<T: Integer>(&self, count: T) -> String;
     /// Pluralize a string by returning `alternate` if `count` is not 1.
+    #[must_use]
     fn pluralize_alternate<T: Integer>(&self, count: T, alternate: &str) -> String;
 }
 

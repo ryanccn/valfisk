@@ -49,6 +49,7 @@ pub struct ValfiskError<'a> {
 
 impl ValfiskError<'_> {
     /// Create a new [`ValfiskError`] from an error or a panic string and Poise context.
+    #[must_use]
     pub fn new<'a>(
         error_or_panic: impl Into<ErrorOrPanic<'a>>,
         ctx: &'a Context,

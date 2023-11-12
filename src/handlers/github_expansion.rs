@@ -58,18 +58,6 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
         embeds.push(embed);
     }
 
-    // {
-    //     let msg_id = message.id;
-    //     let mut message_updates = serenity::collector::collect(&ctx.shard, move |ev| match ev {
-    //         serenity::Event::MessageUpdate(x) if x.id == msg_id => Some(()),
-    //         _ => None,
-    //     });
-    //     let _ = tokio::time::timeout(Duration::from_millis(2000), message_updates.next()).await;
-    //     message
-    //         .edit(&ctx, serenity::EditMessage::new().suppress_embeds(true))
-    //         .await?;
-    // }
-
     if !embeds.is_empty() {
         message
             .channel_id

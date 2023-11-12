@@ -18,6 +18,7 @@ pub enum PresenceChoice {
 }
 
 impl PresenceChoice {
+    #[must_use]
     fn make_activity(self, content: &str) -> serenity::ActivityData {
         match self {
             Self::Custom => serenity::ActivityData::custom(content),
@@ -59,6 +60,7 @@ struct PresenceData {
 }
 
 impl PresenceData {
+    #[must_use]
     fn make_activity(&self) -> serenity::ActivityData {
         self.type_.make_activity(&self.content)
     }
