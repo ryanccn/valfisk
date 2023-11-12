@@ -55,8 +55,7 @@ pub async fn translate(ctx: Context<'_>, message: serenity::Message) -> Result<(
         .sentences
         .into_iter()
         .filter_map(|s| s.trans)
-        .collect::<Vec<String>>()
-        .join("");
+        .collect::<String>();
 
     ctx.send(
         CreateReply::new().embed(

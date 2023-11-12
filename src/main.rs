@@ -1,3 +1,11 @@
+#![warn(clippy::all, clippy::pedantic)]
+#![allow(
+    clippy::unreadable_literal,
+    clippy::module_name_repetitions,
+    clippy::unused_async
+)]
+#![deny(unsafe_code)]
+
 use anyhow::{Context as AnyhowContext, Error, Result};
 use owo_colors::OwoColorize;
 
@@ -19,7 +27,6 @@ mod presence_api;
 mod reqwest_client;
 mod utils;
 
-#[deny(unsafe_code)]
 #[tokio::main]
 async fn main() -> Result<()> {
     #[cfg(debug_assertions)]

@@ -28,38 +28,42 @@ pub async fn shiggy(
 
     let resp = crate::reqwest_client::HTTP.get(url).send().await?;
 
-    if resp.status().is_success() {
-        let data: SafebooruResponse = resp.json().await?;
-        if !raw {
-            ctx.send(
-                CreateReply::new().embed(
-                    serenity::CreateEmbed::new()
-                        .title(data.id.to_string())
-                        .field("Tags", data.tag_string.replace('_', "\\_"), false)
-                        .field("Source", data.source, false)
-                        .url(format!("https://safebooru.donmai.us/posts/{}", data.id))
-                        .image(data.file_url)
-                        .color(0xfef9c3),
-                ),
-            )
-            .await?;
-        } else {
-            ctx.say(data.file_url).await?;
-        }
-    } else {
-        let mut embed = serenity::CreateEmbed::new()
-            .title("Could not fetch shiggy!")
-            .description("An error occurred while fetching from the API.")
-            .color(0xef4444);
+    match resp.error_for_status() {
+        Ok(resp) => {
+            let data: SafebooruResponse = resp.json().await?;
 
-        if let Err(err) = resp.error_for_status_ref().map_err(anyhow::Error::from) {
+            if raw {
+                ctx.say(data.file_url).await?;
+            } else {
+                ctx.send(
+                    CreateReply::new().embed(
+                        serenity::CreateEmbed::new()
+                            .title(data.id.to_string())
+                            .field("Tags", data.tag_string.replace('_', "\\_"), false)
+                            .field("Source", data.source, false)
+                            .url(format!("https://safebooru.donmai.us/posts/{}", data.id))
+                            .image(data.file_url)
+                            .color(0xfef9c3),
+                    ),
+                )
+                .await?;
+            }
+        }
+
+        Err(err) => {
+            let err = anyhow::Error::from(err);
             let valfisk_err = ValfiskError::new(&err, &ctx);
             valfisk_err.handle_log();
             valfisk_err.handle_report().await;
-            embed = embed.footer(serenity::CreateEmbedFooter::new(valfisk_err.error_id))
-        };
 
-        ctx.send(CreateReply::new().embed(embed)).await?;
+            let embed = serenity::CreateEmbed::new()
+                .title("Could not fetch shiggy!")
+                .description("An error occurred while fetching from the API.")
+                .color(0xef4444)
+                .footer(serenity::CreateEmbedFooter::new(valfisk_err.error_id));
+
+            ctx.send(CreateReply::new().embed(embed)).await?;
+        }
     }
 
     Ok(())

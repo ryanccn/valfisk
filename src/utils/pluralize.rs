@@ -10,11 +10,11 @@ pub trait Pluralize {
 
 impl Pluralize for String {
     fn pluralize<T: Integer>(&self, count: T) -> String {
-        self.pluralize_alternate(count, &(self.to_owned() + "s"))
+        self.pluralize_alternate(count, &(self.clone() + "s"))
     }
     fn pluralize_alternate<T: Integer>(&self, count: T, alternate: &str) -> String {
         if count.is_one() {
-            self.to_owned()
+            self.clone()
         } else {
             alternate.to_owned()
         }

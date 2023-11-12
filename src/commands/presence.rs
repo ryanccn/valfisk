@@ -18,7 +18,7 @@ pub enum PresenceChoice {
 }
 
 impl PresenceChoice {
-    fn make_activity(&self, content: &str) -> serenity::ActivityData {
+    fn make_activity(self, content: &str) -> serenity::ActivityData {
         match self {
             Self::Custom => serenity::ActivityData::custom(content),
             Self::Playing => serenity::ActivityData::playing(content),

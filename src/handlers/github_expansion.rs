@@ -37,7 +37,7 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
             .text()
             .await?
             .split('\n')
-            .map(|s| s.to_owned())
+            .map(std::borrow::ToOwned::to_owned)
             .collect();
 
         let idx_start = start - 1;

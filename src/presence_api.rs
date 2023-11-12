@@ -56,9 +56,10 @@ async fn route_get_presence(path: web::Path<(u64,)>) -> Result<impl Responder, A
 }
 
 pub async fn serve() -> anyhow::Result<()> {
-    let host = std::env::var("HOST").unwrap_or(match cfg!(debug_assertions) {
-        true => "127.0.0.1".to_owned(),
-        false => "0.0.0.0".to_owned(),
+    let host = std::env::var("HOST").unwrap_or(if cfg!(debug_assertions) {
+        "127.0.0.1".to_owned()
+    } else {
+        "0.0.0.0".to_owned()
     });
     let port = std::env::var("PORT").map_or(Ok(8080), |v| v.parse::<u16>())?;
 
