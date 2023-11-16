@@ -24,7 +24,7 @@ jobs:
         uses: DeterminateSystems/magic-nix-cache-action@v2
 
       - name: Build valfisk
-        run: nix build -L --accept-flake-config --fallback
+        run: nix build -L --fallback
 
   check:
     runs-on: ubuntu-latest
@@ -39,4 +39,4 @@ jobs:
         uses: DeterminateSystems/magic-nix-cache-action@v2
 
       - name: Run checks
-        run: nix flake check -L --accept-flake-config --show-trace
+        run: nix flake check -L --show-trace
