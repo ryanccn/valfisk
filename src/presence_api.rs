@@ -60,7 +60,7 @@ pub async fn serve() -> anyhow::Result<()> {
     let default_host = "127.0.0.1";
     #[cfg(not(debug_assertions))]
     let default_host = "0.0.0.0";
-    let host = std::env::var("HOST").unwrap_or(default_host.to_owned());
+    let host = std::env::var("HOST").unwrap_or_else(|_| default_host.to_owned());
     let port = std::env::var("PORT").map_or(Ok(8080), |v| v.parse::<u16>())?;
 
     println!(
@@ -81,7 +81,7 @@ pub async fn serve() -> anyhow::Result<()> {
             .add(("x-download-options", "noopen"))
             .add(("x-frame-options", "SAMEORIGIN"))
             .add(("x-permitted-cross-domain-policies", "none"))
-            .add(("x-xss-protection", "0"));
+            .add(("x-xss-protection", "1; mode=block"));
 
         App::new()
             .wrap(security_middleware)
