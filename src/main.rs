@@ -21,9 +21,9 @@ pub struct Data {
 }
 pub type Context<'a> = poise::Context<'a, Data, Error>;
 
+mod api;
 mod commands;
 mod handlers;
-mod presence_api;
 mod reqwest_client;
 mod utils;
 
@@ -50,11 +50,10 @@ async fn main() -> Result<()> {
                                 if new_data.guild_id.map(|g| g.to_string())
                                     == std::env::var("GUILD_ID").ok()
                                 {
-                                    let mut presence_store =
-                                        presence_api::PRESENCE_STORE.lock().unwrap();
+                                    let mut presence_store = api::PRESENCE_STORE.lock().unwrap();
                                     presence_store.insert(
                                         new_data.user.id,
-                                        presence_api::ValfiskPresenceData::from_presence(new_data),
+                                        api::ValfiskPresenceData::from_presence(new_data),
                                     );
                                 }
                             }
@@ -110,7 +109,7 @@ async fn main() -> Result<()> {
 
     tokio::select! {
         result = client.start() => { result.map_err(anyhow::Error::from) },
-        result = presence_api::serve() => { result },
+        result = api::serve() => { result },
         _ = tokio::signal::ctrl_c() => {
             println!("{} with SIGINT, exiting", "Interrupted".magenta());
             std::process::exit(130);
