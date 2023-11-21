@@ -19,6 +19,7 @@ struct GoogleTranslateResponse {
 /// Translates a message
 #[poise::command(context_menu_command = "Translate", guild_only)]
 pub async fn translate(ctx: Context<'_>, message: serenity::Message) -> Result<()> {
+    ctx.defer().await?;
     let serenity::Message { content, .. } = message;
 
     if content.is_empty() {
