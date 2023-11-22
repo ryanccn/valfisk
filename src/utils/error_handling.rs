@@ -64,12 +64,16 @@ impl ValfiskError<'_> {
     /// Log the error to the console.
     pub fn handle_log(&self) {
         eprintln!(
-            "{}\n  {} {}\n  {} {}\n{:#?}",
+            "{}\n  {} {}\n  {} {}\n  {} {}\n  {} {}\n{:#?}",
             format!("Encountered {}!", self.error_or_panic.type_string()).red(),
             "ID:".dimmed(),
             self.error_id,
             "Command:".dimmed(),
-            self.ctx.invoked_command_name(),
+            self.ctx.invocation_string(),
+            "Channel:".dimmed(),
+            self.ctx.channel_id().get(),
+            "User:".dimmed(),
+            self.ctx.author().id,
             self.error_or_panic
         );
     }
@@ -107,7 +111,7 @@ impl ValfiskError<'_> {
                 .color(0xef4444)
                 .field(
                     "Command",
-                    format!("`{}`", self.ctx.invoked_command_name()),
+                    format!("`{}`", self.ctx.invocation_string()),
                     false,
                 )
                 .field(
