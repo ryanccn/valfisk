@@ -20,9 +20,8 @@ struct GoogleTranslateResponse {
 #[poise::command(context_menu_command = "Translate", guild_only)]
 pub async fn translate(ctx: Context<'_>, message: serenity::Message) -> Result<()> {
     ctx.defer().await?;
-    let serenity::Message { content, .. } = message;
 
-    if content.is_empty() {
+    if message.content.is_empty() {
         ctx.send(
             CreateReply::new().embed(
                 serenity::CreateEmbed::new()
@@ -47,7 +46,7 @@ pub async fn translate(ctx: Context<'_>, message: serenity::Message) -> Result<(
         .append_pair("dt", "t")
         .append_pair("dj", "1")
         .append_pair("source", "input")
-        .append_pair("q", &content);
+        .append_pair("q", &message.content);
 
     let resp = crate::reqwest_client::HTTP.get(api_url).send().await?;
 
@@ -59,16 +58,20 @@ pub async fn translate(ctx: Context<'_>, message: serenity::Message) -> Result<(
         .collect::<String>();
 
     ctx.send(
-        CreateReply::new().embed(
-            serenity::CreateEmbed::new()
-                .title("Translation")
-                .description(&translation)
-                .color(0x34d399)
-                .footer(serenity::CreateEmbedFooter::new(format!(
-                    "{} → en",
-                    data.src
-                ))),
-        ),
+        CreateReply::new()
+            .embed(
+                serenity::CreateEmbed::new()
+                    .title("Translation")
+                    .description(&translation)
+                    .color(0x34d399)
+                    .footer(serenity::CreateEmbedFooter::new(format!(
+                        "{} → en",
+                        data.src
+                    ))),
+            )
+            .components(vec![serenity::CreateActionRow::Buttons(vec![
+                serenity::CreateButton::new_link(message.link()).label("Original message"),
+            ])]),
     )
     .await?;
 
