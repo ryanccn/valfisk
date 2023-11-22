@@ -75,11 +75,6 @@ pub async fn lighthouse(
             .color(0x74c0fc)
             .timestamp(serenity::Timestamp::now());
 
-        eprintln!(
-            "{:#?}",
-            data.lighthouse_result.categories.keys().collect::<Vec<_>>()
-        );
-
         for key in ["performance", "accessibility", "best-practices", "seo"] {
             if let Some(value) = data.lighthouse_result.categories.get(key) {
                 report_embed =
