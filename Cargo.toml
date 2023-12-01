@@ -19,7 +19,7 @@ num = "0.4.1"
 once_cell = "1.18.0"
 owo-colors = { version = "3.5.0", features = ["supports-colors"] }
 poise = { git = "https://github.com/serenity-rs/poise.git", branch = "serenity-next" }
-redis = { version = "0.23.3", features = ["tokio-comp", "tokio-rustls-comp"] }
+redis = { version = "0.23.4", features = ["tokio-comp", "tokio-rustls-comp"] }
 redis-macros = "0.2.1"
 regex = "1.10.2"
 reqwest = { version = "0.11.22", default-features = false, features = ["rustls-tls", "json", "brotli"] }
