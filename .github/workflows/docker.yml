@@ -10,14 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: [amd64, arm64v8]
+        arch: [x86_64, aarch64]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@v7
+        uses: DeterminateSystems/nix-installer-action@v8
 
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@v2
@@ -29,7 +29,7 @@ jobs:
           [ ! -L result ] && exit 1
           echo "path=$(realpath result)" >> "$GITHUB_OUTPUT"
 
-      - name: Upload images
+      - name: Upload image
         uses: actions/upload-artifact@v3
         with:
           name: container-${{ matrix.arch }}

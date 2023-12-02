@@ -9,30 +9,25 @@
   }: let
     crossPkgsFor = lib.fix (finalAttrs: {
       "x86_64-linux" = {
-        "amd64" = pkgs.pkgsStatic;
-        "arm64v8" = pkgs.pkgsCross.aarch64-multiplatform.pkgsStatic;
+        "x86_64" = pkgs.pkgsStatic;
+        "aarch64" = pkgs.pkgsCross.aarch64-multiplatform.pkgsStatic;
       };
 
       "aarch64-linux" = {
-        "amd64" = pkgs.pkgsCross.musl64;
-        "arm64v8" = pkgs.pkgsStatic;
+        "x86_64" = pkgs.pkgsCross.musl64;
+        "aarch64" = pkgs.pkgsStatic;
       };
 
       "x86_64-darwin" = {
-        "amd64" = pkgs.pkgsCross.musl64;
-        "arm64v8" = pkgs.pkgsCross.aarch64-multiplatform.pkgsStatic;
+        "x86_64" = pkgs.pkgsCross.musl64;
+        "aarch64" = pkgs.pkgsCross.aarch64-multiplatform.pkgsStatic;
       };
 
       "aarch64-darwin" = finalAttrs."x86_64-darwin";
     });
 
-    nativeArchFor = {
-      "amd64" = "x86_64";
-      "arm64v8" = "aarch64";
-    };
-
     valfiskFor = arch: let
-      target = "${nativeArchFor.${arch}}-unknown-linux-musl";
+      target = "${arch}-unknown-linux-musl";
       target' = builtins.replaceStrings ["-"] ["_"] target;
       targetUpper = lib.toUpper target';
 
@@ -76,8 +71,8 @@
       };
   in {
     legacyPackages = {
-      container-amd64 = containerFor "amd64";
-      container-arm64v8 = containerFor "arm64v8";
+      container-x86_64 = containerFor "x86_64";
+      container-aarch64 = containerFor "aarch64";
     };
   };
 }

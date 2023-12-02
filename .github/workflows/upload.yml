@@ -48,7 +48,7 @@ jobs:
           done
 
           docker manifest create ${{ env.TAG }} \
-            --amend ${{ env.TAG }}-amd64 \
-            --amend ${{ env.TAG }}-arm64v8
+            --amend ${{ env.TAG }}-x86_64 \
+            --amend ${{ env.TAG }}-aarch64
 
           docker manifest push ${{ env.TAG }}
