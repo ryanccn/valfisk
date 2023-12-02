@@ -9,3 +9,8 @@
 # IDEs
 .vscode/
 .idea/
+
+# nix stuff
+.direnv
+result*
+repl-result-out*
