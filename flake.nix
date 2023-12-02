@@ -9,11 +9,17 @@
     fenix.inputs.nixpkgs.follows = "nixpkgs";
     parts.url = "github:hercules-ci/flake-parts";
     parts.inputs.nixpkgs-lib.follows = "nixpkgs";
+    proc-flake.url = "github:srid/proc-flake";
+    flake-root.url = "github:srid/flake-root";
   };
 
   outputs = {parts, ...} @ inputs:
     parts.lib.mkFlake {inherit inputs;} {
-      imports = [./nix];
+      imports = [
+        inputs.proc-flake.flakeModule
+        inputs.flake-root.flakeModule
+        ./nix
+      ];
 
       systems = [
         "x86_64-linux"
