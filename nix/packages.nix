@@ -16,8 +16,6 @@
           Security
           SystemConfiguration
           ;
-
-        inherit (pkgs.darwin) IOKit;
       };
 
       default = config.packages.valfisk;

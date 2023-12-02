@@ -5,7 +5,6 @@
   CoreFoundation,
   Security,
   SystemConfiguration,
-  IOKit,
   optimizeSize ? false,
 }:
 naersk.buildPackage {
@@ -15,7 +14,6 @@ naersk.buildPackage {
     CoreFoundation
     Security
     SystemConfiguration
-    IOKit
   ];
 
   RUSTFLAGS = lib.optionalString optimizeSize " -C codegen-units=1 -C strip=symbols -C opt-level=z";
