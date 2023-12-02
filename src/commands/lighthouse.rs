@@ -89,8 +89,8 @@ pub async fn lighthouse(
         ctx.send(
             CreateReply::new().embed(
                 serenity::CreateEmbed::new()
-                    .title(r#"PageSpeed API key not provided!"#)
-                    .description(r#"The `PAGESPEED_API_KEY` environment variable is required to be set to use this command."#),
+                    .title(r"PageSpeed API key not provided!")
+                    .description(r"The `PAGESPEED_API_KEY` environment variable is required to be set to use this command."),
             ),
         )
         .await?;

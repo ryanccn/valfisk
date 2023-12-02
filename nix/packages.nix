@@ -1,4 +1,8 @@
-{inputs, ...}: {
+{
+  self,
+  inputs,
+  ...
+}: {
   perSystem = {
     lib,
     pkgs,
@@ -8,6 +12,7 @@
   }: {
     packages = {
       valfisk = pkgs.callPackage ./derivation.nix {
+        inherit self;
         naersk = inputs.naersk.lib.${system};
 
         inherit

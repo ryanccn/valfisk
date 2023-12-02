@@ -9,6 +9,7 @@ mod say;
 mod self_timeout;
 mod shiggy;
 mod translate;
+mod version;
 
 pub use presence::restore as restore_presence;
 
@@ -28,5 +29,6 @@ pub fn to_vec() -> Vec<
         self_timeout::self_timeout(),
         shiggy::shiggy(),
         translate::translate(),
+        version::version(),
     ]
 }

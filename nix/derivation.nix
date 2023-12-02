@@ -1,4 +1,5 @@
 {
+  self,
   naersk,
   stdenv,
   lib,
@@ -17,6 +18,9 @@ naersk.buildPackage {
   ];
 
   RUSTFLAGS = lib.optionalString optimizeSize " -C codegen-units=1 -C strip=symbols -C opt-level=z";
+
+  METADATA_LAST_MODIFIED = self.lastModified;
+  METADATA_GIT_REV = self.dirtyRev or self.rev;
 
   meta = with lib; {
     mainProgram = "valfisk";
