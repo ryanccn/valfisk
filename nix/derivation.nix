@@ -3,6 +3,7 @@
   naersk,
   stdenv,
   lib,
+  libiconv,
   CoreFoundation,
   Security,
   SystemConfiguration,
@@ -12,6 +13,7 @@ naersk.buildPackage {
   src = lib.cleanSource ./..;
 
   nativeBuildInputs = lib.optionals stdenv.hostPlatform.isDarwin [
+    libiconv
     CoreFoundation
     Security
     SystemConfiguration

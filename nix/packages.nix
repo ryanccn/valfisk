@@ -15,6 +15,8 @@
         inherit self;
         naersk = inputs.naersk.lib.${system};
 
+        inherit (pkgs) libiconv;
+
         inherit
           (pkgs.darwin.apple_sdk.frameworks)
           CoreFoundation
