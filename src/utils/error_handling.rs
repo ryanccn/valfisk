@@ -6,17 +6,18 @@ use poise::{
 };
 
 use crate::Context;
+use log::error;
 
-/// A wrapper type that encapsulates errors ([`anyhow::Error`]) or panic strings ([`Option<String>`]).
+/// A wrapper type that encapsulates errors ([`color_eyre::eyre::Error`]) or panic strings ([`Option<String>`]).
 pub enum ErrorOrPanic<'a> {
-    /// A reference to an error, [`anyhow::Error`]
-    Error(&'a anyhow::Error),
+    /// A reference to an error, [`color_eyre::eyre::Error`]
+    Error(&'a color_eyre::eyre::Error),
     /// A reference to a panic string, [`Option<String>`]
     Panic(&'a Option<String>),
 }
 
-impl<'a> From<&'a anyhow::Error> for ErrorOrPanic<'a> {
-    fn from(val: &'a anyhow::Error) -> Self {
+impl<'a> From<&'a color_eyre::eyre::Error> for ErrorOrPanic<'a> {
+    fn from(val: &'a color_eyre::eyre::Error) -> Self {
         ErrorOrPanic::Error(val)
     }
 }
@@ -63,8 +64,8 @@ impl ValfiskError<'_> {
 
     /// Log the error to the console.
     pub fn handle_log(&self) {
-        eprintln!(
-            "{}\n  {} {}\n  {} {}\n  {} {}\n  {} {}\n{:#?}",
+        error!(
+            "{}\n{} {}\n{} {}\n{} {}\n{} {}\n{:#?}",
             format!("Encountered {}!", self.error_or_panic.type_string()).red(),
             "ID:".dimmed(),
             self.error_id,
@@ -98,8 +99,10 @@ impl ValfiskError<'_> {
     /// Report the error to a channel defined through the environment variable `ERROR_LOGS_CHANNEL`.
     pub async fn handle_report(&self) {
         if let Ok(channel_id) = match std::env::var("ERROR_LOGS_CHANNEL") {
-            Ok(channel_id_str) => channel_id_str.parse::<u64>().map_err(anyhow::Error::from),
-            Err(err) => Err(anyhow::Error::from(err)),
+            Ok(channel_id_str) => channel_id_str
+                .parse::<u64>()
+                .map_err(color_eyre::eyre::Error::from),
+            Err(err) => Err(color_eyre::eyre::Error::from(err)),
         } {
             let channel = ChannelId::new(channel_id);
 

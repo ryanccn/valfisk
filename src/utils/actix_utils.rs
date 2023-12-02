@@ -1,7 +1,7 @@
 use actix_web::{body::BoxBody, http::StatusCode, HttpResponse};
 use serde_json::json;
 
-pub struct ActixError(anyhow::Error);
+pub struct ActixError(color_eyre::eyre::Error);
 
 impl std::fmt::Debug for ActixError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -28,7 +28,7 @@ impl actix_web::ResponseError for ActixError {
 
 impl<E> From<E> for ActixError
 where
-    E: Into<anyhow::Error>,
+    E: Into<color_eyre::eyre::Error>,
 {
     fn from(err: E) -> Self {
         Self(err.into())

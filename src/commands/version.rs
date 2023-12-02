@@ -1,6 +1,6 @@
 use std::env::consts::{ARCH, OS};
 
-use anyhow::Result;
+use color_eyre::eyre::Result;
 use poise::{serenity_prelude::CreateEmbed, CreateReply};
 
 use crate::Context;

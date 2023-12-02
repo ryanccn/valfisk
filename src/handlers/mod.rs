@@ -1,4 +1,4 @@
-use anyhow::Result;
+use color_eyre::eyre::Result;
 use poise::serenity_prelude as serenity;
 
 mod error_handling;

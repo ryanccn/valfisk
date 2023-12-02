@@ -3,7 +3,7 @@ use poise::serenity_prelude as serenity;
 use crate::reqwest_client;
 use regex::Regex;
 
-use anyhow::Result;
+use color_eyre::eyre::Result;
 use once_cell::sync::Lazy;
 
 static GITHUB: Lazy<Regex> = Lazy::new(|| {

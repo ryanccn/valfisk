@@ -10,10 +10,12 @@ publish = false
 
 [dependencies]
 actix-web = "4.4.0"
-anyhow = "1.0.75"
 chrono = "0.4.31"
+color-eyre = "0.6.2"
 dotenvy = "0.15.7"
+env_logger = "0.10.1"
 humantime = "2.1.0"
+log = "0.4.20"
 nanoid = "0.4.0"
 num = "0.4.1"
 once_cell = "1.18.0"

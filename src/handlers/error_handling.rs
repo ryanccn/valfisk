@@ -3,7 +3,7 @@ use poise::FrameworkError;
 
 use crate::{utils::error_handling::ValfiskError, Data};
 
-pub async fn handle_error(err: &FrameworkError<'_, Data, anyhow::Error>) {
+pub async fn handle_error(err: &FrameworkError<'_, Data, color_eyre::eyre::Error>) {
     match err {
         FrameworkError::Setup { error, .. } => {
             eprintln!(

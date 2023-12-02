@@ -1,4 +1,4 @@
-use anyhow::Result;
+use color_eyre::eyre::Result;
 use std::{collections::HashMap, env, time::Duration};
 
 use poise::{serenity_prelude as serenity, CreateReply};

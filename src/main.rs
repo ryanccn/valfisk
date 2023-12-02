@@ -6,8 +6,8 @@
 )]
 #![forbid(unsafe_code)]
 
-use anyhow::{Context as AnyhowContext, Error, Result};
-use owo_colors::OwoColorize;
+use color_eyre::eyre::{Context as EyreContext, Error, Result};
+use log::{error, info, warn};
 
 use poise::{
     serenity_prelude::{Client, FullEvent, GatewayIntents},
@@ -29,6 +29,13 @@ mod utils;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    if std::env::var("RUST_LOG").is_err() {
+        std::env::set_var("RUST_LOG", "valfisk,warn,error");
+    };
+
+    color_eyre::install()?;
+    env_logger::init();
+
     #[cfg(debug_assertions)]
     dotenvy::dotenv().ok();
 
@@ -73,18 +80,13 @@ async fn main() -> Result<()> {
             },
             |ctx, ready, framework| {
                 Box::pin(async move {
-                    println!(
-                        "{} to Discord as {}",
-                        "Connected".green(),
-                        ready.user.tag().cyan()
-                    );
+                    info!("Connected to Discord as {}", ready.user.tag());
 
                     let commands = &framework.options().commands;
 
                     poise::builtins::register_globally(&ctx, commands).await?;
-                    println!(
-                        "{} {} {}",
-                        "Registered".blue(),
+                    info!(
+                        "Registered {} {}",
                         commands.len(),
                         "command".pluralize(commands.len())
                     );
@@ -93,7 +95,7 @@ async fn main() -> Result<()> {
                         let client = redis::Client::open(redis_url)?;
 
                         if let Err(err) = commands::restore_presence(ctx, &client).await {
-                            eprintln!("{err}");
+                            error!("{err}");
                         };
 
                         Ok(Data {
@@ -108,10 +110,10 @@ async fn main() -> Result<()> {
         .await?;
 
     tokio::select! {
-        result = client.start() => { result.map_err(anyhow::Error::from) },
+        result = client.start() => { result.map_err(color_eyre::eyre::Error::from) },
         result = api::serve() => { result },
         _ = tokio::signal::ctrl_c() => {
-            println!("{} with SIGINT, exiting", "Interrupted".magenta());
+            warn!("Interrupted with SIGINT, exiting");
             std::process::exit(130);
         },
     }

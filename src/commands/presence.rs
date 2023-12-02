@@ -4,8 +4,8 @@ use poise::{serenity_prelude as serenity, CreateReply};
 use redis::AsyncCommands;
 use redis_macros::{FromRedisValue, ToRedisArgs};
 
-use anyhow::Result;
-use owo_colors::OwoColorize;
+use color_eyre::eyre::Result;
+use log::info;
 
 #[derive(poise::ChoiceParameter, serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
 #[serde(rename_all = "lowercase")]
@@ -114,7 +114,7 @@ pub async fn restore(ctx: &serenity::Context, redis_client: &redis::Client) -> R
 
     if let Some(data) = data {
         ctx.set_presence(Some(data.make_activity()), serenity::OnlineStatus::Online);
-        println!("{} presence from Redis", "Restored".cyan());
+        info!("Restored presence from Redis");
     }
 
     Ok(())

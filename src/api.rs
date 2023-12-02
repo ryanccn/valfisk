@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 use crate::utils::actix_utils::ActixError;
-use owo_colors::OwoColorize;
+use log::info;
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ValfiskPresenceData {
@@ -55,7 +55,7 @@ async fn route_get_presence(path: web::Path<(u64,)>) -> Result<impl Responder, A
     }
 }
 
-pub async fn serve() -> anyhow::Result<()> {
+pub async fn serve() -> color_eyre::eyre::Result<()> {
     #[cfg(debug_assertions)]
     let default_host = "127.0.0.1";
     #[cfg(not(debug_assertions))]
@@ -63,11 +63,7 @@ pub async fn serve() -> anyhow::Result<()> {
     let host = std::env::var("HOST").unwrap_or_else(|_| default_host.to_owned());
     let port = std::env::var("PORT").map_or(Ok(8080), |v| v.parse::<u16>())?;
 
-    println!(
-        "{} API server {}",
-        "Started".green(),
-        format!("http://{host}:{port}").dimmed()
-    );
+    info!("Started API server {}", format!("http://{host}:{port}"));
 
     HttpServer::new(|| {
         let security_middleware = middleware::DefaultHeaders::new()
