@@ -67,7 +67,7 @@
 
     containerFor = arch:
       pkgs.dockerTools.buildImage {
-        name = "ryanccn/valfisk";
+        name = "valfisk";
         tag = "latest-${arch}";
         copyToRoot = [pkgs.dockerTools.caCertificates];
         config.Cmd = [(valfiskFor arch)];

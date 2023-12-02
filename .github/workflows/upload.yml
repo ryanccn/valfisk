@@ -16,7 +16,7 @@ jobs:
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: ${{ github.repository }}
-    
+
     permissions:
       packages: write
 
@@ -43,7 +43,7 @@ jobs:
           architectures=("x86_64" "aarch64")
           for arch in "${architectures[@]}"; do
             docker load < images/container-"$arch"/*.tar.gz
-            docker tag ${{ env.IMAGE_NAME }}:latest-"$arch" ${{ env.TAG }}-"$arch"
+            docker tag valfisk:latest-"$arch" ${{ env.TAG }}-"$arch"
             docker push ${{ env.TAG }}-"$arch"
           done
 
