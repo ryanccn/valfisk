@@ -1,9 +1,13 @@
-use poise::serenity_prelude as serenity;
+use std::time::Duration;
+
+use poise::serenity_prelude::{self as serenity, futures::StreamExt, EditMessage, Event};
+use tokio::time::timeout;
 
 use crate::reqwest_client;
 use regex::Regex;
 
 use color_eyre::eyre::Result;
+use log::debug;
 use once_cell::sync::Lazy;
 
 static GITHUB: Lazy<Regex> = Lazy::new(|| {
@@ -11,13 +15,17 @@ static GITHUB: Lazy<Regex> = Lazy::new(|| {
 });
 
 pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Result<()> {
-    let message = message.clone();
     let mut embeds: Vec<serenity::CreateEmbed> = vec![];
 
     for captures in GITHUB.captures_iter(&message.content) {
-        let repo = captures["repo"].to_owned();
-        let ref_ = captures["ref"].to_owned();
-        let file = captures["file"].to_owned();
+        debug!(
+            "Handling GitHub link {} on message {}",
+            &captures[0], message.id
+        );
+
+        let repo = &captures["repo"];
+        let ref_ = &captures["ref"];
+        let file = &captures["file"];
 
         let language = file.split('.').last().unwrap_or("").to_owned();
 
@@ -59,6 +67,24 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
     }
 
     if !embeds.is_empty() {
+        let msg_id = message.id;
+
+        let mut message_updates = serenity::collector::collect(&ctx.shard, move |ev| match ev {
+            Event::MessageUpdate(x) if x.id == msg_id => Some(()),
+            _ => None,
+        });
+
+        let _ = timeout(Duration::from_millis(2000), message_updates.next()).await;
+
+        ctx.http
+            .edit_message(
+                message.channel_id,
+                message.id,
+                &EditMessage::new().suppress_embeds(true),
+                vec![],
+            )
+            .await?;
+
         message
             .channel_id
             .send_message(
@@ -66,7 +92,7 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
                 serenity::CreateMessage::new()
                     .embeds(embeds)
                     .allowed_mentions(serenity::CreateAllowedMentions::new().replied_user(false))
-                    .reference_message(&message),
+                    .reference_message(message),
             )
             .await?;
     };
