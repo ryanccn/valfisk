@@ -1,4 +1,5 @@
-use owo_colors::OwoColorize;
+use log::error;
+
 use poise::FrameworkError;
 
 use crate::{utils::error_handling::ValfiskError, Data};
@@ -6,19 +7,11 @@ use crate::{utils::error_handling::ValfiskError, Data};
 pub async fn handle_error(err: &FrameworkError<'_, Data, color_eyre::eyre::Error>) {
     match err {
         FrameworkError::Setup { error, .. } => {
-            eprintln!(
-                "{} setting up client:\n{:#?}",
-                "Encountered error".red(),
-                error
-            );
+            error!("{}", error);
         }
 
         FrameworkError::EventHandler { error, .. } => {
-            eprintln!(
-                "{} handling event!\n{:#?}",
-                "Encountered error".red(),
-                error
-            );
+            error!("{}", error);
         }
 
         FrameworkError::Command { error, ctx, .. } => {
