@@ -11,7 +11,7 @@ use log::debug;
 use once_cell::sync::Lazy;
 
 static GITHUB: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"https?://github\.com/(?P<repo>[\w-]+/[\w.-]+)/blob/(?P<ref>.+?)/(?P<file>.*)#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
+    Regex::new(r"https?://github\.com/(?P<repo>[\w-]+/[\w.-]+)/blob/(?P<ref>\S+?)/(?P<file>\S+)#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
 });
 
 pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Result<()> {
@@ -27,7 +27,7 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
         let ref_ = &captures["ref"];
         let file = &captures["file"];
 
-        let language = file.split('.').last().unwrap_or("").to_owned();
+        let language = file.split('.').last().unwrap_or("");
 
         let start = captures["start"].parse::<usize>()?;
         let end = captures
@@ -57,7 +57,7 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
             .title(repo)
             .field(
                 file,
-                "```".to_owned() + &language + "\n" + &selected_lines.join("\n") + "\n```",
+                "```".to_owned() + language + "\n" + &selected_lines.join("\n") + "\n```",
                 true,
             )
             .footer(serenity::CreateEmbedFooter::new(ref_))
