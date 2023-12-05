@@ -37,7 +37,14 @@ async fn main() -> Result<()> {
     env_logger::init();
 
     #[cfg(debug_assertions)]
-    dotenvy::dotenv().ok();
+    {
+        if let Ok(dotenv_path) = dotenvy::dotenv() {
+            warn!(
+                "Loaded environment variables from {}",
+                dotenv_path.to_string_lossy()
+            );
+        }
+    }
 
     let token = std::env::var("DISCORD_TOKEN")
         .context("Could not obtain DISCORD_TOKEN from environment!")?;
