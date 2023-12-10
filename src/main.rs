@@ -116,9 +116,11 @@ async fn main() -> Result<()> {
         ))
         .await?;
 
+    let client_http_2 = client.http.clone();
+
     tokio::select! {
         result = client.start() => { result.map_err(color_eyre::eyre::Error::from) },
-        result = api::serve() => { result },
+        result = api::serve(client_http_2) => { result },
         _ = tokio::signal::ctrl_c() => {
             warn!("Interrupted with SIGINT, exiting");
             std::process::exit(130);

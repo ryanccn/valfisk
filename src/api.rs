@@ -1,11 +1,11 @@
-use poise::serenity_prelude as serenity;
+use poise::serenity_prelude::{self as serenity, CreateEmbed, CreateMessage};
 
-use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{get, middleware, post, web, App, HttpResponse, HttpServer, Responder};
 use serde_json::json;
 
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use crate::utils::actix_utils::ActixError;
 use log::info;
@@ -55,7 +55,75 @@ async fn route_get_presence(path: web::Path<(u64,)>) -> Result<impl Responder, A
     }
 }
 
-pub async fn serve() -> color_eyre::eyre::Result<()> {
+#[derive(serde::Deserialize)]
+struct KofiFormData {
+    data: String,
+}
+
+#[derive(serde::Deserialize)]
+#[allow(dead_code)]
+struct KofiData {
+    verification_token: String,
+    r#type: String,
+    is_public: bool,
+    from_name: String,
+    message: Option<String>,
+    amount: String,
+    currency: String,
+    timestamp: serenity::Timestamp,
+}
+
+#[post("/ko-fi")]
+async fn route_kofi_webhook(
+    app_data: web::Data<AppState>,
+    form: web::Form<KofiFormData>,
+) -> Result<impl Responder, ActixError> {
+    let data: KofiData = serde_json::from_str(&form.0.data)?;
+    let verification_token = std::env::var("KOFI_VERIFICATION_TOKEN")?;
+
+    if data.verification_token != verification_token {
+        return Ok(HttpResponse::Unauthorized().json(json!({ "error": "unauthorized" })));
+    }
+
+    if data.is_public {
+        if let Some(channel) = std::env::var("KOFI_NOTIFY_CHANNEL")
+            .ok()
+            .and_then(|c| c.parse::<u64>().ok())
+            .map(serenity::ChannelId::new)
+        {
+            let mut embed = CreateEmbed::new()
+                .title(format!("Thank you to {}!", data.from_name))
+                .description(format!(
+                    "For donating **{} {}** 🥳",
+                    data.amount, data.currency
+                ))
+                .timestamp(data.timestamp)
+                .color(0xfcd34d);
+
+            if let Some(message) = data.message {
+                embed = embed.field("Message", message, false);
+            }
+
+            channel
+                .send_message(&app_data.into_inner(), CreateMessage::new().embed(embed))
+                .await?;
+        }
+    }
+
+    Ok(HttpResponse::Ok().json(json!({ "ok": true })))
+}
+
+struct AppState {
+    serenity_http: Arc<serenity::Http>,
+}
+
+impl poise::serenity_prelude::CacheHttp for AppState {
+    fn http(&self) -> &serenity::Http {
+        &self.serenity_http
+    }
+}
+
+pub async fn serve(serenity_http: Arc<serenity::Http>) -> color_eyre::eyre::Result<()> {
     #[cfg(debug_assertions)]
     let default_host = "127.0.0.1";
     #[cfg(not(debug_assertions))]
@@ -63,9 +131,11 @@ pub async fn serve() -> color_eyre::eyre::Result<()> {
     let host = std::env::var("HOST").unwrap_or_else(|_| default_host.to_owned());
     let port = std::env::var("PORT").map_or(Ok(8080), |v| v.parse::<u16>())?;
 
+    let app_state = web::Data::new(AppState { serenity_http });
+
     info!("Started API server {}", format!("http://{host}:{port}"));
 
-    HttpServer::new(|| {
+    HttpServer::new(move || {
         let security_middleware = middleware::DefaultHeaders::new()
             .add(("access-control-allow-origin", "*"))
             .add(("cross-origin-opener-policy", "same-origin"))
@@ -81,8 +151,10 @@ pub async fn serve() -> color_eyre::eyre::Result<()> {
 
         App::new()
             .wrap(security_middleware)
+            .app_data(app_state.clone())
             .service(route_ping)
             .service(route_get_presence)
+            .service(route_kofi_webhook)
     })
     .bind((host, port))?
     .run()
