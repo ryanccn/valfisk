@@ -90,8 +90,8 @@ pub async fn presence(
     );
 
     ctx.send(
-        CreateReply::new().embed(
-            serenity::CreateEmbed::new()
+        CreateReply::default().embed(
+            serenity::CreateEmbed::default()
                 .title("Presence set!")
                 .field("Type", presence_data.type_.to_string(), false)
                 .field("Content", &presence_data.content, false)

@@ -83,8 +83,8 @@ impl ValfiskError<'_> {
     pub async fn handle_reply(&self) {
         self.ctx
             .send(
-                CreateReply::new().embed(
-                    CreateEmbed::new()
+                CreateReply::default().embed(
+                    CreateEmbed::default()
                         .title("An error occurred!")
                         .description("Hmm. I wonder what happened there?")
                         .footer(CreateEmbedFooter::new(&self.error_id))
@@ -106,7 +106,7 @@ impl ValfiskError<'_> {
         } {
             let channel = ChannelId::new(channel_id);
 
-            let embed = CreateEmbed::new()
+            let embed = CreateEmbed::default()
                 .title("An error occurred!")
                 .description(format!("```\n{:#?}\n```", self.error_or_panic))
                 .footer(CreateEmbedFooter::new(&self.error_id))
@@ -125,7 +125,7 @@ impl ValfiskError<'_> {
                 .field("User", format!("<@{}>", self.ctx.author().id.get()), false);
 
             channel
-                .send_message(&self.ctx, CreateMessage::new().embed(embed))
+                .send_message(&self.ctx, CreateMessage::default().embed(embed))
                 .await
                 .ok();
         }

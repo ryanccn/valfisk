@@ -24,7 +24,7 @@ pub async fn pomelo(ctx: Context<'_>) -> Result<()> {
             };
         }
 
-        let embed = serenity::CreateEmbed::new()
+        let embed = serenity::CreateEmbed::default()
             .title("Username migration / Pomelo")
             .description(format!(
                 "**{}/{}** migrated",
@@ -46,7 +46,7 @@ pub async fn pomelo(ctx: Context<'_>) -> Result<()> {
                 false,
             );
 
-        ctx.send(CreateReply::new().embed(embed)).await?;
+        ctx.send(CreateReply::default().embed(embed)).await?;
     } else {
         ctx.say("Guild unavailable").await?;
     }

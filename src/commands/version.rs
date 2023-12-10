@@ -29,8 +29,8 @@ pub async fn version(ctx: Context<'_>) -> Result<()> {
     };
 
     ctx.send(
-        CreateReply::new().embed(
-            CreateEmbed::new()
+        CreateReply::default().embed(
+            CreateEmbed::default()
                 .title(format!("Valfisk{version_suffix}"))
                 .field("Runtime OS", OS, true)
                 .field("Runtime architecture", ARCH, true)

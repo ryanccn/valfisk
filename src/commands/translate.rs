@@ -23,8 +23,8 @@ pub async fn translate(ctx: Context<'_>, message: serenity::Message) -> Result<(
 
     if message.content.is_empty() {
         ctx.send(
-            CreateReply::new().embed(
-                serenity::CreateEmbed::new()
+            CreateReply::default().embed(
+                serenity::CreateEmbed::default()
                     .title("Translation unavailable")
                     .description("There is no content to translate")
                     .color(0xfacc15),
@@ -58,9 +58,9 @@ pub async fn translate(ctx: Context<'_>, message: serenity::Message) -> Result<(
         .collect::<String>();
 
     ctx.send(
-        CreateReply::new()
+        CreateReply::default()
             .embed(
-                serenity::CreateEmbed::new()
+                serenity::CreateEmbed::default()
                     .title("Translation")
                     .description(&translation)
                     .color(0x34d399)

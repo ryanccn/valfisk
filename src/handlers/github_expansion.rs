@@ -53,7 +53,7 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
 
         let selected_lines = &lines[idx_start..idx_end];
 
-        let embed = serenity::CreateEmbed::new()
+        let embed = serenity::CreateEmbed::default()
             .title(repo)
             .field(
                 file,
@@ -89,9 +89,11 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
             .channel_id
             .send_message(
                 &ctx,
-                serenity::CreateMessage::new()
+                serenity::CreateMessage::default()
                     .embeds(embeds)
-                    .allowed_mentions(serenity::CreateAllowedMentions::new().replied_user(false))
+                    .allowed_mentions(
+                        serenity::CreateAllowedMentions::default().replied_user(false),
+                    )
                     .reference_message(message),
             )
             .await?;

@@ -23,8 +23,8 @@ pub async fn self_timeout(
                 .await?;
 
             ctx.send(
-                poise::CreateReply::new().embed(
-                    serenity::CreateEmbed::new()
+                poise::CreateReply::default().embed(
+                    serenity::CreateEmbed::default()
                         .title("Self-timeout in effect")
                         .field("Start", format!("<t:{0}:F>", start.timestamp()), false)
                         .field(

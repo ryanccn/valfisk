@@ -38,7 +38,7 @@ pub async fn lighthouse(
     if let Ok(pagespeed_token) = env::var("PAGESPEED_API_KEY") {
         let reply_handle = ctx
             .send(
-                CreateReply::new().embed(
+                CreateReply::default().embed(
                     serenity::CreateEmbed::new()
                         .title("Lighthouse audit in progress")
                         .description("This could take around a minute!")
@@ -83,11 +83,11 @@ pub async fn lighthouse(
         }
 
         reply_handle
-            .edit(ctx, CreateReply::new().embed(report_embed))
+            .edit(ctx, CreateReply::default().embed(report_embed))
             .await?;
     } else {
         ctx.send(
-            CreateReply::new().embed(
+            CreateReply::default().embed(
                 serenity::CreateEmbed::new()
                     .title(r"PageSpeed API key not provided!")
                     .description(r"The `PAGESPEED_API_KEY` environment variable is required to be set to use this command."),

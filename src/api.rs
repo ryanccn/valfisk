@@ -91,7 +91,7 @@ async fn route_kofi_webhook(
             .and_then(|c| c.parse::<u64>().ok())
             .map(serenity::ChannelId::new)
         {
-            let mut embed = CreateEmbed::new()
+            let mut embed = CreateEmbed::default()
                 .title(format!("Thank you to {}!", data.from_name))
                 .description(format!(
                     "For donating **{} {}** 🥳",
@@ -105,7 +105,10 @@ async fn route_kofi_webhook(
             }
 
             channel
-                .send_message(&app_data.into_inner(), CreateMessage::new().embed(embed))
+                .send_message(
+                    &app_data.into_inner(),
+                    CreateMessage::default().embed(embed),
+                )
                 .await?;
         }
     }

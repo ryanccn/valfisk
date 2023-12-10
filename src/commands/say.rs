@@ -14,7 +14,7 @@ pub async fn say(
     let channel = ctx.channel_id();
 
     channel
-        .send_message(&ctx, serenity::CreateMessage::new().content(content))
+        .send_message(&ctx, serenity::CreateMessage::default().content(content))
         .await?;
 
     ctx.say("Done!").await?;

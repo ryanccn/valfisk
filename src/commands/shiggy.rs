@@ -36,8 +36,8 @@ pub async fn shiggy(
                 ctx.say(data.file_url).await?;
             } else {
                 ctx.send(
-                    CreateReply::new().embed(
-                        serenity::CreateEmbed::new()
+                    CreateReply::default().embed(
+                        serenity::CreateEmbed::default()
                             .title(data.id.to_string())
                             .field("Tags", data.tag_string.replace('_', "\\_"), false)
                             .field("Source", data.source, false)
@@ -56,13 +56,13 @@ pub async fn shiggy(
             valfisk_err.handle_log();
             valfisk_err.handle_report().await;
 
-            let embed = serenity::CreateEmbed::new()
+            let embed = serenity::CreateEmbed::default()
                 .title("Could not fetch shiggy!")
                 .description("An error occurred while fetching from the API.")
                 .color(0xef4444)
                 .footer(serenity::CreateEmbedFooter::new(valfisk_err.error_id));
 
-            ctx.send(CreateReply::new().embed(embed)).await?;
+            ctx.send(CreateReply::default().embed(embed)).await?;
         }
     }
 

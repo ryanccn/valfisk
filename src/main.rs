@@ -53,10 +53,10 @@ async fn main() -> Result<()> {
         .framework(Framework::new(
             FrameworkOptions {
                 commands: commands::to_vec(),
-                event_handler: |ev, _, _| {
+                event_handler: |ctx, ev, _, _| {
                     Box::pin(async move {
                         match ev {
-                            FullEvent::Message { new_message, ctx } => {
+                            FullEvent::Message { new_message } => {
                                 handlers::handle_message(new_message, ctx).await?;
                             }
 
