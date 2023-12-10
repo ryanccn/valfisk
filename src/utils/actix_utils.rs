@@ -1,4 +1,5 @@
 use actix_web::{body::BoxBody, http::StatusCode, HttpResponse};
+use log::error;
 use serde_json::json;
 
 pub struct ActixError(color_eyre::eyre::Error);
@@ -17,6 +18,8 @@ impl std::fmt::Display for ActixError {
 
 impl actix_web::ResponseError for ActixError {
     fn error_response(&self) -> HttpResponse<BoxBody> {
+        error!("{}", self.0);
+
         HttpResponse::InternalServerError()
             .json(json!({ "error": "An internal server error occurred!" }))
     }
