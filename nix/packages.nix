@@ -4,16 +4,28 @@
   ...
 }: {
   perSystem = {
+    inputs',
     lib,
     pkgs,
     system,
     config,
     ...
-  }: {
+  }: let
+    toolchain = with inputs'.fenix.packages;
+      combine [
+        minimal.cargo
+        minimal.rustc
+        minimal.rust-std
+      ];
+
+    naersk = inputs.naersk.lib.${system}.override {
+      cargo = toolchain;
+      rustc = toolchain;
+    };
+  in {
     packages = {
       valfisk = pkgs.callPackage ./derivation.nix {
-        inherit self;
-        naersk = inputs.naersk.lib.${system};
+        inherit self naersk;
 
         inherit (pkgs) libiconv;
 
