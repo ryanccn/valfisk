@@ -1,4 +1,4 @@
-use poise::serenity_prelude::{self as serenity, CreateEmbed, CreateMessage};
+use poise::serenity_prelude as serenity;
 
 use actix_web::{get, middleware, post, web, App, HttpResponse, HttpServer, Responder};
 use serde_json::json;
@@ -23,7 +23,7 @@ impl ValfiskPresenceData {
         Self {
             status: presence.status,
             client_status: presence.client_status.clone(),
-            activities: presence.activities.clone(),
+            activities: presence.activities.to_vec(),
         }
     }
 }
@@ -91,7 +91,7 @@ async fn route_kofi_webhook(
             .and_then(|c| c.parse::<u64>().ok())
             .map(serenity::ChannelId::new)
         {
-            let mut embed = CreateEmbed::default()
+            let mut embed = serenity::CreateEmbed::default()
                 .title(format!("Thank you to {}!", data.from_name))
                 .description(format!(
                     "For donating **{} {}** 🥳",
@@ -107,7 +107,7 @@ async fn route_kofi_webhook(
             channel
                 .send_message(
                     &app_data.into_inner(),
-                    CreateMessage::default().embed(embed),
+                    serenity::CreateMessage::default().embed(embed),
                 )
                 .await?;
         }
