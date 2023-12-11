@@ -1405,7 +1405,7 @@ checksum = "26072860ba924cbfa98ea39c8c19b4dd6a4a25423dbdf219c1eca91aa0cf6964"
 [[package]]
 name = "poise"
 version = "0.6.0-rc1"
-source = "git+https://github.com/serenity-rs/poise.git?branch=serenity-next#e1d254b700d74a9248ce0c8608b89400a350ac8c"
+source = "git+https://github.com/serenity-rs/poise.git?branch=serenity-next#3689947a2c61c3c6f54e0ee0efb17c6ffd48297c"
 dependencies = [
  "async-trait",
  "derivative",
@@ -1421,7 +1421,7 @@ dependencies = [
 [[package]]
 name = "poise_macros"
 version = "0.6.0-rc1"
-source = "git+https://github.com/serenity-rs/poise.git?branch=serenity-next#e1d254b700d74a9248ce0c8608b89400a350ac8c"
+source = "git+https://github.com/serenity-rs/poise.git?branch=serenity-next#3689947a2c61c3c6f54e0ee0efb17c6ffd48297c"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -1854,7 +1854,7 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.12.0"
-source = "git+https://github.com/serenity-rs/serenity?branch=next#6981848992cb999a5fca4d6a96decad21f821bbf"
+source = "git+https://github.com/serenity-rs/serenity?branch=next#9da2a4422685ce152df79d40e8d4b27ea14bba31"
 dependencies = [
  "arrayvec",
  "async-trait",
@@ -1873,6 +1873,7 @@ dependencies = [
  "secrecy",
  "serde",
  "serde_json",
+ "small-fixed-array",
  "time",
  "tokio",
  "tokio-tungstenite",
@@ -1939,6 +1940,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f92a496fb766b417c996b9c5e57daf2f7ad3b0bebe1ccfca4856390e3d3bb67"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "small-fixed-array"
+version = "0.1.0"
+source = "git+https://github.com/GnomedDev/small-fixed-array#295791a491435a660a5a51164ab4215b605dd49c"
+dependencies = [
+ "serde",
+ "tracing",
 ]
 
 [[package]]
