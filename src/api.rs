@@ -5,7 +5,7 @@ use serde_json::json;
 
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
 use crate::utils::actix_utils::ActixError;
 use log::info;
@@ -28,8 +28,8 @@ impl ValfiskPresenceData {
     }
 }
 
-pub static PRESENCE_STORE: Lazy<Mutex<HashMap<serenity::UserId, ValfiskPresenceData>>> =
-    Lazy::new(|| Mutex::new(HashMap::new()));
+pub static PRESENCE_STORE: Lazy<RwLock<HashMap<serenity::UserId, ValfiskPresenceData>>> =
+    Lazy::new(|| RwLock::new(HashMap::new()));
 
 #[get("/")]
 async fn route_ping() -> Result<impl Responder, ActixError> {
@@ -45,7 +45,7 @@ async fn route_get_presence(path: web::Path<(u64,)>) -> Result<impl Responder, A
 
     let user_id = serenity::UserId::from(path.0);
 
-    let store = PRESENCE_STORE.lock().unwrap();
+    let store = PRESENCE_STORE.read().unwrap();
     let presence_data = store.get(&user_id).cloned();
     drop(store);
 

@@ -64,11 +64,12 @@ async fn main() -> Result<()> {
                                 if new_data.guild_id.map(|g| g.to_string())
                                     == std::env::var("GUILD_ID").ok()
                                 {
-                                    let mut presence_store = api::PRESENCE_STORE.lock().unwrap();
-                                    presence_store.insert(
+                                    let mut store = api::PRESENCE_STORE.write().unwrap();
+                                    store.insert(
                                         new_data.user.id,
                                         api::ValfiskPresenceData::from_presence(new_data),
                                     );
+                                    drop(store);
                                 }
                             }
 
