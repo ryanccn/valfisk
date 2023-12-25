@@ -9,7 +9,7 @@ license = "AGPL-3.0-only"
 publish = false
 
 [dependencies]
-actix-web = "4.4.0"
+actix-web = "4.4.1"
 chrono = "0.4.31"
 color-eyre = "0.6.2"
 dotenvy = "0.15.7"
