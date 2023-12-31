@@ -8,8 +8,6 @@
   Security,
   SystemConfiguration,
   optimizeSize ? false,
-  callPackage,
-  librusty_v8 ? callPackage ./librusty_v8.nix {},
 }:
 naersk.buildPackage {
   src = lib.cleanSource ./..;
@@ -25,8 +23,6 @@ naersk.buildPackage {
 
   METADATA_LAST_MODIFIED = self.lastModified;
   METADATA_GIT_REV = self.dirtyRev or self.rev;
-
-  RUSTY_V8_ARCHIVE = librusty_v8;
 
   meta = with lib; {
     mainProgram = "valfisk";
