@@ -28,6 +28,7 @@ reqwest = { version = "0.11.22", default-features = false, features = ["rustls-t
 serde = { version = "1.0.193", features = ["derive"] }
 serde_json = "1.0.108"
 tokio = { version = "1.35.0", features = ["full"] }
+v8 = "0.82.0"
 
 [profile.release]
 opt-level = "z"
