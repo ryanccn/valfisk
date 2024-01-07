@@ -23,11 +23,12 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
             &captures[0], message.id
         );
 
-        let repo = &captures["repo"];
-        let ref_ = &captures["ref"];
-        let file = &captures["file"];
+        let repo = captures["repo"].to_owned();
+        let ref_ = captures["ref"].to_owned();
+        let file = captures["file"].to_owned();
 
-        let language = file.split('.').last().unwrap_or("");
+        let file_for_language = file.clone();
+        let language = file_for_language.split('.').last().unwrap_or("");
 
         let start = captures["start"].parse::<usize>()?;
         let end = captures

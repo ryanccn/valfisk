@@ -19,7 +19,7 @@ pub async fn self_timeout(
 
             member
                 .to_mut()
-                .disable_communication_until_datetime(&ctx, end_serenity)
+                .disable_communication_until(&ctx, end_serenity)
                 .await?;
 
             ctx.send(
