@@ -55,12 +55,14 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
         let selected_lines = &lines[idx_start..idx_end];
 
         let embed = serenity::CreateEmbed::default()
-            .title(repo)
-            .field(
-                file,
-                "```".to_owned() + language + "\n" + &selected_lines.join("\n") + "\n```",
-                true,
-            )
+            .title(format!(
+                "{repo} {file} L{start}{}",
+                match end {
+                    Some(end) => format!("-{end}"),
+                    None => String::new(),
+                }
+            ))
+            .description("```".to_owned() + language + "\n" + &selected_lines.join("\n") + "\n```")
             .footer(serenity::CreateEmbedFooter::new(ref_))
             .timestamp(serenity::Timestamp::now());
 
