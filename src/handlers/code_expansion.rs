@@ -14,6 +14,9 @@ static GITHUB: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"https?://github\.com/(?P<repo>[\w-]+/[\w.-]+)/blob/(?P<ref>\S+?)/(?P<file>\S+)#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
 });
 
+static RUST_PLAYGROUND: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"https://play\.rust-lang\.org/\S*[?&]gist=(?P<gist>\w+)").unwrap());
+
 pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Result<()> {
     let mut embeds: Vec<serenity::CreateEmbed> = vec![];
 
@@ -65,6 +68,33 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
             .description("```".to_owned() + language + "\n" + &selected_lines.join("\n") + "\n```")
             .footer(serenity::CreateEmbedFooter::new(ref_))
             .timestamp(serenity::Timestamp::now());
+
+        embeds.push(embed);
+    }
+
+    for captures in RUST_PLAYGROUND.captures_iter(&message.content) {
+        debug!(
+            "Handling Rust Playground link {} on message {}",
+            &captures[0], message.id
+        );
+
+        let gist_id = captures["gist"].to_owned();
+
+        let gist = reqwest_client::HTTP
+            .get(format!(
+                "https://gist.githubusercontent.com/rust-play/{gist_id}/raw/playground.rs"
+            ))
+            .send()
+            .await?
+            .text()
+            .await?;
+
+        let embed = serenity::CreateEmbed::default()
+            .title("Rust Playground")
+            .description("```rust\n".to_owned() + &gist + "\n```")
+            .footer(serenity::CreateEmbedFooter::new(gist_id))
+            .timestamp(serenity::Timestamp::now())
+            .color(0xdea584);
 
         embeds.push(embed);
     }
