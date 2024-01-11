@@ -16,7 +16,7 @@ pub async fn pomelo(ctx: Context<'_>) -> Result<()> {
             .filter(|m| !m.user.bot())
             .collect();
 
-        let mut nonmigrated_users: Vec<&serenity::UserId> = vec![];
+        let mut nonmigrated_users: Vec<&serenity::UserId> = Vec::new();
 
         for member in &members {
             if member.user.discriminator.is_some() {

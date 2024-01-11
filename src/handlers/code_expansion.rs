@@ -18,7 +18,7 @@ static RUST_PLAYGROUND: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"https://play\.rust-lang\.org/\S*[?&]gist=(?P<gist>\w+)").unwrap());
 
 pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Result<()> {
-    let mut embeds: Vec<serenity::CreateEmbed> = vec![];
+    let mut embeds: Vec<serenity::CreateEmbed> = Vec::new();
 
     for captures in GITHUB.captures_iter(&message.content) {
         debug!(
@@ -114,7 +114,7 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
                 message.channel_id,
                 message.id,
                 &EditMessage::new().suppress_embeds(true),
-                vec![],
+                Vec::new(),
             )
             .await?;
 

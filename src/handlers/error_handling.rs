@@ -4,14 +4,14 @@ use poise::FrameworkError;
 
 use crate::{utils::error_handling::ValfiskError, Data};
 
-pub async fn handle_error(err: &FrameworkError<'_, Data, color_eyre::eyre::Error>) {
+pub async fn handle_error(err: &FrameworkError<'_, Data, color_eyre::eyre::Report>) {
     match err {
         FrameworkError::Setup { error, .. } => {
-            error!("{}", error);
+            error!("{:?}", error);
         }
 
         FrameworkError::EventHandler { error, .. } => {
-            error!("{}", error);
+            error!("{:?}", error);
         }
 
         FrameworkError::Command { error, ctx, .. } => {

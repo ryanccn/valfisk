@@ -19,14 +19,17 @@ use crate::utils::Pluralize;
 pub struct Data {
     pub redis: Option<redis::Client>,
 }
+
 pub type Context<'a> = poise::Context<'a, Data, Error>;
 
 mod api;
 mod commands;
 mod handlers;
 mod reqwest_client;
+mod starboard;
 mod utils;
 
+#[allow(clippy::too_many_lines)]
 #[tokio::main]
 async fn main() -> Result<()> {
     if std::env::var("RUST_LOG").is_err() {
@@ -53,11 +56,35 @@ async fn main() -> Result<()> {
         .framework(Framework::new(
             FrameworkOptions {
                 commands: commands::to_vec(),
-                event_handler: |ctx, ev, _, _| {
+                event_handler: |ctx, ev, _, data| {
                     Box::pin(async move {
                         match ev {
                             FullEvent::Message { new_message } => {
                                 handlers::handle_message(new_message, ctx).await?;
+                            }
+
+                            FullEvent::ReactionAdd { add_reaction } => {
+                                let message = add_reaction.message(&ctx).await?;
+                                starboard::handle(ctx, data, &message).await?;
+                            }
+
+                            FullEvent::ReactionRemove { removed_reaction } => {
+                                let message = removed_reaction.message(&ctx).await?;
+                                starboard::handle(ctx, data, &message).await?;
+                            }
+
+                            FullEvent::ReactionRemoveAll {
+                                removed_from_message_id,
+                                channel_id,
+                            } => {
+                                let message =
+                                    channel_id.message(&ctx, removed_from_message_id).await?;
+                                starboard::handle(ctx, data, &message).await?;
+                            }
+
+                            FullEvent::ReactionRemoveEmoji { removed_reactions } => {
+                                let message = removed_reactions.message(&ctx).await?;
+                                starboard::handle(ctx, data, &message).await?;
                             }
 
                             FullEvent::PresenceUpdate { new_data, .. } => {
