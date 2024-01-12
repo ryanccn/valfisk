@@ -8,6 +8,7 @@ mod presence;
 mod say;
 mod self_timeout;
 mod shiggy;
+mod sysinfo;
 mod translate;
 mod version;
 
@@ -28,6 +29,7 @@ pub fn to_vec() -> Vec<
         say::say(),
         self_timeout::self_timeout(),
         shiggy::shiggy(),
+        sysinfo::sysinfo(),
         translate::translate(),
         version::version(),
     ]
