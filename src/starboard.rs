@@ -92,10 +92,10 @@ fn serialize_reactions(
     format!("**{reaction_string}** in <#{channel}>")
 }
 
-async fn make_message_embed<'a>(
+async fn make_message_embed(
     _http: &serenity::Http,
     message: &serenity::Message,
-) -> Result<serenity::CreateEmbed<'a>> {
+) -> Result<serenity::CreateEmbed> {
     let content = message.content.to_string();
     let mut builder = serenity::CreateEmbed::default()
         .description(if content.is_empty() {

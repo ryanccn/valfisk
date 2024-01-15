@@ -1,4 +1,4 @@
-use num::Integer;
+use num_traits::int::PrimInt as Integer;
 
 /// A trait that simplifies the pluralization of nouns.
 pub trait Pluralize {

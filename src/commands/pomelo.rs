@@ -13,7 +13,7 @@ pub async fn pomelo(ctx: Context<'_>) -> Result<()> {
             .members(&ctx, None, None)
             .await?
             .into_iter()
-            .filter(|m| !m.user.bot())
+            .filter(|m| !m.user.bot)
             .collect();
 
         let mut nonmigrated_users: Vec<&serenity::UserId> = Vec::new();

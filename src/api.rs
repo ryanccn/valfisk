@@ -23,7 +23,7 @@ impl ValfiskPresenceData {
         Self {
             status: presence.status,
             client_status: presence.client_status.clone(),
-            activities: presence.activities.to_vec(),
+            activities: presence.activities.clone(),
         }
     }
 }
