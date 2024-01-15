@@ -52,19 +52,19 @@ pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
     embed = embed.field(
         "Operating system",
         format!(
-            "**{}** {} ({})",
+            "**{}** {}{}",
             os.os_type(),
             os.version(),
-            os.architecture().unwrap_or_default(),
+            match os.architecture() {
+                Some(arch) => format!(" ({arch})"),
+                None => String::new(),
+            },
         ),
         false,
     );
 
-    if let Some(redis) = &ctx.data().redis {
-        let mut conn = redis.get_async_connection().await?;
-        let keys: u64 = redis::cmd("DBSIZE").query_async(&mut conn).await?;
-
-        embed = embed.field("KV keys", format!("{keys}"), false);
+    if let Some(storage) = &ctx.data().storage {
+        embed = embed.field("KV keys", format!("{}", storage.size().await?), false);
     }
 
     ctx.send(CreateReply::default().embed(embed)).await?;

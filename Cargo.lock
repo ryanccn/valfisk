@@ -2518,6 +2518,7 @@ dependencies = [
  "once_cell",
  "os_info",
  "owo-colors 4.0.0",
+ "paste",
  "poise",
  "redis 0.24.0",
  "redis-macros",

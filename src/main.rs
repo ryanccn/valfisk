@@ -13,11 +13,12 @@ use poise::{
     serenity_prelude::{Client, FullEvent, GatewayIntents},
     Framework, FrameworkOptions,
 };
+use storage::Storage;
 
 use crate::utils::Pluralize;
 
 pub struct Data {
-    pub redis: Option<redis::Client>,
+    storage: Option<Storage>,
 }
 
 pub type Context<'a> = poise::Context<'a, Data, Error>;
@@ -27,6 +28,7 @@ mod commands;
 mod handlers;
 mod reqwest_client;
 mod starboard;
+mod storage;
 mod utils;
 
 #[allow(clippy::too_many_lines)]
@@ -128,16 +130,17 @@ async fn main() -> Result<()> {
 
                     if let Ok(redis_url) = std::env::var("REDIS_URL") {
                         let client = redis::Client::open(redis_url)?;
+                        let storage = Storage::from(client);
 
-                        if let Err(err) = commands::restore_presence(ctx, &client).await {
+                        if let Err(err) = commands::restore_presence(ctx, &storage).await {
                             error!("{err}");
                         };
 
                         Ok(Data {
-                            redis: Some(client),
+                            storage: Some(storage),
                         })
                     } else {
-                        Ok(Data { redis: None })
+                        Ok(Data { storage: None })
                     }
                 })
             },

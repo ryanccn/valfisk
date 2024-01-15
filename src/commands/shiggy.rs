@@ -5,7 +5,7 @@ use color_eyre::eyre::Result;
 
 #[derive(serde::Deserialize)]
 struct SafebooruResponse {
-    id: i32,
+    id: i64,
     source: String,
     tag_string: String,
     file_url: String,

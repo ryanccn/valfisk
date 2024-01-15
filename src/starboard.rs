@@ -1,14 +1,9 @@
 use std::env;
 
 use poise::serenity_prelude as serenity;
-use redis::AsyncCommands as _;
 
 use color_eyre::eyre::{OptionExt, Result};
 use log::debug;
-
-fn make_redis_key(message_id: &str) -> String {
-    format!("starboard-v1:{message_id}")
-}
 
 fn channel_from_env(key: &str) -> Option<serenity::ChannelId> {
     env::var(key)
@@ -143,18 +138,16 @@ pub async fn handle(
     data: &crate::Data,
     message: &serenity::Message,
 ) -> Result<()> {
-    let mut redis = data
-        .redis
+    let storage = data
+        .storage
         .as_ref()
-        .ok_or_eyre("no Redis available for starboard features")?
-        .get_async_connection()
-        .await?;
+        .ok_or_eyre("no storage available for starboard features")?;
 
     if let Some(starboard) = get_starboard_channel(&ctx, message.channel_id).await? {
         let significant_reactions = get_significant_reactions(message)?;
 
-        if let Some(existing_starboard_message) = redis
-            .get::<_, Option<String>>(make_redis_key(&message.id.to_string()))
+        if let Some(existing_starboard_message) = storage
+            .get_starboard(&message.id.to_string())
             .await?
             .and_then(|s| s.parse::<serenity::MessageId>().ok())
         {
@@ -163,7 +156,7 @@ pub async fn handle(
                     .delete_message(&ctx, existing_starboard_message)
                     .await?;
 
-                redis.del(make_redis_key(&message.id.to_string())).await?;
+                storage.del_starboard(&message.id.to_string()).await?;
 
                 debug!(
                     "Deleted starboard message {} for {}",
@@ -204,12 +197,8 @@ pub async fn handle(
                 )
                 .await?;
 
-            redis
-                .set_options(
-                    make_redis_key(&message.id.to_string()),
-                    starboard_message.id.to_string(),
-                    redis::SetOptions::default().with_expiration(redis::SetExpiry::EX(2629746)),
-                )
+            storage
+                .set_starboard(&message.id.to_string(), &starboard_message.id.to_string())
                 .await?;
 
             debug!(
