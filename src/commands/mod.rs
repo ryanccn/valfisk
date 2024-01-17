@@ -1,19 +1,20 @@
 use crate::Context;
 
-mod lighthouse;
-mod owo;
-mod ping;
-mod pomelo;
-mod presence;
-mod say;
-mod self_timeout;
-mod shiggy;
-mod sysinfo;
-mod template_channel;
-mod translate;
-mod version;
+mod fun;
+mod useful;
+mod utils;
 
-pub use presence::restore as restore_presence;
+pub use utils::presence::restore as restore_presence;
+
+macro_rules! command {
+    ($category: ident, $name: ident) => {
+        $category::$name::$name()
+    };
+
+    ($category: ident, $name: ident, $override: ident) => {
+        $category::$name::$override()
+    };
+}
 
 pub fn to_vec() -> Vec<
     poise::Command<
@@ -22,18 +23,18 @@ pub fn to_vec() -> Vec<
     >,
 > {
     vec![
-        lighthouse::lighthouse(),
-        owo::owo(),
-        ping::ping(),
-        pomelo::pomelo(),
-        presence::presence(),
-        say::say(),
-        self_timeout::self_timeout(),
-        self_timeout::transparency(),
-        shiggy::shiggy(),
-        sysinfo::sysinfo(),
-        template_channel::template_channel(),
-        translate::translate(),
-        version::version(),
+        command!(useful, lighthouse),
+        command!(useful, self_timeout),
+        command!(useful, self_timeout, transparency),
+        command!(useful, translate),
+        command!(fun, owo),
+        command!(fun, pomelo),
+        command!(fun, shiggy),
+        command!(utils, ping),
+        command!(utils, presence),
+        command!(utils, say),
+        command!(utils, sysinfo),
+        command!(utils, template_channel),
+        command!(utils, version),
     ]
 }
