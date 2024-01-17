@@ -124,4 +124,5 @@ macro_rules! impl_storage {
 impl Storage {
     impl_storage!(presence, "presence-v1", presence::PresenceData);
     impl_storage!(starboard, "starboard-v1:{}", String, ttl = 2629746, message_id: &str);
+    impl_storage!(self_timeout_transparency, "stt-v1:{}", bool, user_id: &str);
 }

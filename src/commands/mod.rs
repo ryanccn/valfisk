@@ -28,6 +28,7 @@ pub fn to_vec() -> Vec<
         presence::presence(),
         say::say(),
         self_timeout::self_timeout(),
+        self_timeout::transparency(),
         shiggy::shiggy(),
         sysinfo::sysinfo(),
         translate::translate(),
