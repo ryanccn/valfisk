@@ -9,6 +9,7 @@ mod say;
 mod self_timeout;
 mod shiggy;
 mod sysinfo;
+mod template_channel;
 mod translate;
 mod version;
 
@@ -31,6 +32,7 @@ pub fn to_vec() -> Vec<
         self_timeout::transparency(),
         shiggy::shiggy(),
         sysinfo::sysinfo(),
+        template_channel::template_channel(),
         translate::translate(),
         version::version(),
     ]

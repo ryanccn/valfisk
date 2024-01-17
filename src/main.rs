@@ -29,6 +29,7 @@ mod handlers;
 mod reqwest_client;
 mod starboard;
 mod storage;
+mod template_channel;
 mod utils;
 
 #[allow(clippy::too_many_lines)]
