@@ -94,10 +94,10 @@ fn serialize_reactions(
     format!("**{reaction_string}** in <#{channel}>")
 }
 
-async fn make_message_embed(
+fn make_message_embed(
     _http: &serenity::Http,
     message: &serenity::Message,
-) -> Result<serenity::CreateEmbed> {
+) -> serenity::CreateEmbed {
     let content = message.content.to_string();
     let mut builder = serenity::CreateEmbed::default()
         .description(if content.is_empty() {
@@ -132,7 +132,7 @@ async fn make_message_embed(
     // TODO: implement top-most role color
     builder = builder.color(0xfcd34d);
 
-    Ok(builder)
+    builder
 }
 
 pub async fn handle(
@@ -183,7 +183,7 @@ pub async fn handle(
             }
         } else if !significant_reactions.is_empty() {
             let content = serialize_reactions(message.channel_id, &significant_reactions);
-            let embed = make_message_embed(&ctx.http, message).await?;
+            let embed = make_message_embed(&ctx.http, message);
 
             let link_button =
                 serenity::CreateButton::new_link(message.link()).label("Jump to message");
