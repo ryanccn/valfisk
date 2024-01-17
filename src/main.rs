@@ -30,11 +30,70 @@ async fn event_handler(
     // framework: poise::FrameworkContext<'_, Data, Report>,
     data: &Data,
 ) -> Result<()> {
-    use serenity::FullEvent;
+    use serenity::{FullEvent, Timestamp};
 
     match ev {
         FullEvent::Message { new_message } => {
             handlers::handle_message(new_message, ctx, data).await?;
+        }
+
+        FullEvent::MessageUpdate { event, .. } => {
+            use storage::log::MessageLog;
+
+            let timestamp = event.edited_timestamp.unwrap_or(Timestamp::now());
+
+            if let Some(storage) = &data.storage {
+                let prev = storage.get_message_log(&event.id.to_string()).await?;
+
+                let content = event.content.clone();
+                let author = event.author.as_ref().map(|a| a.id);
+
+                storage
+                    .set_message_log(
+                        &event.id.to_string(),
+                        &MessageLog::new(content.clone(), author),
+                    )
+                    .await?;
+
+                handlers::log::edit(
+                    ctx,
+                    (&event.id, &event.channel_id, &event.guild_id),
+                    &author,
+                    &prev.and_then(|p| p.content),
+                    content.as_ref().unwrap_or(&"*Unknown*".to_owned()),
+                    &timestamp,
+                )
+                .await?;
+            }
+        }
+
+        FullEvent::MessageDelete {
+            deleted_message_id,
+            channel_id,
+            guild_id,
+        } => {
+            starboard::handle_deletion(ctx, data, deleted_message_id, channel_id).await?;
+
+            let timestamp = Timestamp::now();
+
+            if let Some(storage) = &data.storage {
+                let prev = storage
+                    .get_message_log(&deleted_message_id.to_string())
+                    .await?;
+
+                handlers::log::delete(
+                    ctx,
+                    (deleted_message_id, channel_id, guild_id),
+                    &prev.as_ref().and_then(|p| p.author),
+                    &prev.and_then(|p| p.content),
+                    &timestamp,
+                )
+                .await?;
+
+                storage
+                    .del_message_log(&deleted_message_id.to_string())
+                    .await?;
+            }
         }
 
         FullEvent::ReactionAdd { add_reaction } => {
@@ -58,14 +117,6 @@ async fn event_handler(
         FullEvent::ReactionRemoveEmoji { removed_reactions } => {
             let message = removed_reactions.message(&ctx).await?;
             starboard::handle(ctx, data, &message).await?;
-        }
-
-        FullEvent::MessageDelete {
-            deleted_message_id,
-            channel_id,
-            ..
-        } => {
-            starboard::handle_deletion(ctx, data, deleted_message_id, channel_id).await?;
         }
 
         FullEvent::PresenceUpdate { new_data, .. } => {
