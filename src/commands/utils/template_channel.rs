@@ -7,7 +7,13 @@ use poise::{
 use crate::{reqwest_client::HTTP, template_channel::Config as TemplateChannelConfig, Context};
 
 /// Apply a channel template from a URL to a channel
-#[poise::command(rename = "template-channel", slash_command, guild_only, ephemeral)]
+#[poise::command(
+    rename = "template-channel",
+    slash_command,
+    guild_only,
+    ephemeral,
+    default_member_permissions = "MANAGE_GUILD"
+)]
 pub async fn template_channel(
     ctx: Context<'_>,
     #[description = "The URL to fetch the template from"] url: String,
