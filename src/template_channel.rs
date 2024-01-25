@@ -76,33 +76,32 @@ impl Config {
         self.components
             .iter()
             .map(|component| match component {
-                Component::Embed(data) => {
-                    let mut message = CreateMessage::default();
+                Component::Embed(data) => CreateMessage::default().embeds(
+                    data.embeds
+                        .iter()
+                        .map(|data| {
+                            let mut embed = CreateEmbed::default();
 
-                    for embed_data in &data.embeds {
-                        let mut embed = CreateEmbed::default();
+                            if let Some(title) = &data.title {
+                                embed = embed.title(title);
+                            }
+                            if let Some(description) = &data.description {
+                                embed = embed.description(description);
+                            }
+                            if let Some(color) = &data.color {
+                                embed = embed.color(*color);
+                            }
+                            if let Some(fields) = &data.fields {
+                                embed = embed
+                                    .fields(fields.iter().map(|f| (&f.name, &f.value, f.inline)));
+                            }
 
-                        if let Some(title) = &embed_data.title {
-                            embed = embed.title(title);
-                        }
-                        if let Some(description) = &embed_data.description {
-                            embed = embed.description(description);
-                        }
-                        if let Some(color) = &embed_data.color {
-                            embed = embed.color(*color);
-                        }
-                        if let Some(fields) = &embed_data.fields {
-                            embed =
-                                embed.fields(fields.iter().map(|f| (&f.name, &f.value, f.inline)));
-                        }
+                            embed
+                        })
+                        .collect(),
+                ),
 
-                        message = message.embed(embed);
-                    }
-
-                    message
-                }
-
-                Component::Links(data) => {
+                Component::Links(data) => CreateMessage::default().embed({
                     let mut embed = CreateEmbed::default().title(&data.title).description(
                         data.links
                             .iter()
@@ -115,26 +114,26 @@ impl Config {
                         embed = embed.color(color);
                     }
 
-                    CreateMessage::default().embed(embed)
-                }
+                    embed
+                }),
 
-                Component::Rules(data) => {
-                    let mut message = CreateMessage::default();
+                Component::Rules(data) => CreateMessage::default().embeds(
+                    data.rules
+                        .iter()
+                        .enumerate()
+                        .map(|(idx, (title, desc))| {
+                            let mut embed = CreateEmbed::default()
+                                .title(format!("{}. {}", idx + 1, title))
+                                .description(desc);
 
-                    for (idx, (title, desc)) in data.rules.iter().enumerate() {
-                        let mut embed = CreateEmbed::default()
-                            .title(format!("{}. {}", idx + 1, title))
-                            .description(desc);
+                            if let Some(color) = data.colors.get(idx % data.colors.len()) {
+                                embed = embed.color(*color);
+                            }
 
-                        if let Some(color) = data.colors.get(idx % data.colors.len()) {
-                            embed = embed.color(*color);
-                        }
-
-                        message = message.add_embed(embed);
-                    }
-
-                    message
-                }
+                            embed
+                        })
+                        .collect(),
+                ),
 
                 Component::Text(data) => CreateMessage::default().content(&data.text),
             })

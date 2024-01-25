@@ -61,16 +61,13 @@ fn is_significant_reaction(reaction: &serenity::MessageReaction) -> Result<bool>
     )
 }
 
-fn get_significant_reactions(
-    message: &serenity::Message,
-) -> Result<Vec<(serenity::ReactionType, u64)>> {
-    let mut collected_reactions: Vec<(serenity::ReactionType, u64)> = Vec::new();
-
-    for reaction in &message.reactions {
-        if is_significant_reaction(reaction)? {
-            collected_reactions.push((reaction.reaction_type.clone(), reaction.count));
-        };
-    }
+fn get_significant_reactions(message: &serenity::Message) -> Vec<(serenity::ReactionType, u64)> {
+    let mut collected_reactions: Vec<(serenity::ReactionType, u64)> = message
+        .reactions
+        .iter()
+        .filter(|r| is_significant_reaction(r).is_ok_and(|b| b))
+        .map(|r| (r.reaction_type.clone(), r.count))
+        .collect();
 
     collected_reactions.sort_by_key(|i| match &i.0 {
         serenity::ReactionType::Custom { id, .. } => id.get().to_string(),
@@ -78,7 +75,7 @@ fn get_significant_reactions(
         _ => "unknown".to_owned(),
     });
 
-    Ok(collected_reactions)
+    collected_reactions
 }
 
 fn serialize_reactions(
@@ -146,7 +143,7 @@ pub async fn handle(
         .ok_or_eyre("no storage available for starboard features")?;
 
     if let Some(starboard) = get_starboard_channel(&ctx, message.channel_id).await? {
-        let significant_reactions = get_significant_reactions(message)?;
+        let significant_reactions = get_significant_reactions(message);
 
         if let Some(existing_starboard_message) = storage
             .get_starboard(&message.id.to_string())

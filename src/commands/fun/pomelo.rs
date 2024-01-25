@@ -16,13 +16,11 @@ pub async fn pomelo(ctx: Context<'_>) -> Result<()> {
             .filter(|m| !m.user.bot)
             .collect();
 
-        let mut nonmigrated_users: Vec<&serenity::UserId> = Vec::new();
-
-        for member in &members {
-            if member.user.discriminator.is_some() {
-                nonmigrated_users.push(&member.user.id);
-            };
-        }
+        let nonmigrated_users: Vec<serenity::UserId> = members
+            .iter()
+            .filter(|m| m.user.discriminator.is_some())
+            .map(|m| m.user.id)
+            .collect();
 
         let embed = serenity::CreateEmbed::default()
             .title("Username migration / Pomelo")
