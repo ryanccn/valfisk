@@ -1,9 +1,6 @@
-use std::time::Duration;
+use poise::serenity_prelude as serenity;
 
-use poise::serenity_prelude::{self as serenity, futures::StreamExt, EditMessage, Event};
-use tokio::time::timeout;
-
-use crate::reqwest_client;
+use crate::{reqwest_client, utils::serenity::suppress_embeds};
 use regex::Regex;
 
 use color_eyre::eyre::Result;
@@ -100,23 +97,7 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
     }
 
     if !embeds.is_empty() {
-        let msg_id = message.id;
-
-        let mut message_updates = serenity::collector::collect(&ctx.shard, move |ev| match ev {
-            Event::MessageUpdate(x) if x.id == msg_id => Some(()),
-            _ => None,
-        });
-
-        let _ = timeout(Duration::from_millis(2000), message_updates.next()).await;
-
-        ctx.http
-            .edit_message(
-                message.channel_id,
-                message.id,
-                &EditMessage::new().suppress_embeds(true),
-                Vec::new(),
-            )
-            .await?;
+        suppress_embeds(ctx, message).await?;
 
         message
             .channel_id
