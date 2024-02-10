@@ -27,6 +27,7 @@ pub fn to_vec() -> Vec<
         command!(useful, self_timeout),
         command!(useful, self_timeout, transparency),
         command!(useful, translate),
+        command!(useful, suppress_embeds),
         command!(fun, owo),
         command!(fun, pomelo),
         command!(fun, shiggy),
