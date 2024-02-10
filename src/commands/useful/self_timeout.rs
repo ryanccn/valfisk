@@ -8,6 +8,7 @@ use crate::{utils::serenity::unique_username, Context};
 pub async fn self_timeout(
     ctx: Context<'_>,
     #[description = "The duration to time yourself out for"] duration: String,
+    #[description = "The reason for the timeout"] reason: Option<String>,
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
@@ -41,10 +42,14 @@ pub async fn self_timeout(
                     .await?
                     .unwrap_or(false)
                 {
-                    let resp_embed = resp_embed.author(
+                    let mut resp_embed = resp_embed.author(
                         serenity::CreateEmbedAuthor::new(unique_username(ctx.author()))
                             .icon_url(ctx.author().face()),
                     );
+
+                    if let Some(reason) = reason {
+                        resp_embed = resp_embed.field("Reason", reason, false);
+                    }
 
                     ctx.channel_id()
                         .send_message(&ctx, serenity::CreateMessage::default().embed(resp_embed))
