@@ -28,7 +28,7 @@ mod utils;
 async fn event_handler(
     ctx: &serenity::Context,
     ev: &serenity::FullEvent,
-    _framework: poise::FrameworkContext<'_, Data, Report>,
+    // framework: poise::FrameworkContext<'_, Data, Report>,
     data: &Data,
 ) -> Result<()> {
     use serenity::FullEvent;
@@ -136,9 +136,7 @@ async fn main() -> Result<()> {
         .framework(Framework::new(
             FrameworkOptions {
                 commands: commands::to_vec(),
-                event_handler: |ctx, ev, framework, data| {
-                    Box::pin(event_handler(ctx, ev, framework, data))
-                },
+                event_handler: |ctx, ev, _, data| Box::pin(event_handler(ctx, ev, data)),
                 on_error: |err| {
                     Box::pin(async move {
                         handlers::handle_error(&err).await;
