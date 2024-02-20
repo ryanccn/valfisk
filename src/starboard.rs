@@ -42,23 +42,26 @@ fn is_significant_reaction(reaction: &serenity::MessageReaction) -> Result<bool>
         return Ok(false);
     }
 
-    Ok(
-        match env::var("STARBOARD_EMOJIS").map(|v| {
-            v.split(',')
+    Ok(match env::var("STARBOARD_EMOJIS") {
+        Ok(starboard_emojis) if starboard_emojis == "ANY" => true,
+
+        Ok(starboard_emojis) => {
+            let emojis = starboard_emojis
+                .split(',')
                 .map(|c| c.trim().to_owned())
-                .collect::<Vec<_>>()
-        }) {
-            Ok(emojis) => match &reaction.reaction_type {
+                .collect::<Vec<_>>();
+
+            match &reaction.reaction_type {
                 serenity::ReactionType::Custom { id, .. } => emojis.contains(&id.to_string()),
                 serenity::ReactionType::Unicode(fixed_string) => {
                     emojis.contains(&fixed_string.to_string())
                 }
                 _ => false,
-            },
+            }
+        }
 
-            Err(_) => false,
-        },
-    )
+        Err(_) => false,
+    })
 }
 
 fn get_significant_reactions(message: &serenity::Message) -> Vec<(serenity::ReactionType, u64)> {
