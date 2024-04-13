@@ -46,7 +46,7 @@
         name = "valfisk";
         tag = "latest-${arch}";
         copyToRoot = [pkgs.dockerTools.caCertificates];
-        config.Cmd = [valfiskFor.${arch}];
+        config.Cmd = [(lib.getExe valfiskFor.${arch})];
 
         architecture = crossPkgsFor.${arch}.go.GOARCH;
       };
