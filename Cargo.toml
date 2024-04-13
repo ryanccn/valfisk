@@ -2,7 +2,6 @@
 name = "valfisk"
 version = "0.1.0"
 edition = "2021"
-
 description = "Next generation Ryanland Discord bot"
 authors = ["Ryan Cao <hello@ryanccn.dev>"]
 license = "AGPL-3.0-only"
@@ -35,8 +34,14 @@ sysinfo = "0.30.5"
 tokio = { version = "1.35.0", features = ["full"] }
 toml = "0.8.8"
 
-[profile.release]
-opt-level = "z"
-strip = "symbols"
-lto = "fat"
-codegen-units = 1
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+perf = { level = "warn", priority = -1 }
+
+unreadable_literal = "allow"
+module_name_repetitions = "allow"
+redundant_closure_for_method_calls = "allow"
+
+[lints.rust]
+unsafe_code = "forbid"

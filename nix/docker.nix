@@ -1,5 +1,6 @@
-{inputs, ...}: {
+{...}: {
   perSystem = {
+    self',
     lib,
     pkgs,
     system,
@@ -7,67 +8,47 @@
     inputs',
     ...
   }: let
-    crossPkgsFor = lib.fix (finalAttrs: {
-      "x86_64-linux" = {
-        "x86_64" = pkgs.pkgsStatic;
-        "aarch64" = pkgs.pkgsCross.aarch64-multiplatform.pkgsStatic;
+    crossPkgsFor = {
+      x86_64 = pkgs.pkgsCross.musl64.pkgsStatic;
+      aarch64 = pkgs.pkgsCross.aarch64-multiplatform.pkgsStatic;
+    };
+
+    valfiskFor = let
+      toolchain = pkgs.rust-bin.stable.latest.minimal.override {
+        extensions = ["rust-std"];
+        targets = map (pkgs: pkgs.stdenv.hostPlatform.config) (lib.attrValues crossPkgsFor);
       };
 
-      "aarch64-linux" = {
-        "x86_64" = pkgs.pkgsCross.musl64;
-        "aarch64" = pkgs.pkgsStatic;
-      };
+      rustPlatforms =
+        lib.mapAttrs (
+          lib.const (pkgs:
+            pkgs.makeRustPlatform (
+              lib.genAttrs ["cargo" "rustc"] (lib.const toolchain)
+            ))
+        )
+        crossPkgsFor;
 
-      "x86_64-darwin" = {
-        "x86_64" = pkgs.pkgsCross.musl64;
-        "aarch64" = pkgs.pkgsCross.aarch64-multiplatform.pkgsStatic;
-      };
-
-      "aarch64-darwin" = finalAttrs."x86_64-darwin";
-    });
-
-    valfiskFor = arch: let
-      target = "${arch}-unknown-linux-musl";
-      target' = builtins.replaceStrings ["-"] ["_"] target;
-      targetUpper = lib.toUpper target';
-
-      toolchain = with inputs'.fenix.packages;
-        combine [
-          minimal.cargo
-          minimal.rustc
-          targets.${target}.latest.rust-std
-        ];
-
-      naersk' = inputs.naersk.lib.${system}.override {
-        cargo = toolchain;
-        rustc = toolchain;
-      };
-
-      valfisk = config.packages.valfisk.override {
-        naersk = naersk';
-        optimizeSize = true;
-      };
-
-      inherit (crossPkgsFor.${system}.${arch}.stdenv) cc;
+      mkPackageWith = rustPlatform:
+        self'.packages.valfisk.override {
+          inherit rustPlatform;
+          lto = true;
+          optimizeSize = true;
+        };
     in
-      lib.getExe (
-        valfisk.overrideAttrs (_:
-          lib.fix (finalAttrs: {
-            CARGO_BUILD_TARGET = target;
-            "CC_${target'}" = "${cc}/bin/${cc.targetPrefix}cc";
-            "CARGO_TARGET_${targetUpper}_RUSTFLAGS" = "-C target-feature=+crt-static";
-            "CARGO_TARGET_${targetUpper}_LINKER" = finalAttrs."CC_${target'}";
-          }))
-      );
+      lib.mapAttrs' (
+        target: rustPlatform:
+          lib.nameValuePair target (mkPackageWith rustPlatform)
+      )
+      rustPlatforms;
 
     containerFor = arch:
       pkgs.dockerTools.buildImage {
         name = "valfisk";
         tag = "latest-${arch}";
         copyToRoot = [pkgs.dockerTools.caCertificates];
-        config.Cmd = [(valfiskFor arch)];
+        config.Cmd = [valfiskFor.${arch}];
 
-        architecture = crossPkgsFor.${system}.${arch}.go.GOARCH;
+        architecture = crossPkgsFor.${arch}.go.GOARCH;
       };
   in {
     legacyPackages = {

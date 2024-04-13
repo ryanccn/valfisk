@@ -1,28 +1,55 @@
 {
   self,
-  naersk,
   stdenv,
   lib,
+  rustPlatform,
+  pkg-config,
   libiconv,
-  CoreFoundation,
-  Security,
-  SystemConfiguration,
+  darwin,
+  lto ? false,
   optimizeSize ? false,
 }:
-naersk.buildPackage {
-  src = lib.cleanSource ./..;
+rustPlatform.buildRustPackage {
+  pname = "valfisk";
+  version = builtins.substring 0 8 self.lastModifiedDate;
 
-  nativeBuildInputs = lib.optionals stdenv.hostPlatform.isDarwin [
+  src = lib.fileset.toSource {
+    root = ../.;
+    fileset = lib.fileset.unions [
+      ../src
+      ../Cargo.lock
+      ../Cargo.toml
+    ];
+  };
+  cargoLock.lockFile = ../Cargo.lock;
+
+  __structuredAttrs = true;
+
+  buildInputs = lib.optionals stdenv.isDarwin [
     libiconv
-    CoreFoundation
-    Security
-    SystemConfiguration
+    darwin.apple_sdk.frameworks.CoreFoundation
+    darwin.apple_sdk.frameworks.Security
+    darwin.apple_sdk.frameworks.SystemConfiguration
   ];
 
-  RUSTFLAGS = lib.optionalString optimizeSize " -C codegen-units=1 -C strip=symbols -C opt-level=z";
+  nativeBuildInputs = [
+    pkg-config
+  ];
 
-  METADATA_LAST_MODIFIED = self.lastModified;
-  METADATA_GIT_REV = self.dirtyRev or self.rev;
+  env =
+    {
+      METADATA_LAST_MODIFIED = self.lastModified;
+      METADATA_GIT_REV = self.dirtyRev or self.rev;
+    }
+    // lib.optionalAttrs lto {
+      CARGO_PROFILE_RELEASE_LTO = "fat";
+    }
+    // lib.optionalAttrs optimizeSize {
+      CARGO_PROFILE_RELEASE_OPT_LEVEL = "z";
+      CARGO_PROFILE_RELEASE_PANIC = "abort";
+      CARGO_PROFILE_RELEASE_CODEGEN_UNITS = "1";
+      CARGO_PROFILE_RELEASE_STRIP = "symbols";
+    };
 
   meta = with lib; {
     mainProgram = "valfisk";

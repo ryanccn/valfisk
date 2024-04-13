@@ -1,7 +1,3 @@
-#![warn(clippy::all, clippy::pedantic, clippy::perf)]
-#![allow(clippy::unreadable_literal, clippy::module_name_repetitions)]
-#![forbid(unsafe_code)]
-
 use color_eyre::eyre::{Context as _, Report, Result};
 use log::{error, info, warn};
 
