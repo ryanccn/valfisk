@@ -11,10 +11,7 @@ static GITHUB: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"https?://github\.com/(?P<repo>[\w-]+/[\w.-]+)/blob/(?P<ref>\S+?)/(?P<file>\S+)#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
 });
 
-static RUST_PLAYGROUND: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"https://play\.rust-lang\.org/\S*[?&]gist=(?P<gist>\w+)").unwrap());
-
-pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Result<()> {
+async fn github(message: &serenity::Message) -> Result<Vec<serenity::CreateEmbed>> {
     let mut embeds: Vec<serenity::CreateEmbed> = Vec::new();
 
     for captures in GITHUB.captures_iter(&message.content) {
@@ -46,7 +43,7 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
             .text()
             .await?
             .split('\n')
-            .map(std::borrow::ToOwned::to_owned)
+            .map(|s| s.to_owned())
             .collect();
 
         let idx_start = start - 1;
@@ -68,6 +65,15 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
 
         embeds.push(embed);
     }
+
+    Ok(embeds)
+}
+
+static RUST_PLAYGROUND: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"https://play\.rust-lang\.org/\S*[?&]gist=(?P<gist>\w+)").unwrap());
+
+async fn rust_playground(message: &serenity::Message) -> Result<Vec<serenity::CreateEmbed>> {
+    let mut embeds: Vec<serenity::CreateEmbed> = Vec::new();
 
     for captures in RUST_PLAYGROUND.captures_iter(&message.content) {
         debug!(
@@ -95,6 +101,51 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
 
         embeds.push(embed);
     }
+
+    Ok(embeds)
+}
+
+static GO_PLAYGROUND: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"https://go\.dev/play/p/(?P<id>\w+)").unwrap());
+
+async fn go_playground(message: &serenity::Message) -> Result<Vec<serenity::CreateEmbed>> {
+    let mut embeds: Vec<serenity::CreateEmbed> = Vec::new();
+
+    for captures in GO_PLAYGROUND.captures_iter(&message.content) {
+        debug!(
+            "Handling Go Playground link {} on message {}",
+            &captures[0], message.id
+        );
+
+        let id = captures["id"].to_owned();
+
+        let code = reqwest_client::HTTP
+            .get(format!("https://go.dev/_/share?id={id}"))
+            .send()
+            .await?
+            .text()
+            .await?;
+
+        let embed = serenity::CreateEmbed::default()
+            .title("Go Playground")
+            .description("```go\n".to_owned() + &code + "\n```")
+            .footer(serenity::CreateEmbedFooter::new(id))
+            .timestamp(serenity::Timestamp::now())
+            .color(0x00b7e7);
+
+        embeds.push(embed);
+    }
+
+    Ok(embeds)
+}
+
+#[allow(clippy::too_many_lines)]
+pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Result<()> {
+    let mut embeds: Vec<serenity::CreateEmbed> = Vec::new();
+
+    embeds.extend(github(message).await?);
+    embeds.extend(rust_playground(message).await?);
+    embeds.extend(go_playground(message).await?);
 
     if !embeds.is_empty() {
         suppress_embeds(ctx, message).await?;
