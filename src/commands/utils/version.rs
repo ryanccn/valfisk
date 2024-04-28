@@ -14,6 +14,11 @@ pub async fn version(ctx: Context<'_>) -> Result<()> {
         None => String::new(),
     };
 
+    let host = match option_env!("METADATA_HOST") {
+        Some(host) => format!("`{host}`"),
+        None => "unknown".to_owned(),
+    };
+
     let target = match option_env!("METADATA_TARGET") {
         Some(target) => format!("`{target}`"),
         None => "unknown".to_owned(),
@@ -35,9 +40,10 @@ pub async fn version(ctx: Context<'_>) -> Result<()> {
                 .title(format!("Valfisk{version_suffix}"))
                 .field("Runtime OS", OS, true)
                 .field("Runtime architecture", ARCH, true)
-                .field("Target", target, false)
-                .field("Last modified", last_modified, false)
-                .field("Git revision", git_rev, false)
+                .field("Target", &target, false)
+                .field("Build host", &host, false)
+                .field("Last modified", &last_modified, false)
+                .field("Git revision", &git_rev, false)
                 .color(0xf472b6),
         ),
     )
