@@ -1,9 +1,10 @@
-use log::error;
+use tracing::error;
 
 use poise::FrameworkError;
 
 use crate::{utils::error_handling::ValfiskError, Data};
 
+#[tracing::instrument(skip(err))]
 pub async fn handle_error(err: &FrameworkError<'_, Data, color_eyre::eyre::Report>) {
     match err {
         FrameworkError::Setup { error, .. } => {

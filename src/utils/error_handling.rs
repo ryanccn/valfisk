@@ -1,12 +1,11 @@
 use nanoid::nanoid;
-use owo_colors::OwoColorize;
 use poise::{
     serenity_prelude::{ChannelId, CreateEmbed, CreateEmbedFooter, CreateMessage, Timestamp},
     CreateReply,
 };
 
 use crate::Context;
-use log::error;
+use tracing::error;
 
 /// A wrapper type that encapsulates errors ([`color_eyre::eyre::Error`]) or panic strings ([`Option<String>`]).
 pub enum ErrorOrPanic<'a> {
@@ -39,6 +38,7 @@ impl ErrorOrPanic<'_> {
 }
 
 /// A wrapped type around errors or panics encapsulated in [`ErrorOrPanic`] that includes context from Poise and a randomly generated `error_id`.
+#[derive(Debug)]
 pub struct ValfiskError<'a> {
     /// The error or panic.
     pub error_or_panic: ErrorOrPanic<'a>,
@@ -63,23 +63,13 @@ impl ValfiskError<'_> {
     }
 
     /// Log the error to the console.
+    #[tracing::instrument(skip(self), fields(id = self.error_id, r#type = self.error_or_panic.type_string(), command = self.ctx.invocation_string(), channel = self.ctx.channel_id().get(), author = self.ctx.author().id.get()))]
     pub fn handle_log(&self) {
-        error!(
-            "{}\n{} {}\n{} {}\n{} {}\n{} {}\n{:#?}",
-            format!("Encountered {}!", self.error_or_panic.type_string()).red(),
-            "ID:".dimmed(),
-            self.error_id,
-            "Command:".dimmed(),
-            self.ctx.invocation_string(),
-            "Channel:".dimmed(),
-            self.ctx.channel_id().get(),
-            "User:".dimmed(),
-            self.ctx.author().id,
-            self.error_or_panic
-        );
+        error!("{:#?}", self.error_or_panic);
     }
 
     /// Reply to the interaction with an embed informing the user of an error, containing the randomly generated error ID.
+    #[tracing::instrument(skip(self))]
     pub async fn handle_reply(&self) {
         self.ctx
             .send(
@@ -97,6 +87,7 @@ impl ValfiskError<'_> {
     }
 
     /// Report the error to a channel defined through the environment variable `ERROR_LOGS_CHANNEL`.
+    #[tracing::instrument(skip(self))]
     pub async fn handle_report(&self) {
         if let Ok(channel_id) = match std::env::var("ERROR_LOGS_CHANNEL") {
             Ok(channel_id_str) => channel_id_str
@@ -132,6 +123,7 @@ impl ValfiskError<'_> {
     }
 
     /// Log the error to the console, send an error reply to the interaction, and report the error in the error channel.
+    #[tracing::instrument(skip(self))]
     pub async fn handle_all(&self) {
         self.handle_log();
         self.handle_reply().await;

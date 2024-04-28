@@ -2,7 +2,7 @@ use crate::{storage::presence::PresenceChoice, Context};
 use poise::{serenity_prelude as serenity, CreateReply};
 
 use color_eyre::eyre::Result;
-use log::info;
+use tracing::info;
 
 /// Modify the Discord presence shown by the bot
 #[poise::command(
@@ -11,6 +11,7 @@ use log::info;
     guild_only,
     default_member_permissions = "MANAGE_GUILD"
 )]
+#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 pub async fn presence(
     ctx: Context<'_>,
     #[description = "Text to display"] content: String,
@@ -39,6 +40,7 @@ pub async fn presence(
     Ok(())
 }
 
+#[tracing::instrument(skip(ctx))]
 pub async fn restore(ctx: &serenity::Context, storage: &crate::storage::Storage) -> Result<()> {
     let data = storage.get_presence().await?;
 

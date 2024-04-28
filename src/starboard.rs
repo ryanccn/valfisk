@@ -3,7 +3,7 @@ use std::env;
 use poise::serenity_prelude as serenity;
 
 use color_eyre::eyre::{OptionExt, Result};
-use log::debug;
+use tracing::debug;
 
 use crate::utils::serenity::unique_username;
 
@@ -13,8 +13,9 @@ fn channel_from_env(key: &str) -> Option<serenity::ChannelId> {
         .and_then(|s| s.parse::<serenity::ChannelId>().ok())
 }
 
+#[tracing::instrument]
 async fn get_starboard_channel(
-    http: impl serenity::CacheHttp,
+    http: impl serenity::CacheHttp + std::fmt::Debug,
     message_channel: serenity::ChannelId,
 ) -> Result<Option<serenity::ChannelId>> {
     let Some(message_channel) = message_channel.to_channel(&http).await?.guild() else {
@@ -135,6 +136,7 @@ fn make_message_embed(
     builder
 }
 
+#[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
 pub async fn handle(
     ctx: &serenity::Context,
     data: &crate::Data,

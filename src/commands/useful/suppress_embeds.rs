@@ -5,6 +5,7 @@ use crate::Context;
 
 /// Translates a message
 #[poise::command(context_menu_command = "Suppress Embeds", guild_only, ephemeral)]
+#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 #[allow(clippy::redundant_closure_for_method_calls)]
 pub async fn suppress_embeds(ctx: Context<'_>, message: serenity::Message) -> Result<()> {
     ctx.defer_ephemeral().await?;

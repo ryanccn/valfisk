@@ -1,6 +1,6 @@
 use actix_web::{body::BoxBody, http::StatusCode, HttpResponse};
-use log::error;
 use serde_json::json;
+use tracing::error;
 
 pub struct ActixError(color_eyre::eyre::Error);
 

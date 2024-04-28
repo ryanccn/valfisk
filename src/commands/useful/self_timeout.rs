@@ -5,6 +5,7 @@ use crate::{utils::serenity::unique_username, Context};
 
 /// Time yourself out for a specific duration
 #[poise::command(rename = "self-timeout", slash_command, guild_only)]
+#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 pub async fn self_timeout(
     ctx: Context<'_>,
     #[description = "The duration to time yourself out for"] duration: String,

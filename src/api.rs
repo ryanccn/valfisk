@@ -2,13 +2,14 @@ use poise::serenity_prelude as serenity;
 
 use actix_web::{get, middleware, post, web, App, HttpResponse, HttpServer, Responder};
 use serde_json::json;
+use tracing_actix_web::TracingLogger;
 
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 use crate::utils::actix::ActixError;
-use log::info;
+use tracing::info;
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ValfiskPresenceData {
@@ -31,11 +32,13 @@ impl ValfiskPresenceData {
 pub static PRESENCE_STORE: Lazy<RwLock<HashMap<serenity::UserId, ValfiskPresenceData>>> =
     Lazy::new(|| RwLock::new(HashMap::new()));
 
+#[tracing::instrument]
 #[get("/")]
 async fn route_ping() -> Result<impl Responder, ActixError> {
     Ok(HttpResponse::Ok().json(json!({ "ok": true })))
 }
 
+#[tracing::instrument]
 #[get("/presence/{user}")]
 async fn route_get_presence(path: web::Path<(u64,)>) -> Result<impl Responder, ActixError> {
     let path = path.into_inner();
@@ -55,7 +58,7 @@ async fn route_get_presence(path: web::Path<(u64,)>) -> Result<impl Responder, A
     }
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Debug)]
 struct KofiFormData {
     data: String,
 }
@@ -73,6 +76,7 @@ struct KofiData {
     timestamp: serenity::Timestamp,
 }
 
+#[tracing::instrument]
 #[post("/ko-fi")]
 async fn route_kofi_webhook(
     app_data: web::Data<AppState>,
@@ -116,6 +120,7 @@ async fn route_kofi_webhook(
     Ok(HttpResponse::Ok().json(json!({ "ok": true })))
 }
 
+#[derive(Debug)]
 struct AppState {
     serenity_http: Arc<serenity::Http>,
 }
@@ -126,6 +131,7 @@ impl poise::serenity_prelude::CacheHttp for AppState {
     }
 }
 
+#[tracing::instrument(skip(serenity_http))]
 pub async fn serve(serenity_http: Arc<serenity::Http>) -> color_eyre::eyre::Result<()> {
     #[cfg(debug_assertions)]
     let default_host = "127.0.0.1";
@@ -153,6 +159,7 @@ pub async fn serve(serenity_http: Arc<serenity::Http>) -> color_eyre::eyre::Resu
             .add(("x-xss-protection", "1; mode=block"));
 
         App::new()
+            .wrap(TracingLogger::default())
             .wrap(security_middleware)
             .app_data(app_state.clone())
             .service(route_ping)

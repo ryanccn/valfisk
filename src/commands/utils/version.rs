@@ -7,6 +7,7 @@ use crate::Context;
 
 /// Get version information
 #[poise::command(slash_command, guild_only)]
+#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 pub async fn version(ctx: Context<'_>) -> Result<()> {
     let version_suffix = match option_env!("CARGO_PKG_VERSION") {
         Some(v) => format!(" v{v}"),

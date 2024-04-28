@@ -14,6 +14,7 @@ use crate::{reqwest_client::HTTP, template_channel::Config as TemplateChannelCon
     ephemeral,
     default_member_permissions = "MANAGE_GUILD"
 )]
+#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 pub async fn template_channel(
     ctx: Context<'_>,
     #[description = "The URL to fetch the template from"] url: String,

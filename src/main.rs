@@ -1,11 +1,13 @@
-use color_eyre::eyre::{Context as _, Report, Result};
-use log::{error, info, warn};
+use color_eyre::eyre::{Report, Result, WrapErr as _};
+use tracing::{info, warn};
 
 use poise::{serenity_prelude as serenity, Framework, FrameworkOptions};
 use storage::Storage;
+use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
 use crate::utils::Pluralize;
 
+#[derive(Debug)]
 pub struct Data {
     storage: Option<Storage>,
 }
@@ -21,6 +23,7 @@ mod storage;
 mod template_channel;
 mod utils;
 
+#[tracing::instrument(skip_all)]
 async fn event_handler(
     ctx: &serenity::Context,
     ev: &serenity::FullEvent,
@@ -74,6 +77,7 @@ async fn event_handler(
     Ok(())
 }
 
+#[tracing::instrument(skip_all)]
 async fn setup(
     ctx: &serenity::Context,
     ready: &serenity::Ready,
@@ -94,9 +98,7 @@ async fn setup(
         let client = redis::Client::open(redis_url)?;
         let storage = Storage::from(client);
 
-        if let Err(err) = commands::restore_presence(ctx, &storage).await {
-            error!("{err}");
-        };
+        commands::restore_presence(ctx, &storage).await?;
 
         Ok(Data {
             storage: Some(storage),
@@ -113,7 +115,10 @@ async fn main() -> Result<()> {
     };
 
     color_eyre::install()?;
-    env_logger::init();
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer())
+        .with(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
 
     #[cfg(debug_assertions)]
     {
@@ -126,7 +131,7 @@ async fn main() -> Result<()> {
     }
 
     let token = std::env::var("DISCORD_TOKEN")
-        .context("Could not obtain DISCORD_TOKEN from environment!")?;
+        .wrap_err_with(|| "Could not obtain DISCORD_TOKEN from environment!")?;
 
     let mut client = serenity::Client::builder(token, serenity::GatewayIntents::all())
         .framework(Framework::new(

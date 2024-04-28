@@ -5,6 +5,7 @@ use crate::Context;
 
 /// Get information on the username migration within the server
 #[poise::command(slash_command, guild_only)]
+#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 pub async fn pomelo(ctx: Context<'_>) -> Result<()> {
     if let Some(guild) = ctx.guild_id() {
         ctx.defer().await?;

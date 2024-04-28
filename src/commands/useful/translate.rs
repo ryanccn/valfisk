@@ -18,6 +18,7 @@ struct GoogleTranslateResponse {
 
 /// Translates a message
 #[poise::command(context_menu_command = "Translate", guild_only)]
+#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 pub async fn translate(ctx: Context<'_>, message: serenity::Message) -> Result<()> {
     ctx.defer().await?;
 

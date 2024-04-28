@@ -4,13 +4,14 @@ use crate::{reqwest_client, utils::serenity::suppress_embeds};
 use regex::Regex;
 
 use color_eyre::eyre::Result;
-use log::debug;
 use once_cell::sync::Lazy;
+use tracing::debug;
 
 static GITHUB: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"https?://github\.com/(?P<repo>[\w-]+/[\w.-]+)/blob/(?P<ref>\S+?)/(?P<file>\S+)#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
 });
 
+#[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
 async fn github(message: &serenity::Message) -> Result<Vec<serenity::CreateEmbed>> {
     let mut embeds: Vec<serenity::CreateEmbed> = Vec::new();
 
@@ -72,6 +73,7 @@ async fn github(message: &serenity::Message) -> Result<Vec<serenity::CreateEmbed
 static RUST_PLAYGROUND: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"https://play\.rust-lang\.org/\S*[?&]gist=(?P<gist>\w+)").unwrap());
 
+#[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
 async fn rust_playground(message: &serenity::Message) -> Result<Vec<serenity::CreateEmbed>> {
     let mut embeds: Vec<serenity::CreateEmbed> = Vec::new();
 
@@ -108,6 +110,7 @@ async fn rust_playground(message: &serenity::Message) -> Result<Vec<serenity::Cr
 static GO_PLAYGROUND: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"https://go\.dev/play/p/(?P<id>\w+)").unwrap());
 
+#[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
 async fn go_playground(message: &serenity::Message) -> Result<Vec<serenity::CreateEmbed>> {
     let mut embeds: Vec<serenity::CreateEmbed> = Vec::new();
 
@@ -139,7 +142,7 @@ async fn go_playground(message: &serenity::Message) -> Result<Vec<serenity::Crea
     Ok(embeds)
 }
 
-#[allow(clippy::too_many_lines)]
+#[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
 pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Result<()> {
     let mut embeds: Vec<serenity::CreateEmbed> = Vec::new();
 

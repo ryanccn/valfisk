@@ -6,6 +6,7 @@ use color_eyre::eyre::Result;
 
 /// Get system information for the bot host
 #[poise::command(slash_command, guild_only)]
+#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 #[allow(clippy::cast_precision_loss)]
 pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
     let sys = System::new_with_specifics(
