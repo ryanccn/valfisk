@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use nanoid::nanoid;
 use poise::{
     serenity_prelude::{ChannelId, CreateEmbed, CreateEmbedFooter, CreateMessage, Timestamp},
@@ -131,11 +133,11 @@ impl ValfiskError<'_> {
     }
 }
 
-impl std::fmt::Debug for ErrorOrPanic<'_> {
+impl Debug for ErrorOrPanic<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Error(e) => e.fmt(f),
-            Self::Panic(p) => p.fmt(f),
+            Self::Error(e) => Debug::fmt(e, f),
+            Self::Panic(p) => Debug::fmt(p, f),
         }
     }
 }

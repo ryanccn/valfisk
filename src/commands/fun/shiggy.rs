@@ -22,14 +22,17 @@ pub async fn shiggy(
     raw: bool,
 ) -> Result<()> {
     ctx.defer().await?;
-    let mut url = "https://safebooru.donmai.us/posts/random.json".parse::<reqwest::Url>()?;
-    url.query_pairs_mut()
-        .append_pair("tags", "kemomimi-chan_(naga_u) naga_u")
-        .append_pair("only", "id,source,tag_string,file_url");
 
-    let resp = crate::reqwest_client::HTTP.get(url).send().await?;
-
-    match resp.error_for_status() {
+    match crate::reqwest_client::HTTP
+        .get("https://safebooru.donmai.us/posts/random.json")
+        .query(&[
+            ("tags", "kemomimi-chan_(naga_u) naga_u"),
+            ("only", "id,source,tag_string,file_url"),
+        ])
+        .send()
+        .await?
+        .error_for_status()
+    {
         Ok(resp) => {
             let data: SafebooruResponse = resp.json().await?;
 
@@ -41,9 +44,9 @@ pub async fn shiggy(
                         serenity::CreateEmbed::default()
                             .title(data.id.to_string())
                             .field("Tags", data.tag_string.replace('_', "\\_"), false)
-                            .field("Source", data.source, false)
+                            .field("Source", &data.source, false)
                             .url(format!("https://safebooru.donmai.us/posts/{}", data.id))
-                            .image(data.file_url)
+                            .image(&data.file_url)
                             .color(0xfef9c3),
                     ),
                 )
@@ -52,7 +55,7 @@ pub async fn shiggy(
         }
 
         Err(err) => {
-            let err = color_eyre::eyre::Error::from(err);
+            let err = color_eyre::eyre::Report::from(err);
             let valfisk_err = ValfiskError::new(&err, &ctx);
             valfisk_err.handle_log();
             valfisk_err.handle_report().await;

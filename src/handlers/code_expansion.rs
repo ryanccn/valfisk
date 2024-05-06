@@ -33,17 +33,16 @@ async fn github(message: &serenity::Message) -> Result<Vec<serenity::CreateEmbed
             .name("end")
             .and_then(|end| end.as_str().parse::<usize>().ok());
 
-        let resp = reqwest_client::HTTP
+        let lines: Vec<String> = reqwest_client::HTTP
             .get(format!(
                 "https://raw.githubusercontent.com/{repo}/{ref_}/{file}"
             ))
             .send()
-            .await?;
-
-        let lines: Vec<String> = resp
+            .await?
+            .error_for_status()?
             .text()
             .await?
-            .split('\n')
+            .lines()
             .map(|s| s.to_owned())
             .collect();
 
@@ -91,6 +90,7 @@ async fn rust_playground(message: &serenity::Message) -> Result<Vec<serenity::Cr
             ))
             .send()
             .await?
+            .error_for_status()?
             .text()
             .await?;
 
@@ -123,9 +123,11 @@ async fn go_playground(message: &serenity::Message) -> Result<Vec<serenity::Crea
         let id = captures["id"].to_owned();
 
         let code = reqwest_client::HTTP
-            .get(format!("https://go.dev/_/share?id={id}"))
+            .get("https://go.dev/_/share")
+            .query(&[("id", &id)])
             .send()
             .await?
+            .error_for_status()?
             .text()
             .await?;
 

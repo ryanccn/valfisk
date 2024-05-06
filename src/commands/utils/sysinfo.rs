@@ -11,8 +11,8 @@ use color_eyre::eyre::Result;
 pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
     let sys = System::new_with_specifics(
         RefreshKind::new()
-            .with_cpu(CpuRefreshKind::everything())
-            .with_memory(MemoryRefreshKind::everything()),
+            .with_cpu(CpuRefreshKind::new().with_cpu_usage())
+            .with_memory(MemoryRefreshKind::everything().with_ram()),
     );
     let os = os_info::get();
 
