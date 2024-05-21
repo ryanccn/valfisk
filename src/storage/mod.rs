@@ -13,7 +13,7 @@ impl From<redis::Client> for Storage {
 
 impl Storage {
     pub async fn size(&self) -> ::redis::RedisResult<u64> {
-        let mut conn = self.redis.get_async_connection().await?;
+        let mut conn = self.redis.get_multiplexed_async_connection().await?;
         let keys: u64 = redis::cmd("DBSIZE").query_async(&mut conn).await?;
         Ok(keys)
     }
@@ -25,7 +25,7 @@ macro_rules! impl_storage {
             #[::tracing::instrument(skip(self))]
             pub async fn [<get_ $n>](&self) -> ::redis::RedisResult<Option<$t>> {
                 use ::redis::AsyncCommands as _;
-                let mut conn = self.redis.get_async_connection().await?;
+                let mut conn = self.redis.get_multiplexed_async_connection().await?;
                 let ret: Option<$t> = conn.get($k).await?;
                 Ok(ret)
             }
@@ -33,7 +33,7 @@ macro_rules! impl_storage {
             #[::tracing::instrument(skip(self))]
             pub async fn [<set_ $n>](&self, value: &$t) -> ::redis::RedisResult<()> {
                 use ::redis::AsyncCommands as _;
-                let mut conn = self.redis.get_async_connection().await?;
+                let mut conn = self.redis.get_multiplexed_async_connection().await?;
                 conn.set($k, value).await?;
                 Ok(())
             }
@@ -41,7 +41,7 @@ macro_rules! impl_storage {
             #[::tracing::instrument(skip(self))]
             pub async fn [<del_ $n>](&self) -> ::redis::RedisResult<()> {
                 use ::redis::AsyncCommands as _;
-                let mut conn = self.redis.get_async_connection().await?;
+                let mut conn = self.redis.get_multiplexed_async_connection().await?;
                 conn.del($k).await?;
                 Ok(())
             }
@@ -53,7 +53,7 @@ macro_rules! impl_storage {
             #[::tracing::instrument(skip(self))]
             pub async fn [<get_ $n>](&self, $($mn: $mt),+) -> ::redis::RedisResult<Option<$t>> {
                 use ::redis::AsyncCommands as _;
-                let mut conn = self.redis.get_async_connection().await?;
+                let mut conn = self.redis.get_multiplexed_async_connection().await?;
                 let ret: Option<$t> = conn.get(format!($k, $($mn),*)).await?;
                 Ok(ret)
             }
@@ -61,7 +61,7 @@ macro_rules! impl_storage {
             #[::tracing::instrument(skip(self))]
             pub async fn [<set_ $n>](&self, $($mn: $mt),+, value: &$t) -> ::redis::RedisResult<()> {
                 use ::redis::AsyncCommands as _;
-                let mut conn = self.redis.get_async_connection().await?;
+                let mut conn = self.redis.get_multiplexed_async_connection().await?;
                 conn.set(format!($k, $($mn),*), value).await?;
                 Ok(())
             }
@@ -69,7 +69,7 @@ macro_rules! impl_storage {
             #[::tracing::instrument(skip(self))]
             pub async fn [<del_ $n>](&self, $($mn: $mt),+) -> ::redis::RedisResult<()> {
                 use ::redis::AsyncCommands as _;
-                let mut conn = self.redis.get_async_connection().await?;
+                let mut conn = self.redis.get_multiplexed_async_connection().await?;
                 conn.del(format!($k, $($mn),*)).await?;
                 Ok(())
             }
@@ -81,7 +81,7 @@ macro_rules! impl_storage {
             #[::tracing::instrument(skip(self))]
             pub async fn [<get_ $n>](&self) -> ::redis::RedisResult<Option<$t>> {
                 use ::redis::AsyncCommands as _;
-                let mut conn = self.redis.get_async_connection().await?;
+                let mut conn = self.redis.get_multiplexed_async_connection().await?;
                 let ret: Option<$t> = conn.get($k).await?;
                 Ok(ret)
             }
@@ -89,7 +89,7 @@ macro_rules! impl_storage {
             #[::tracing::instrument(skip(self))]
             pub async fn [<set_ $n>](&self, value: &$t) -> ::redis::RedisResult<()> {
                 use ::redis::AsyncCommands as _;
-                let mut conn = self.redis.get_async_connection().await?;
+                let mut conn = self.redis.get_multiplexed_async_connection().await?;
                 conn.set_options($k, value, redis::SetOptions::default().with_expiration(redis::SetExpiry::EX($ttl))).await?;
                 Ok(())
             }
@@ -97,7 +97,7 @@ macro_rules! impl_storage {
             #[::tracing::instrument(skip(self))]
             pub async fn [<del_ $n>](&self) -> ::redis::RedisResult<()> {
                 use ::redis::AsyncCommands as _;
-                let mut conn = self.redis.get_async_connection().await?;
+                let mut conn = self.redis.get_multiplexed_async_connection().await?;
                 conn.del($k).await?;
                 Ok(())
             }
@@ -109,7 +109,7 @@ macro_rules! impl_storage {
             #[::tracing::instrument(skip(self))]
             pub async fn [<get_ $n>](&self, $($mn: $mt),+) -> ::redis::RedisResult<Option<$t>> {
                 use ::redis::AsyncCommands as _;
-                let mut conn = self.redis.get_async_connection().await?;
+                let mut conn = self.redis.get_multiplexed_async_connection().await?;
                 let ret: Option<$t> = conn.get(format!($k, $($mn),*)).await?;
                 Ok(ret)
             }
@@ -117,7 +117,7 @@ macro_rules! impl_storage {
             #[::tracing::instrument(skip(self))]
             pub async fn [<set_ $n>](&self, $($mn: $mt),+, value: &$t) -> ::redis::RedisResult<()> {
                 use ::redis::AsyncCommands as _;
-                let mut conn = self.redis.get_async_connection().await?;
+                let mut conn = self.redis.get_multiplexed_async_connection().await?;
                 conn.set_options(format!($k, $($mn),*), value, redis::SetOptions::default().with_expiration(redis::SetExpiry::EX($ttl))).await?;
                 Ok(())
             }
@@ -125,7 +125,7 @@ macro_rules! impl_storage {
             #[::tracing::instrument(skip(self))]
             pub async fn [<del_ $n>](&self, $($mn: $mt),+) -> ::redis::RedisResult<()> {
                 use ::redis::AsyncCommands as _;
-                let mut conn = self.redis.get_async_connection().await?;
+                let mut conn = self.redis.get_multiplexed_async_connection().await?;
                 conn.del(format!($k, $($mn),*)).await?;
                 Ok(())
             }
@@ -144,28 +144,28 @@ impl Storage {
 impl Storage {
     pub async fn getall_autoreply(&self) -> ::redis::RedisResult<Vec<(String, String)>> {
         use ::redis::AsyncCommands as _;
-        let mut conn = self.redis.get_async_connection().await?;
+        let mut conn = self.redis.get_multiplexed_async_connection().await?;
         let values: Vec<(String, String)> = conn.hgetall("autoreply-v1").await?;
         Ok(values)
     }
 
     pub async fn add_autoreply(&self, f: &str, v: &str) -> ::redis::RedisResult<()> {
         use ::redis::AsyncCommands as _;
-        let mut conn = self.redis.get_async_connection().await?;
+        let mut conn = self.redis.get_multiplexed_async_connection().await?;
         conn.hset("autoreply-v1", f, v).await?;
         Ok(())
     }
 
     pub async fn del_autoreply(&self, f: &str) -> ::redis::RedisResult<()> {
         use ::redis::AsyncCommands as _;
-        let mut conn = self.redis.get_async_connection().await?;
+        let mut conn = self.redis.get_multiplexed_async_connection().await?;
         conn.hdel("autoreply-v1", f).await?;
         Ok(())
     }
 
     pub async fn delall_autoreply(&self) -> ::redis::RedisResult<()> {
         use ::redis::AsyncCommands as _;
-        let mut conn = self.redis.get_async_connection().await?;
+        let mut conn = self.redis.get_multiplexed_async_connection().await?;
         conn.del("autoreply-v1").await?;
         Ok(())
     }
