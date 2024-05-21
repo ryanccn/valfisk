@@ -34,7 +34,7 @@ async fn event_handler(
 
     match ev {
         FullEvent::Message { new_message } => {
-            handlers::handle_message(new_message, ctx).await?;
+            handlers::handle_message(new_message, ctx, data).await?;
         }
 
         FullEvent::ReactionAdd { add_reaction } => {

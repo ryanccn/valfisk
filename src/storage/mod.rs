@@ -139,3 +139,34 @@ impl Storage {
     impl_storage!(starboard, "starboard-v1:{}", String, ttl = 2629746, message_id: &str);
     impl_storage!(self_timeout_transparency, "stt-v1:{}", bool, user_id: &str);
 }
+
+#[allow(dead_code)]
+impl Storage {
+    pub async fn getall_autoreply(&self) -> ::redis::RedisResult<Vec<(String, String)>> {
+        use ::redis::AsyncCommands as _;
+        let mut conn = self.redis.get_async_connection().await?;
+        let values: Vec<(String, String)> = conn.hgetall("autoreply-v1").await?;
+        Ok(values)
+    }
+
+    pub async fn add_autoreply(&self, f: &str, v: &str) -> ::redis::RedisResult<()> {
+        use ::redis::AsyncCommands as _;
+        let mut conn = self.redis.get_async_connection().await?;
+        conn.hset("autoreply-v1", f, v).await?;
+        Ok(())
+    }
+
+    pub async fn del_autoreply(&self, f: &str) -> ::redis::RedisResult<()> {
+        use ::redis::AsyncCommands as _;
+        let mut conn = self.redis.get_async_connection().await?;
+        conn.hdel("autoreply-v1", f).await?;
+        Ok(())
+    }
+
+    pub async fn delall_autoreply(&self) -> ::redis::RedisResult<()> {
+        use ::redis::AsyncCommands as _;
+        let mut conn = self.redis.get_async_connection().await?;
+        conn.del("autoreply-v1").await?;
+        Ok(())
+    }
+}
