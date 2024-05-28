@@ -13,10 +13,10 @@ fn channel_from_env(key: &str) -> Option<serenity::ChannelId> {
         .and_then(|s| s.parse::<serenity::ChannelId>().ok())
 }
 
-#[tracing::instrument]
+#[tracing::instrument(skip(http))]
 async fn get_starboard_channel(
     http: impl serenity::CacheHttp + std::fmt::Debug,
-    message_channel: serenity::ChannelId,
+    message_channel: &serenity::ChannelId,
 ) -> Result<Option<serenity::ChannelId>> {
     let Some(message_channel) = message_channel.to_channel(&http).await?.guild() else {
         return Ok(None);
@@ -147,7 +147,7 @@ pub async fn handle(
         .as_ref()
         .ok_or_eyre("no storage available for starboard features")?;
 
-    if let Some(starboard) = get_starboard_channel(&ctx, message.channel_id).await? {
+    if let Some(starboard) = get_starboard_channel(&ctx, &message.channel_id).await? {
         let significant_reactions = get_significant_reactions(message);
 
         if let Some(existing_starboard_message) = storage
@@ -209,6 +209,42 @@ pub async fn handle(
                 "Created starboard message {} for {}",
                 starboard_message.id, message.id
             );
+        }
+    }
+
+    Ok(())
+}
+
+#[tracing::instrument(skip(ctx, data))]
+pub async fn handle_deletion(
+    ctx: &serenity::Context,
+    data: &crate::Data,
+    deleted_message_id: &serenity::MessageId,
+    channel_id: &serenity::ChannelId,
+) -> Result<()> {
+    if let Some(storage) = &data.storage {
+        if let Some(starboard_channel) = get_starboard_channel(&ctx, channel_id).await? {
+            if let Some(starboard_id) = storage
+                .get_starboard(&deleted_message_id.to_string())
+                .await?
+            {
+                debug!(
+                    "Deleted starboard message {} for {} (source deleted)",
+                    starboard_id, deleted_message_id
+                );
+
+                storage
+                    .del_starboard(&deleted_message_id.to_string())
+                    .await?;
+
+                ctx.http
+                    .delete_message(
+                        starboard_channel,
+                        starboard_id.parse::<serenity::MessageId>()?,
+                        None,
+                    )
+                    .await?;
+            }
         }
     }
 

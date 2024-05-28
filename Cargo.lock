@@ -2739,6 +2739,7 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-actix-web",
+ "tracing-error",
  "tracing-subscriber",
 ]
 

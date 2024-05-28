@@ -60,6 +60,14 @@ async fn event_handler(
             starboard::handle(ctx, data, &message).await?;
         }
 
+        FullEvent::MessageDelete {
+            deleted_message_id,
+            channel_id,
+            ..
+        } => {
+            starboard::handle_deletion(ctx, data, deleted_message_id, channel_id).await?;
+        }
+
         FullEvent::PresenceUpdate { new_data, .. } => {
             if new_data.guild_id.map(|g| g.to_string()) == std::env::var("GUILD_ID").ok() {
                 let mut store = api::PRESENCE_STORE.write().unwrap();
@@ -118,6 +126,7 @@ async fn main() -> Result<()> {
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer())
         .with(tracing_subscriber::EnvFilter::from_default_env())
+        .with(tracing_error::ErrorLayer::default())
         .init();
 
     #[cfg(debug_assertions)]

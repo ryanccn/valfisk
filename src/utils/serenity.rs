@@ -10,7 +10,7 @@ pub fn unique_username(user: &serenity::User) -> String {
     ret
 }
 
-#[tracing::instrument]
+#[tracing::instrument(skip(ctx))]
 pub async fn suppress_embeds(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
     use poise::futures_util::StreamExt as _;
     use serenity::{EditMessage, Event};
