@@ -29,6 +29,7 @@ pub fn to_vec() -> Vec<
         command!(useful, translate),
         command!(useful, suppress_embeds),
         command!(fun, autoreply),
+        command!(fun, intelligence, ask),
         command!(fun, owo),
         command!(fun, pomelo),
         command!(fun, shiggy),
