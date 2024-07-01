@@ -21,7 +21,7 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@v11
 
       - name: Update lockfile
-        uses: DeterminateSystems/update-flake-lock@v21
+        uses: DeterminateSystems/update-flake-lock@v23
         with:
           commit-msg: "chore(flake): update inputs"
           pr-title: "chore(flake): update inputs"
