@@ -13,27 +13,24 @@
     flake-root.url = "github:srid/flake-root";
   };
 
-  outputs = {parts, ...} @ inputs:
-    parts.lib.mkFlake {inherit inputs;} {
+  outputs =
+    { parts, ... }@inputs:
+    parts.lib.mkFlake { inherit inputs; } {
       imports = [
         inputs.proc-flake.flakeModule
         inputs.flake-root.flakeModule
         ./nix
       ];
 
-      perSystem = {
-        self',
-        system,
-        ...
-      }: {
-        _module.args.pkgs = import inputs.nixpkgs {
-          inherit system;
-          overlays = [
-            inputs.rust-overlay.overlays.default
-          ];
-          config = {};
+      perSystem =
+        { self', system, ... }:
+        {
+          _module.args.pkgs = import inputs.nixpkgs {
+            inherit system;
+            overlays = [ inputs.rust-overlay.overlays.default ];
+            config = { };
+          };
         };
-      };
 
       systems = [
         "x86_64-linux"
@@ -43,8 +40,6 @@
       ];
     }
     // {
-      overlays.default = _: prev: {
-        nrr = prev.callPackage ./nix/derivation.nix {};
-      };
+      overlays.default = _: prev: { valfisk = prev.callPackage ./nix/derivation.nix { }; };
     };
 }

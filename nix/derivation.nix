@@ -33,18 +33,14 @@ rustPlatform.buildRustPackage {
     darwin.apple_sdk.frameworks.SystemConfiguration
   ];
 
-  nativeBuildInputs = [
-    pkg-config
-  ];
+  nativeBuildInputs = [ pkg-config ];
 
   env =
     {
       METADATA_LAST_MODIFIED = self.lastModified;
       METADATA_GIT_REV = self.dirtyRev or self.rev;
     }
-    // lib.optionalAttrs lto {
-      CARGO_PROFILE_RELEASE_LTO = "fat";
-    }
+    // lib.optionalAttrs lto { CARGO_PROFILE_RELEASE_LTO = "fat"; }
     // lib.optionalAttrs optimizeSize {
       CARGO_PROFILE_RELEASE_OPT_LEVEL = "z";
       CARGO_PROFILE_RELEASE_PANIC = "abort";
@@ -56,7 +52,10 @@ rustPlatform.buildRustPackage {
     mainProgram = "valfisk";
     description = "Next generation Ryanland Discord bot, written in Rust";
     homepage = "https://github.com/ryanccn/valfisk";
-    maintainers = with maintainers; [getchoo ryanccn];
+    maintainers = with maintainers; [
+      getchoo
+      ryanccn
+    ];
     licenses = licenses.agpl3Only;
   };
 }
