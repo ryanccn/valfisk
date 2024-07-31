@@ -22,7 +22,7 @@ os_info = { version = "3.8.2", default-features = false }
 paste = "1.0.15"
 poise = "0.6.1"
 rand = "0.8.5"
-redis = { version = "0.25.2", features = ["tokio-comp", "tokio-rustls-comp"] }
+redis = { version = "0.26.0", features = ["tokio-comp", "tokio-rustls-comp"] }
 redis-macros = "0.3.0"
 regex = "1.10.5"
 reqwest = { version = "0.12.5", default-features = false, features = ["rustls-tls", "json", "brotli"] }
