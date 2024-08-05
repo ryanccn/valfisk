@@ -14,7 +14,7 @@ chrono = "0.4.38"
 color-eyre = "0.6.3"
 dotenvy = "0.15.7"
 humantime = "2.1.0"
-indexmap = { version = "2.2.6", features = ["serde"] }
+indexmap = { version = "2.3.0", features = ["serde"] }
 nanoid = "0.4.0"
 num-traits = "0.2.19"
 once_cell = "1.19.0"
