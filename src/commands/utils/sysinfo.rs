@@ -33,11 +33,7 @@ pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
         false,
     );
 
-    embed = embed.field(
-        "CPU load",
-        format!("{:.2}%", sys.global_cpu_info().cpu_usage()),
-        false,
-    );
+    embed = embed.field("CPU load", format!("{:.2}%", sys.global_cpu_usage()), false);
 
     embed = embed.field(
         "Memory",

@@ -1,6 +1,6 @@
 use std::env;
 
-use color_eyre::eyre::Result;
+use color_eyre::eyre::{eyre, Context as _, Result};
 use serde::Deserialize;
 use serde_json::json;
 
@@ -22,7 +22,9 @@ pub async fn ask(
 ) -> Result<()> {
     ctx.defer().await?;
 
-    let secret = env::var("INTELLIGENCE_SECRET")?;
+    let secret = env::var("INTELLIGENCE_SECRET")
+        .wrap_err_with(|| eyre!("Valfisk Intelligence API secret is not set!"))?;
+
     let resp: AskResponse = HTTP
         .post(ASK_API_URL)
         .bearer_auth(secret)
