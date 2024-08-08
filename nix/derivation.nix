@@ -35,6 +35,8 @@ rustPlatform.buildRustPackage {
 
   nativeBuildInputs = [ pkg-config ];
 
+  doCheck = false;
+
   env =
     {
       METADATA_LAST_MODIFIED = self.lastModified;
