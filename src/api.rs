@@ -1,6 +1,6 @@
 use poise::serenity_prelude as serenity;
 
-use actix_web::{get, middleware, post, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{get, head, middleware, post, web, App, HttpResponse, HttpServer, Responder};
 use serde_json::json;
 use tracing_actix_web::TracingLogger;
 
@@ -39,6 +39,12 @@ async fn route_ping() -> Result<impl Responder, ActixError> {
 }
 
 #[tracing::instrument]
+#[head("/")]
+async fn route_ping_head() -> Result<impl Responder, ActixError> {
+    Ok(HttpResponse::Ok().finish())
+}
+
+#[tracing::instrument]
 #[get("/presence/{user}")]
 async fn route_get_presence(path: web::Path<(u64,)>) -> Result<impl Responder, ActixError> {
     let path = path.into_inner();
@@ -55,6 +61,27 @@ async fn route_get_presence(path: web::Path<(u64,)>) -> Result<impl Responder, A
     match presence_data {
         Some(presence_data) => Ok(HttpResponse::Ok().json(presence_data)),
         None => Ok(HttpResponse::NotFound().json(json!({ "error": "User not found!" }))),
+    }
+}
+
+#[tracing::instrument]
+#[head("/presence/{user}")]
+async fn route_get_presence_head(path: web::Path<(u64,)>) -> Result<impl Responder, ActixError> {
+    let path = path.into_inner();
+    if path.0 == 0 {
+        return Ok(HttpResponse::BadRequest().finish());
+    }
+
+    let user_id = serenity::UserId::from(path.0);
+
+    let store = PRESENCE_STORE.read().unwrap();
+    let presence_exists = store.contains_key(&user_id);
+    drop(store);
+
+    if presence_exists {
+        Ok(HttpResponse::Ok().finish())
+    } else {
+        Ok(HttpResponse::NotFound().finish())
     }
 }
 
@@ -162,7 +189,9 @@ pub async fn serve(serenity_http: Arc<serenity::Http>) -> color_eyre::eyre::Resu
             .wrap(TracingLogger::default())
             .wrap(security_middleware)
             .app_data(app_state.clone())
+            .service(route_ping_head)
             .service(route_ping)
+            .service(route_get_presence_head)
             .service(route_get_presence)
             .service(route_kofi_webhook)
     })

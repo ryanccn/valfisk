@@ -5,7 +5,7 @@ use poise::{serenity_prelude as serenity, Framework, FrameworkOptions};
 use storage::Storage;
 use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
-use crate::utils::Pluralize;
+use crate::utils::Pluralize as _;
 
 #[derive(Debug)]
 pub struct Data {
