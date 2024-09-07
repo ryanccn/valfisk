@@ -118,7 +118,7 @@ impl ValfiskError<'_> {
                 .field("User", format!("<@{}>", self.ctx.author().id.get()), false);
 
             channel
-                .send_message(&self.ctx, CreateMessage::default().embed(embed))
+                .send_message(self.ctx.http(), CreateMessage::default().embed(embed))
                 .await
                 .ok();
         }

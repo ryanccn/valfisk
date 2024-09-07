@@ -1,6 +1,6 @@
 use color_eyre::eyre::Result;
 use once_cell::sync::Lazy;
-use poise::serenity_prelude as serenity;
+use poise::serenity_prelude::{self as serenity};
 
 use crate::{utils::serenity::unique_username, Data};
 
@@ -26,7 +26,7 @@ static MEMBER_LOGS_CHANNEL: Lazy<Option<serenity::ChannelId>> = Lazy::new(|| {
         .and_then(|s| s.parse::<serenity::ChannelId>().ok())
 });
 
-fn make_link_components(link: &str, label: &str) -> Vec<serenity::CreateActionRow> {
+fn make_link_components<'a>(link: &'a str, label: &'a str) -> Vec<serenity::CreateActionRow<'a>> {
     vec![serenity::CreateActionRow::Buttons(vec![
         serenity::CreateButton::new_link(link).label(label),
     ])]
@@ -65,7 +65,7 @@ pub async fn edit(
 
         logs_channel
             .send_message(
-                &ctx,
+                &ctx.http,
                 serenity::CreateMessage::default()
                     .embed(
                         serenity::CreateEmbed::default()
@@ -114,7 +114,7 @@ pub async fn delete(
 
         logs_channel
             .send_message(
-                &ctx,
+                &ctx.http,
                 serenity::CreateMessage::default()
                     .embed(
                         serenity::CreateEmbed::default()
@@ -141,7 +141,7 @@ pub async fn member_join(ctx: &serenity::Context, user: &serenity::User) -> Resu
     if let Some(logs_channel) = *MEMBER_LOGS_CHANNEL {
         logs_channel
             .send_message(
-                &ctx,
+                &ctx.http,
                 serenity::CreateMessage::default().embed(
                     serenity::CreateEmbed::default()
                         .author(
@@ -202,7 +202,7 @@ pub async fn member_leave(
         }
 
         logs_channel
-            .send_message(&ctx, serenity::CreateMessage::default().embed(embed))
+            .send_message(&ctx.http, serenity::CreateMessage::default().embed(embed))
             .await?;
     }
 

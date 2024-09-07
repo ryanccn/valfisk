@@ -17,7 +17,7 @@ impl MessageLog {
 impl From<Message> for MessageLog {
     fn from(value: Message) -> Self {
         Self {
-            content: Some(value.content),
+            content: Some(value.content.into_string()),
             author: Some(value.author.id),
         }
     }
@@ -26,7 +26,7 @@ impl From<Message> for MessageLog {
 impl From<&Message> for MessageLog {
     fn from(value: &Message) -> Self {
         Self {
-            content: Some(value.content.clone()),
+            content: Some(value.content.clone().into_string()),
             author: Some(value.author.id),
         }
     }

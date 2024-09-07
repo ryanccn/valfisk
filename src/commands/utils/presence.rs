@@ -40,13 +40,14 @@ pub async fn presence(
     Ok(())
 }
 
-#[tracing::instrument(skip(ctx))]
-pub async fn restore(ctx: &serenity::Context, storage: &crate::storage::Storage) -> Result<()> {
-    let data = storage.get_presence().await?;
+#[tracing::instrument(skip_all)]
+pub async fn restore(ctx: &serenity::Context, data: &crate::Data) -> Result<()> {
+    if let Some(storage) = &data.storage {
+        if let Some(presence) = storage.get_presence().await? {
+            ctx.set_presence(Some(presence.to_activity()), serenity::OnlineStatus::Online);
 
-    if let Some(data) = data {
-        ctx.set_presence(Some(data.to_activity()), serenity::OnlineStatus::Online);
-        info!("Restored presence from Redis");
+            info!("Restored presence from Redis");
+        }
     }
 
     Ok(())

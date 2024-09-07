@@ -22,9 +22,9 @@ pub async fn self_timeout(
             member
                 .to_mut()
                 .edit(
-                    &ctx,
+                    ctx.http(),
                     serenity::EditMember::default()
-                        .disable_communication_until_datetime(end_serenity)
+                        .disable_communication_until(end_serenity)
                         .audit_log_reason(&format!(
                             "Requested self timeout{}",
                             reason.as_ref().map_or(String::new(), |r| format!(": {r}"))
@@ -61,7 +61,10 @@ pub async fn self_timeout(
                     }
 
                     ctx.channel_id()
-                        .send_message(&ctx, serenity::CreateMessage::default().embed(resp_embed))
+                        .send_message(
+                            ctx.http(),
+                            serenity::CreateMessage::default().embed(resp_embed),
+                        )
                         .await?;
                 };
             }
@@ -86,8 +89,8 @@ pub async fn transparency(
     ctx: Context<'_>,
     #[description = "Whether transparency is on or off"] status: bool,
 ) -> Result<()> {
-    let storage = ctx
-        .data()
+    let data = ctx.data();
+    let storage = data
         .storage
         .as_ref()
         .ok_or_else(|| eyre!("storage is not available for the transparency feature"))?;

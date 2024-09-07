@@ -24,7 +24,7 @@ impl ValfiskPresenceData {
         Self {
             status: presence.status,
             client_status: presence.client_status.clone(),
-            activities: presence.activities.clone(),
+            activities: presence.activities.to_vec(),
         }
     }
 }
@@ -137,7 +137,7 @@ async fn route_kofi_webhook(
 
             channel
                 .send_message(
-                    &app_data.into_inner(),
+                    &app_data.into_inner().serenity_http,
                     serenity::CreateMessage::default().embed(embed),
                 )
                 .await?;
@@ -150,12 +150,6 @@ async fn route_kofi_webhook(
 #[derive(Debug)]
 struct AppState {
     serenity_http: Arc<serenity::Http>,
-}
-
-impl poise::serenity_prelude::CacheHttp for AppState {
-    fn http(&self) -> &serenity::Http {
-        &self.serenity_http
-    }
 }
 
 #[tracing::instrument(skip(serenity_http))]

@@ -11,10 +11,10 @@ pub async fn pomelo(ctx: Context<'_>) -> Result<()> {
         ctx.defer().await?;
 
         let members: Vec<_> = guild
-            .members(&ctx, None, None)
+            .members(ctx.http(), None, None)
             .await?
             .into_iter()
-            .filter(|m| !m.user.bot)
+            .filter(|m| !m.user.bot())
             .collect();
 
         let nonmigrated_users: Vec<serenity::UserId> = members

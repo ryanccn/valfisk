@@ -20,11 +20,7 @@ pub async fn kick(
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
-    if let Some(reason) = &reason {
-        member.kick_with_reason(&ctx, reason).await?;
-    } else {
-        member.kick(&ctx).await?;
-    }
+    member.kick(ctx.http(), reason.as_deref()).await?;
 
     let mut dm_embed = serenity::CreateEmbed::default()
         .title("Kick")
@@ -40,7 +36,7 @@ pub async fn kick(
         member
             .user
             .direct_message(
-                &ctx,
+                ctx.http(),
                 serenity::CreateMessage::default().embed(dm_embed.clone()),
             )
             .await?;
@@ -53,7 +49,10 @@ pub async fn kick(
         );
 
         logs_channel
-            .send_message(&ctx, serenity::CreateMessage::default().embed(server_embed))
+            .send_message(
+                ctx.http(),
+                serenity::CreateMessage::default().embed(server_embed),
+            )
             .await?;
     }
 

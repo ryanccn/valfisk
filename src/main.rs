@@ -1,7 +1,9 @@
+use std::sync::Arc;
+
 use color_eyre::eyre::{Report, Result, WrapErr as _};
 use tracing::{info, warn};
 
-use poise::{serenity_prelude as serenity, Framework, FrameworkOptions};
+use poise::{serenity_prelude as serenity, Framework, FrameworkContext, FrameworkOptions};
 use storage::Storage;
 use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
@@ -25,16 +27,31 @@ mod utils;
 
 #[tracing::instrument(skip_all)]
 async fn event_handler(
-    ctx: &serenity::Context,
+    ctx: FrameworkContext<'_, Data, Report>,
     ev: &serenity::FullEvent,
-    // framework: poise::FrameworkContext<'_, Data, Report>,
-    data: &Data,
 ) -> Result<()> {
     use serenity::{FullEvent, Timestamp};
 
+    let data = ctx.user_data();
+
     match ev {
+        FullEvent::Ready { data_about_bot } => {
+            info!("Connected to Discord as {}", data_about_bot.user.tag());
+
+            let commands = &ctx.options().commands;
+            poise::builtins::register_globally(&ctx.serenity_context.http, commands).await?;
+
+            info!(
+                "Registered {} {}",
+                commands.len(),
+                "command".pluralize(commands.len())
+            );
+
+            commands::restore_presence(ctx.serenity_context, &ctx.user_data()).await?;
+        }
+
         FullEvent::Message { new_message } => {
-            handlers::handle_message(new_message, ctx, data).await?;
+            handlers::handle_message(new_message, ctx.serenity_context, &data).await?;
         }
 
         FullEvent::MessageUpdate { event, .. } => {
@@ -51,16 +68,18 @@ async fn event_handler(
                 storage
                     .set_message_log(
                         &event.id.to_string(),
-                        &MessageLog::new(content.clone(), author),
+                        &MessageLog::new(content.as_ref().map(|s| s.to_string()), author),
                     )
                     .await?;
 
                 handlers::log::edit(
-                    ctx,
+                    ctx.serenity_context,
                     (&event.id, &event.channel_id, &event.guild_id),
                     &author,
                     &prev.and_then(|p| p.content),
-                    content.as_ref().unwrap_or(&"*Unknown*".to_owned()),
+                    &content
+                        .as_ref()
+                        .map_or("*Unknown*".to_owned(), |s| s.to_string()),
                     &timestamp,
                 )
                 .await?;
@@ -72,7 +91,8 @@ async fn event_handler(
             channel_id,
             guild_id,
         } => {
-            starboard::handle_deletion(ctx, data, deleted_message_id, channel_id).await?;
+            starboard::handle_deletion(ctx.serenity_context, &data, deleted_message_id, channel_id)
+                .await?;
 
             let timestamp = Timestamp::now();
 
@@ -82,7 +102,7 @@ async fn event_handler(
                     .await?;
 
                 handlers::log::delete(
-                    ctx,
+                    ctx.serenity_context,
                     (deleted_message_id, channel_id, guild_id),
                     &prev.as_ref().and_then(|p| p.author),
                     &prev.and_then(|p| p.content),
@@ -97,30 +117,32 @@ async fn event_handler(
         }
 
         FullEvent::ReactionAdd { add_reaction } => {
-            let message = add_reaction.message(&ctx).await?;
-            starboard::handle(ctx, data, &message).await?;
+            let message = add_reaction.message(ctx.serenity_context).await?;
+            starboard::handle(ctx.serenity_context, &data, &message).await?;
         }
 
         FullEvent::ReactionRemove { removed_reaction } => {
-            let message = removed_reaction.message(&ctx).await?;
-            starboard::handle(ctx, data, &message).await?;
+            let message = removed_reaction.message(ctx.serenity_context).await?;
+            starboard::handle(ctx.serenity_context, &data, &message).await?;
         }
 
         FullEvent::ReactionRemoveAll {
             removed_from_message_id,
             channel_id,
         } => {
-            let message = channel_id.message(&ctx, removed_from_message_id).await?;
-            starboard::handle(ctx, data, &message).await?;
+            let message = channel_id
+                .message(ctx.serenity_context, *removed_from_message_id)
+                .await?;
+            starboard::handle(ctx.serenity_context, &data, &message).await?;
         }
 
         FullEvent::ReactionRemoveEmoji { removed_reactions } => {
-            let message = removed_reactions.message(&ctx).await?;
-            starboard::handle(ctx, data, &message).await?;
+            let message = removed_reactions.message(ctx.serenity_context).await?;
+            starboard::handle(ctx.serenity_context, &data, &message).await?;
         }
 
         FullEvent::GuildMemberAddition { new_member } => {
-            handlers::log::member_join(ctx, &new_member.user).await?;
+            handlers::log::member_join(ctx.serenity_context, &new_member.user).await?;
         }
 
         FullEvent::GuildMemberRemoval {
@@ -128,7 +150,8 @@ async fn event_handler(
             member_data_if_available,
             ..
         } => {
-            handlers::log::member_leave(ctx, user, member_data_if_available).await?;
+            handlers::log::member_leave(ctx.serenity_context, user, member_data_if_available)
+                .await?;
         }
 
         FullEvent::PresenceUpdate { new_data, .. } => {
@@ -146,37 +169,6 @@ async fn event_handler(
     }
 
     Ok(())
-}
-
-#[tracing::instrument(skip_all)]
-async fn setup(
-    ctx: &serenity::Context,
-    ready: &serenity::Ready,
-    framework: &poise::Framework<Data, Report>,
-) -> Result<Data> {
-    info!("Connected to Discord as {}", ready.user.tag());
-
-    let commands = &framework.options().commands;
-
-    poise::builtins::register_globally(&ctx, commands).await?;
-    info!(
-        "Registered {} {}",
-        commands.len(),
-        "command".pluralize(commands.len())
-    );
-
-    if let Ok(redis_url) = std::env::var("REDIS_URL") {
-        let client = redis::Client::open(redis_url)?;
-        let storage = Storage::from(client);
-
-        commands::restore_presence(ctx, &storage).await?;
-
-        Ok(Data {
-            storage: Some(storage),
-        })
-    } else {
-        Ok(Data { storage: None })
-    }
 }
 
 #[tokio::main]
@@ -205,20 +197,21 @@ async fn main() -> Result<()> {
     let token = std::env::var("DISCORD_TOKEN")
         .wrap_err_with(|| "Could not obtain DISCORD_TOKEN from environment!")?;
 
-    let mut client = serenity::Client::builder(token, serenity::GatewayIntents::all())
-        .framework(Framework::new(
-            FrameworkOptions {
-                commands: commands::to_vec(),
-                event_handler: |ctx, ev, _, data| Box::pin(event_handler(ctx, ev, data)),
-                on_error: |err| {
-                    Box::pin(async move {
-                        handlers::handle_error(&err).await;
-                    })
-                },
-                ..Default::default()
-            },
-            |ctx, ready, framework| Box::pin(setup(ctx, ready, framework)),
-        ))
+    let storage = if let Ok(redis_url) = std::env::var("REDIS_URL") {
+        let client = redis::Client::open(redis_url)?;
+        Some(Storage::from(client))
+    } else {
+        None
+    };
+
+    let mut client = serenity::Client::builder(&token, serenity::GatewayIntents::all())
+        .framework(Framework::new(FrameworkOptions {
+            commands: commands::to_vec(),
+            event_handler: |ctx, ev| Box::pin(event_handler(ctx, ev)),
+            on_error: |err| Box::pin(handlers::handle_error(err)),
+            ..Default::default()
+        }))
+        .data(Arc::new(Data { storage }))
         .await?;
 
     let client_http_2 = client.http.clone();

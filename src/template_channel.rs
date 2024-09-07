@@ -33,7 +33,7 @@ pub struct EmbedComponent {
 pub struct EmbedComponentEmbed {
     title: Option<String>,
     description: Option<String>,
-    color: Option<u64>,
+    color: Option<u32>,
     fields: Option<Vec<EmbedComponentEmbedField>>,
 }
 
@@ -50,13 +50,13 @@ pub struct RulesComponent {
     #[serde(default)]
     rules: IndexMap<String, String>,
     #[serde(default)]
-    colors: Vec<u64>,
+    colors: Vec<u32>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
 pub struct LinksComponent {
     title: String,
-    color: Option<u64>,
+    color: Option<u32>,
     links: IndexMap<String, String>,
 }
 
@@ -98,7 +98,7 @@ impl Config {
 
                             embed
                         })
-                        .collect(),
+                        .collect::<Vec<_>>(),
                 ),
 
                 Component::Links(data) => CreateMessage::default().embed({
@@ -132,7 +132,7 @@ impl Config {
 
                             embed
                         })
-                        .collect(),
+                        .collect::<Vec<_>>(),
                 ),
 
                 Component::Text(data) => CreateMessage::default().content(&data.text),

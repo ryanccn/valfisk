@@ -22,8 +22,8 @@ pub async fn autoreply(_ctx: Context<'_>) -> Result<()> {
 async fn list(ctx: Context<'_>) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
-    let storage = ctx
-        .data()
+    let data = ctx.data();
+    let storage = data
         .storage
         .as_ref()
         .ok_or_else(|| eyre!("storage is not available"))?;
@@ -57,8 +57,8 @@ async fn add(
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
-    let storage = ctx
-        .data()
+    let data = ctx.data();
+    let storage = data
         .storage
         .as_ref()
         .ok_or_else(|| eyre!("storage is not available"))?;
@@ -86,8 +86,8 @@ async fn delete(
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
-    let storage = ctx
-        .data()
+    let data = ctx.data();
+    let storage = data
         .storage
         .as_ref()
         .ok_or_else(|| eyre!("storage is not available"))?;
@@ -117,8 +117,8 @@ async fn delete(
 async fn delete_all(ctx: Context<'_>) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
-    let storage = ctx
-        .data()
+    let data = ctx.data();
+    let storage = data
         .storage
         .as_ref()
         .ok_or_else(|| eyre!("storage is not available"))?;

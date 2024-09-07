@@ -34,7 +34,7 @@ pub async fn handle(
         };
 
         if let Some(reply) = possible_reply {
-            message.reply(&ctx, reply).await?;
+            message.reply(&ctx.http, reply).await?;
         }
     }
 

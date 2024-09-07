@@ -11,10 +11,10 @@ pub async fn suppress_embeds(ctx: Context<'_>, message: serenity::Message) -> Re
     ctx.defer_ephemeral().await?;
 
     if ctx.author() == &message.author
-        || ctx
-            .author_member()
-            .await
-            .is_some_and(|m| m.permissions(ctx).is_ok_and(|p| p.manage_messages()))
+        || ctx.author_member().await.is_some_and(|m| {
+            m.permissions(ctx.cache())
+                .is_ok_and(|p| p.manage_messages())
+        })
     {
         let suppressed = message
             .flags

@@ -2,7 +2,7 @@ use color_eyre::eyre::Result;
 use poise::serenity_prelude as serenity;
 
 pub fn unique_username(user: &serenity::User) -> String {
-    let mut ret = user.name.clone();
+    let mut ret = user.name.clone().into_string();
     if let Some(discrim) = user.discriminator {
         ret.push_str(&format!("#{discrim}"));
     }

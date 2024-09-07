@@ -18,7 +18,7 @@ async fn get_starboard_channel(
     http: impl serenity::CacheHttp + std::fmt::Debug,
     message_channel: &serenity::ChannelId,
 ) -> Result<Option<serenity::ChannelId>> {
-    let Some(message_channel) = message_channel.to_channel(&http).await?.guild() else {
+    let Some(message_channel) = message_channel.to_channel(&http, None).await?.guild() else {
         return Ok(None);
     };
 
@@ -95,10 +95,10 @@ fn serialize_reactions(
     format!("**{reaction_string}** in <#{channel}>")
 }
 
-fn make_message_embed(
+fn make_message_embed<'a>(
     _http: &serenity::Http,
     message: &serenity::Message,
-) -> serenity::CreateEmbed {
+) -> serenity::CreateEmbed<'a> {
     let content = message.content.to_string();
     let mut builder = serenity::CreateEmbed::default()
         .description(if content.is_empty() {
@@ -157,7 +157,7 @@ pub async fn handle(
         {
             if significant_reactions.is_empty() {
                 starboard
-                    .delete_message(&ctx, existing_starboard_message)
+                    .delete_message(&ctx.http, existing_starboard_message, None)
                     .await?;
 
                 storage.del_starboard(&message.id.to_string()).await?;
@@ -169,8 +169,8 @@ pub async fn handle(
             } else {
                 starboard
                     .edit_message(
-                        &ctx,
-                        &existing_starboard_message,
+                        &ctx.http,
+                        existing_starboard_message,
                         serenity::EditMessage::default().content(serialize_reactions(
                             message.channel_id,
                             &significant_reactions,
@@ -193,7 +193,7 @@ pub async fn handle(
 
             let starboard_message = starboard
                 .send_message(
-                    &ctx,
+                    &ctx.http,
                     serenity::CreateMessage::default()
                         .content(content)
                         .embed(embed)

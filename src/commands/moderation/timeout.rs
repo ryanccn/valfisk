@@ -26,13 +26,13 @@ pub async fn timeout(
         let end_serenity = serenity::Timestamp::from_unix_timestamp(end.timestamp())?;
 
         let mut edit_member =
-            serenity::EditMember::default().disable_communication_until_datetime(end_serenity);
+            serenity::EditMember::default().disable_communication_until(end_serenity);
 
         if let Some(reason) = &reason {
             edit_member = edit_member.audit_log_reason(reason);
         }
 
-        member.edit(&ctx, edit_member).await?;
+        member.edit(ctx.http(), edit_member).await?;
 
         let mut dm_embed = serenity::CreateEmbed::default()
             .title("Timeout")
@@ -54,7 +54,7 @@ pub async fn timeout(
             member
                 .user
                 .direct_message(
-                    &ctx,
+                    ctx.http(),
                     serenity::CreateMessage::default().embed(dm_embed.clone()),
                 )
                 .await?;
@@ -67,7 +67,10 @@ pub async fn timeout(
             );
 
             logs_channel
-                .send_message(&ctx, serenity::CreateMessage::default().embed(server_embed))
+                .send_message(
+                    ctx.http(),
+                    serenity::CreateMessage::default().embed(server_embed),
+                )
                 .await?;
         }
 

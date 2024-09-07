@@ -26,11 +26,13 @@ pub async fn ban(
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
-    if let Some(reason) = &reason {
-        member.ban_with_reason(&ctx, 0, reason).await?;
-    } else {
-        member.ban(&ctx, 0).await?;
-    }
+    member
+        .ban(
+            ctx.http(),
+            delete_message_days.unwrap_or(0),
+            reason.as_deref(),
+        )
+        .await?;
 
     let mut dm_embed = serenity::CreateEmbed::default()
         .title("Ban")
@@ -52,7 +54,7 @@ pub async fn ban(
         member
             .user
             .direct_message(
-                &ctx,
+                ctx.http(),
                 serenity::CreateMessage::default().embed(dm_embed.clone()),
             )
             .await?;
@@ -65,7 +67,10 @@ pub async fn ban(
         );
 
         logs_channel
-            .send_message(&ctx, serenity::CreateMessage::default().embed(server_embed))
+            .send_message(
+                ctx.http(),
+                serenity::CreateMessage::default().embed(server_embed),
+            )
             .await?;
     }
 

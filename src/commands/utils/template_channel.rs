@@ -32,13 +32,13 @@ pub async fn template_channel(
         let mut message_iter = channel.messages_iter(&ctx).boxed();
         while let Some(message) = message_iter.next().await {
             if let Ok(message) = message {
-                message.delete(&ctx).await?;
+                message.delete(ctx.http(), None).await?;
             }
         }
     }
 
     for m in messages {
-        channel.send_message(&ctx, m).await?;
+        channel.send_message(ctx.http(), m).await?;
     }
 
     ctx.send(
