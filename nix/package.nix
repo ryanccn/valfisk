@@ -9,9 +9,16 @@
   enableLTO ? true,
   enableOptimizeSize ? false,
 }:
+let
+  year = builtins.substring 0 4 self.lastModifiedDate;
+  month = builtins.substring 4 2 self.lastModifiedDate;
+  day = builtins.substring 6 2 self.lastModifiedDate;
+
+  formattedDate = "${year}-${month}-${day}";
+in
 rustPlatform.buildRustPackage rec {
   pname = passthru.cargoToml.package.name;
-  inherit (passthru.cargoToml.package) version;
+  version = passthru.cargoToml.package.version + "-unstable-" + formattedDate;
 
   strictDeps = true;
 
@@ -40,7 +47,11 @@ rustPlatform.buildRustPackage rec {
   nativeBuildInputs = lib.optionals stdenv.isDarwin [ pkg-config ];
 
   env =
-    lib.optionalAttrs enableLTO {
+    {
+      METADATA_LAST_MODIFIED = self.lastModified;
+      METADATA_GIT_REV = self.dirtyRev or self.rev;
+    }
+    // lib.optionalAttrs enableLTO {
       CARGO_PROFILE_RELEASE_LTO = "fat";
       CARGO_PROFILE_RELEASE_CODEGEN_UNITS = "1";
     }
