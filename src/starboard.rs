@@ -131,7 +131,7 @@ fn make_message_embed(
     }
 
     // TODO: implement top-most role color
-    builder = builder.color(0xfcd34d);
+    builder = builder.color(0xffd43b);
 
     builder
 }

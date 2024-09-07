@@ -8,7 +8,7 @@ pub struct Storage {
 
 impl From<redis::Client> for Storage {
     fn from(value: ::redis::Client) -> Self {
-        Storage { redis: value }
+        Self { redis: value }
     }
 }
 

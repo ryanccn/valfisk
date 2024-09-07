@@ -2,7 +2,7 @@ use color_eyre::eyre::Result;
 use once_cell::sync::Lazy;
 use poise::serenity_prelude as serenity;
 
-use crate::Data;
+use crate::{utils::serenity::unique_username, Data};
 
 pub async fn handle_message(message: &serenity::Message, data: &Data) -> Result<()> {
     if let Some(storage) = &data.storage {
@@ -14,8 +14,14 @@ pub async fn handle_message(message: &serenity::Message, data: &Data) -> Result<
     Ok(())
 }
 
-static LOGS_CHANNEL: Lazy<Option<serenity::ChannelId>> = Lazy::new(|| {
+static MESSAGE_LOGS_CHANNEL: Lazy<Option<serenity::ChannelId>> = Lazy::new(|| {
     std::env::var("MESSAGE_LOGS_CHANNEL")
+        .ok()
+        .and_then(|s| s.parse::<serenity::ChannelId>().ok())
+});
+
+static MEMBER_LOGS_CHANNEL: Lazy<Option<serenity::ChannelId>> = Lazy::new(|| {
+    std::env::var("MEMBER_LOGS_CHANNEL")
         .ok()
         .and_then(|s| s.parse::<serenity::ChannelId>().ok())
 });
@@ -27,10 +33,10 @@ fn make_link_components(link: &str, label: &str) -> Vec<serenity::CreateActionRo
 }
 
 fn format_user(user: Option<&serenity::UserId>) -> String {
-    match user {
-        Some(user) => format!("<@{user}> ({user})"),
-        None => "*Unknown*".to_owned(),
-    }
+    user.map_or_else(
+        || "*Unknown*".to_owned(),
+        |user| format!("<@{user}> ({user})"),
+    )
 }
 
 pub async fn edit(
@@ -45,7 +51,11 @@ pub async fn edit(
     new_content: &str,
     timestamp: &serenity::Timestamp,
 ) -> Result<()> {
-    if let Some(logs_channel) = *LOGS_CHANNEL {
+    if author == &Some(ctx.cache.current_user().id) {
+        return Ok(());
+    }
+
+    if let Some(logs_channel) = *MESSAGE_LOGS_CHANNEL {
         let link = id.link(channel.to_owned(), guild.to_owned());
 
         let mut embed_author = serenity::CreateEmbedAuthor::new("Message Edited");
@@ -68,7 +78,7 @@ pub async fn edit(
                             )
                             .field("New content", new_content, false)
                             .field("Author", format_user(author.as_ref()), false)
-                            .color(0xfde047)
+                            .color(0xffd43b)
                             .timestamp(timestamp),
                     )
                     .components(make_link_components(&link, "Jump")),
@@ -90,7 +100,11 @@ pub async fn delete(
     content: &Option<String>,
     timestamp: &serenity::Timestamp,
 ) -> Result<()> {
-    if let Some(logs_channel) = *LOGS_CHANNEL {
+    if author == &Some(ctx.cache.current_user().id) {
+        return Ok(());
+    }
+
+    if let Some(logs_channel) = *MESSAGE_LOGS_CHANNEL {
         let link = id.link(channel.to_owned(), guild.to_owned());
 
         let mut embed_author = serenity::CreateEmbedAuthor::new("Message Deleted");
@@ -112,10 +126,60 @@ pub async fn delete(
                                 false,
                             )
                             .field("Author", format_user(author.as_ref()), false)
-                            .color(0xef4444)
+                            .color(0xff6b6b)
                             .timestamp(timestamp),
                     )
                     .components(make_link_components(&link, "Jump")),
+            )
+            .await?;
+    }
+
+    Ok(())
+}
+
+pub async fn member_join(ctx: &serenity::Context, user: &serenity::User) -> Result<()> {
+    if let Some(logs_channel) = *MEMBER_LOGS_CHANNEL {
+        logs_channel
+            .send_message(
+                &ctx,
+                serenity::CreateMessage::default().embed(
+                    serenity::CreateEmbed::default()
+                        .author(
+                            serenity::CreateEmbedAuthor::new(format!(
+                                "@{} joined",
+                                unique_username(user)
+                            ))
+                            .icon_url(user.face()),
+                        )
+                        .field("ID", format!("`{}`", user.id), false)
+                        .color(0x69db7c)
+                        .timestamp(serenity::Timestamp::now()),
+                ),
+            )
+            .await?;
+    }
+
+    Ok(())
+}
+
+pub async fn member_leave(ctx: &serenity::Context, user: &serenity::User) -> Result<()> {
+    if let Some(logs_channel) = *MEMBER_LOGS_CHANNEL {
+        logs_channel
+            .send_message(
+                &ctx,
+                serenity::CreateMessage::default().embed(
+                    serenity::CreateEmbed::default()
+                        .author(
+                            serenity::CreateEmbedAuthor::new(format!(
+                                "@{} left",
+                                unique_username(user)
+                            ))
+                            .icon_url(user.face()),
+                        )
+                        .field("ID", format!("`{}`", user.id), false)
+                        .color(0xff6b6b)
+                        .timestamp(serenity::Timestamp::now()),
+                ),
             )
             .await?;
     }

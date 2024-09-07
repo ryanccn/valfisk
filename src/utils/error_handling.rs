@@ -81,7 +81,7 @@ impl ValfiskError<'_> {
                         .description("Hmm. I wonder what happened there?")
                         .footer(CreateEmbedFooter::new(&self.error_id))
                         .timestamp(Timestamp::now())
-                        .color(0xef4444),
+                        .color(0xff6b6b),
                 ),
             )
             .await
@@ -104,7 +104,7 @@ impl ValfiskError<'_> {
                 .description(format!("```\n{:#?}\n```", self.error_or_panic))
                 .footer(CreateEmbedFooter::new(&self.error_id))
                 .timestamp(Timestamp::now())
-                .color(0xef4444)
+                .color(0xff6b6b)
                 .field(
                     "Command",
                     format!("`{}`", self.ctx.invocation_string()),

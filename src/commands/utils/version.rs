@@ -9,30 +9,22 @@ use crate::Context;
 #[poise::command(slash_command, guild_only)]
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 pub async fn version(ctx: Context<'_>) -> Result<()> {
-    let version_suffix = match option_env!("CARGO_PKG_VERSION") {
-        Some(v) => format!(" v{v}"),
-        None => String::new(),
-    };
+    let version_suffix =
+        option_env!("CARGO_PKG_VERSION").map_or_else(String::new, |v| format!(" v{v}"));
 
-    let host = match option_env!("METADATA_HOST") {
-        Some(host) => format!("`{host}`"),
-        None => "unknown".to_owned(),
-    };
+    let host = option_env!("METADATA_HOST")
+        .map_or_else(|| "unknown".to_owned(), |host| format!("`{host}`"));
 
-    let target = match option_env!("METADATA_TARGET") {
-        Some(target) => format!("`{target}`"),
-        None => "unknown".to_owned(),
-    };
+    let target = option_env!("METADATA_TARGET")
+        .map_or_else(|| "unknown".to_owned(), |target| format!("`{target}`"));
 
-    let last_modified = match option_env!("METADATA_LAST_MODIFIED") {
-        Some(timestamp) => format!("<t:{timestamp}:f>"),
-        None => "unknown".to_owned(),
-    };
+    let last_modified = option_env!("METADATA_LAST_MODIFIED").map_or_else(
+        || "unknown".to_owned(),
+        |timestamp| format!("<t:{timestamp}:f>"),
+    );
 
-    let git_rev = match option_env!("METADATA_GIT_REV") {
-        Some(git_rev) => format!("`{git_rev}`"),
-        None => "unknown".to_owned(),
-    };
+    let git_rev = option_env!("METADATA_GIT_REV")
+        .map_or_else(|| "unknown".to_owned(), |git_rev| format!("`{git_rev}`"));
 
     ctx.send(
         CreateReply::default().embed(

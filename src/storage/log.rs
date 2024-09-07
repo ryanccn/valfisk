@@ -9,7 +9,7 @@ pub struct MessageLog {
 }
 
 impl MessageLog {
-    pub fn new(content: Option<String>, author: Option<UserId>) -> Self {
+    pub const fn new(content: Option<String>, author: Option<UserId>) -> Self {
         Self { content, author }
     }
 }

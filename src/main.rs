@@ -40,7 +40,7 @@ async fn event_handler(
         FullEvent::MessageUpdate { event, .. } => {
             use storage::log::MessageLog;
 
-            let timestamp = event.edited_timestamp.unwrap_or(Timestamp::now());
+            let timestamp = event.edited_timestamp.unwrap_or_else(Timestamp::now);
 
             if let Some(storage) = &data.storage {
                 let prev = storage.get_message_log(&event.id.to_string()).await?;
@@ -117,6 +117,14 @@ async fn event_handler(
         FullEvent::ReactionRemoveEmoji { removed_reactions } => {
             let message = removed_reactions.message(&ctx).await?;
             starboard::handle(ctx, data, &message).await?;
+        }
+
+        FullEvent::GuildMemberAddition { new_member } => {
+            handlers::log::member_join(ctx, &new_member.user).await?;
+        }
+
+        FullEvent::GuildMemberRemoval { user, .. } => {
+            handlers::log::member_leave(ctx, user).await?;
         }
 
         FullEvent::PresenceUpdate { new_data, .. } => {

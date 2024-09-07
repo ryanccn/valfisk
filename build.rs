@@ -13,13 +13,13 @@ fn main() {
     println!("cargo:rerun-if-changed-env=TARGET");
     println!("cargo:rerun-if-changed-env=HOST");
 
-    let last_modified = env::var("METADATA_LAST_MODIFIED").unwrap_or(
+    let last_modified = env::var("METADATA_LAST_MODIFIED").unwrap_or_else(|_| {
         SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
             .as_secs()
-            .to_string(),
-    );
+            .to_string()
+    });
 
     println!("cargo:rustc-env=METADATA_LAST_MODIFIED={last_modified}");
 }

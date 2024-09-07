@@ -54,10 +54,7 @@ async fn github(message: &serenity::Message) -> Result<Vec<serenity::CreateEmbed
         let embed = serenity::CreateEmbed::default()
             .title(format!(
                 "{repo} {file} L{start}{}",
-                match end {
-                    Some(end) => format!("-{end}"),
-                    None => String::new(),
-                }
+                end.map_or_else(String::new, |end| format!("-{end}"))
             ))
             .description("```".to_owned() + language + "\n" + &selected_lines.join("\n") + "\n```")
             .footer(serenity::CreateEmbedFooter::new(ref_))

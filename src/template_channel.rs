@@ -4,7 +4,7 @@ use indexmap::IndexMap;
 use poise::serenity_prelude::{CreateEmbed, CreateMessage};
 use serde::{Deserialize, Serialize};
 
-fn default_to_false() -> bool {
+const fn default_to_false() -> bool {
     false
 }
 
@@ -23,13 +23,13 @@ pub enum Component {
     Text(TextComponent),
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
 pub struct EmbedComponent {
     #[serde(default)]
     embeds: Vec<EmbedComponentEmbed>,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
 pub struct EmbedComponentEmbed {
     title: Option<String>,
     description: Option<String>,
@@ -37,7 +37,7 @@ pub struct EmbedComponentEmbed {
     fields: Option<Vec<EmbedComponentEmbedField>>,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
 pub struct EmbedComponentEmbedField {
     name: String,
     value: String,
@@ -45,7 +45,7 @@ pub struct EmbedComponentEmbedField {
     inline: bool,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
 pub struct RulesComponent {
     #[serde(default)]
     rules: IndexMap<String, String>,
@@ -53,14 +53,14 @@ pub struct RulesComponent {
     colors: Vec<u64>,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
 pub struct LinksComponent {
     title: String,
     color: Option<u64>,
     links: IndexMap<String, String>,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
 pub struct TextComponent {
     text: String,
 }
