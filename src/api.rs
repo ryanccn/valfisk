@@ -20,7 +20,7 @@ pub struct ValfiskPresenceData {
 }
 
 impl ValfiskPresenceData {
-    pub fn from_presence(presence: &serenity::Presence) -> ValfiskPresenceData {
+    pub fn from_presence(presence: &serenity::Presence) -> Self {
         Self {
             status: presence.status,
             client_status: presence.client_status.clone(),
@@ -58,10 +58,10 @@ async fn route_get_presence(path: web::Path<(u64,)>) -> Result<impl Responder, A
     let presence_data = store.get(&user_id).cloned();
     drop(store);
 
-    match presence_data {
-        Some(presence_data) => Ok(HttpResponse::Ok().json(presence_data)),
-        None => Ok(HttpResponse::NotFound().json(json!({ "error": "User not found!" }))),
-    }
+    presence_data.map_or_else(
+        || Ok(HttpResponse::NotFound().json(json!({ "error": "User not found!" }))),
+        |presence_data| Ok(HttpResponse::Ok().json(presence_data)),
+    )
 }
 
 #[tracing::instrument]
@@ -129,7 +129,7 @@ async fn route_kofi_webhook(
                     data.amount, data.currency
                 ))
                 .timestamp(data.timestamp)
-                .color(0xfcd34d);
+                .color(0xffd43b);
 
             if let Some(message) = data.message {
                 embed = embed.field("Message", message, false);

@@ -28,7 +28,7 @@ pub async fn translate(ctx: Context<'_>, message: serenity::Message) -> Result<(
                 serenity::CreateEmbed::default()
                     .title("Translation unavailable")
                     .description("There is no content to translate")
-                    .color(0xfacc15),
+                    .color(0xffd43b),
             ),
         )
         .await?;

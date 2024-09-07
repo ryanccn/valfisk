@@ -1,6 +1,7 @@
 use crate::Context;
 
 mod fun;
+mod moderation;
 mod useful;
 mod utils;
 
@@ -28,6 +29,9 @@ pub fn to_vec() -> Vec<
         command!(useful, self_timeout, transparency),
         command!(useful, translate),
         command!(useful, suppress_embeds),
+        command!(moderation, ban),
+        command!(moderation, kick),
+        command!(moderation, timeout),
         command!(fun, autoreply),
         command!(fun, intelligence, ask),
         command!(fun, owo),

@@ -1,3 +1,4 @@
+pub mod log;
 pub mod presence;
 
 #[derive(Debug)]
@@ -7,7 +8,7 @@ pub struct Storage {
 
 impl From<redis::Client> for Storage {
     fn from(value: ::redis::Client) -> Self {
-        Storage { redis: value }
+        Self { redis: value }
     }
 }
 
@@ -138,6 +139,7 @@ impl Storage {
     impl_storage!(presence, "presence-v1", presence::PresenceData);
     impl_storage!(starboard, "starboard-v1:{}", String, ttl = 2629746, message_id: &str);
     impl_storage!(self_timeout_transparency, "stt-v1:{}", bool, user_id: &str);
+    impl_storage!(message_log, "message-log-v1:{}", log::MessageLog, ttl = 86400, message_id: &str);
 }
 
 #[allow(dead_code)]

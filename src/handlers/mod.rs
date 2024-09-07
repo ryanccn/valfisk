@@ -4,6 +4,7 @@ use poise::serenity_prelude as serenity;
 mod autoreply;
 mod code_expansion;
 mod error_handling;
+pub mod log;
 
 pub use error_handling::handle_error;
 
@@ -17,7 +18,8 @@ pub async fn handle_message(
 ) -> Result<()> {
     tokio::try_join!(
         code_expansion::handle(message, ctx),
-        autoreply::handle(message, ctx, data)
+        autoreply::handle(message, ctx, data),
+        log::handle_message(message, data),
     )?;
 
     Ok(())

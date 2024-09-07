@@ -63,7 +63,7 @@ pub async fn shiggy(
             let embed = serenity::CreateEmbed::default()
                 .title("Could not fetch shiggy!")
                 .description("An error occurred while fetching from the API.")
-                .color(0xef4444)
+                .color(0xff6b6b)
                 .footer(serenity::CreateEmbedFooter::new(valfisk_err.error_id));
 
             ctx.send(CreateReply::default().embed(embed)).await?;

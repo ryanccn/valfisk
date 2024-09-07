@@ -24,10 +24,7 @@ pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
         "CPU",
         format!(
             "**{}** ({} cores)",
-            match sys.cpus().first() {
-                Some(cpu) => cpu.brand(),
-                None => "Unknown",
-            },
+            sys.cpus().first().map_or("Unknown", |cpu| cpu.brand()),
             sys.physical_core_count().unwrap_or_default()
         ),
         false,
@@ -52,10 +49,8 @@ pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
             "**{}** {}{}",
             os.os_type(),
             os.version(),
-            match os.architecture() {
-                Some(arch) => format!(" ({arch})"),
-                None => String::new(),
-            },
+            os.architecture()
+                .map_or_else(String::new, |arch| format!(" ({arch})")),
         ),
         false,
     );
