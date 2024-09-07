@@ -1,15 +1,9 @@
 {
-  description = "Next generation Ryanland Discord bot, written in Rust";
-
   inputs = {
-    nixpkgs.url = "nixpkgs/nixos-unstable";
-
-    rust-overlay.url = "github:oxalica/rust-overlay";
-    rust-overlay.inputs.nixpkgs.follows = "nixpkgs";
-
+    nixpkgs.url = "nixpkgs/nixpkgs-unstable";
     parts.url = "github:hercules-ci/flake-parts";
     parts.inputs.nixpkgs-lib.follows = "nixpkgs";
-    proc-flake.url = "github:srid/proc-flake";
+    nix-filter.url = "github:numtide/nix-filter";
     flake-root.url = "github:srid/flake-root";
   };
 
@@ -17,20 +11,9 @@
     { parts, ... }@inputs:
     parts.lib.mkFlake { inherit inputs; } {
       imports = [
-        inputs.proc-flake.flakeModule
         inputs.flake-root.flakeModule
         ./nix
       ];
-
-      perSystem =
-        { self', system, ... }:
-        {
-          _module.args.pkgs = import inputs.nixpkgs {
-            inherit system;
-            overlays = [ inputs.rust-overlay.overlays.default ];
-            config = { };
-          };
-        };
 
       systems = [
         "x86_64-linux"
@@ -38,8 +21,5 @@
         "x86_64-darwin"
         "aarch64-darwin"
       ];
-    }
-    // {
-      overlays.default = _: prev: { valfisk = prev.callPackage ./nix/derivation.nix { }; };
     };
 }

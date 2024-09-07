@@ -1,49 +1,19 @@
-{ ... }:
+{ inputs, self, ... }:
 {
   perSystem =
-    {
-      self',
-      lib,
-      pkgs,
-      system,
-      config,
-      inputs',
-      ...
-    }:
+    { pkgs, lib, ... }:
     let
-      crossPkgsFor = {
+      crossPkgs = {
         x86_64 = pkgs.pkgsCross.musl64.pkgsStatic;
         aarch64 = pkgs.pkgsCross.aarch64-multiplatform.pkgsStatic;
       };
 
-      valfiskFor =
-        let
-          toolchain = pkgs.rust-bin.stable.latest.minimal.override {
-            extensions = [ "rust-std" ];
-            targets = map (pkgs: pkgs.stdenv.hostPlatform.config) (lib.attrValues crossPkgsFor);
-          };
-
-          rustPlatforms = lib.mapAttrs (lib.const (
-            pkgs:
-            pkgs.makeRustPlatform (
-              lib.genAttrs [
-                "cargo"
-                "rustc"
-              ] (lib.const toolchain)
-            )
-          )) crossPkgsFor;
-
-          mkPackageWith =
-            rustPlatform:
-            self'.packages.valfisk.override {
-              inherit rustPlatform;
-              lto = true;
-              optimizeSize = true;
-            };
-        in
-        lib.mapAttrs' (
-          target: rustPlatform: lib.nameValuePair target (mkPackageWith rustPlatform)
-        ) rustPlatforms;
+      pkgFor =
+        arch:
+        crossPkgs.${arch}.callPackage ./package.nix {
+          inherit self;
+          inherit (inputs) nix-filter;
+        };
 
       containerFor =
         arch:
@@ -51,9 +21,10 @@
           name = "valfisk";
           tag = "latest-${arch}";
           copyToRoot = [ pkgs.dockerTools.caCertificates ];
-          config.Cmd = [ (lib.getExe valfiskFor.${arch}) ];
 
-          architecture = crossPkgsFor.${arch}.go.GOARCH;
+          config.Cmd = [ (lib.getExe (pkgFor arch)) ];
+
+          architecture = crossPkgs.${arch}.go.GOARCH;
         };
     in
     {

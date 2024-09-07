@@ -1,7 +1,8 @@
-{
+_: {
   imports = [
-    ./dev.nix
-    ./docker.nix
     ./packages.nix
+    ./docker.nix
+    ./dev.nix
+    ./checks.nix
   ];
 }

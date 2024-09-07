@@ -1,19 +1,18 @@
-{ self, ... }:
+{ self, inputs, ... }:
 {
   perSystem =
-    {
-      inputs',
-      lib,
-      pkgs,
-      system,
-      config,
-      ...
-    }:
+    { pkgs, config, ... }:
+    let
+      inherit (pkgs) lib;
+    in
     {
       packages = {
-        valfisk = pkgs.callPackage ./derivation.nix { inherit self; };
+        valfisk = pkgs.callPackage ./package.nix {
+          inherit self;
+          inherit (inputs) nix-filter;
+        };
 
         default = config.packages.valfisk;
-      };
+      } // (lib.attrsets.mapAttrs' (name: value: lib.nameValuePair "check-${name}" value) config.checks);
     };
 }
