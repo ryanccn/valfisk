@@ -21,7 +21,15 @@ pub async fn self_timeout(
 
             member
                 .to_mut()
-                .disable_communication_until_datetime(&ctx, end_serenity)
+                .edit(
+                    &ctx,
+                    serenity::EditMember::default()
+                        .disable_communication_until_datetime(end_serenity)
+                        .audit_log_reason(&format!(
+                            "Requested self timeout{}",
+                            reason.as_ref().map_or(String::new(), |r| format!(": {r}"))
+                        )),
+                )
                 .await?;
 
             let resp_embed = serenity::CreateEmbed::default()
