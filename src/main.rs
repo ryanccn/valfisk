@@ -123,8 +123,12 @@ async fn event_handler(
             handlers::log::member_join(ctx, &new_member.user).await?;
         }
 
-        FullEvent::GuildMemberRemoval { user, .. } => {
-            handlers::log::member_leave(ctx, user).await?;
+        FullEvent::GuildMemberRemoval {
+            user,
+            member_data_if_available,
+            ..
+        } => {
+            handlers::log::member_leave(ctx, user, member_data_if_available).await?;
         }
 
         FullEvent::PresenceUpdate { new_data, .. } => {

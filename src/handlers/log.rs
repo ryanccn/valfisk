@@ -151,6 +151,7 @@ pub async fn member_join(ctx: &serenity::Context, user: &serenity::User) -> Resu
                             ))
                             .icon_url(user.face()),
                         )
+                        .field("User", user.to_string(), false)
                         .field("ID", format!("`{}`", user.id), false)
                         .color(0x69db7c)
                         .timestamp(serenity::Timestamp::now()),
@@ -162,25 +163,46 @@ pub async fn member_join(ctx: &serenity::Context, user: &serenity::User) -> Resu
     Ok(())
 }
 
-pub async fn member_leave(ctx: &serenity::Context, user: &serenity::User) -> Result<()> {
+pub async fn member_leave(
+    ctx: &serenity::Context,
+    user: &serenity::User,
+    member: &Option<serenity::Member>,
+) -> Result<()> {
     if let Some(logs_channel) = *MEMBER_LOGS_CHANNEL {
-        logs_channel
-            .send_message(
-                &ctx,
-                serenity::CreateMessage::default().embed(
-                    serenity::CreateEmbed::default()
-                        .author(
-                            serenity::CreateEmbedAuthor::new(format!(
-                                "@{} left",
-                                unique_username(user)
-                            ))
-                            .icon_url(user.face()),
-                        )
-                        .field("ID", format!("`{}`", user.id), false)
-                        .color(0xff6b6b)
-                        .timestamp(serenity::Timestamp::now()),
-                ),
+        let mut embed = serenity::CreateEmbed::default()
+            .author(
+                serenity::CreateEmbedAuthor::new(format!("@{} left", unique_username(user)))
+                    .icon_url(user.face()),
             )
+            .field("User", user.to_string(), false)
+            .field("ID", format!("`{}`", user.id), false)
+            .color(0xff6b6b)
+            .timestamp(serenity::Timestamp::now());
+
+        if let Some(member) = member {
+            if let Some(roles) = member.roles(&ctx.cache) {
+                embed = embed.field(
+                    "Roles",
+                    if roles.is_empty() {
+                        "*None*".to_owned()
+                    } else {
+                        roles
+                            .iter()
+                            .map(|r| r.to_string())
+                            .collect::<Vec<_>>()
+                            .join(" ")
+                    },
+                    false,
+                );
+            }
+
+            if let Some(joined_at) = member.joined_at {
+                embed = embed.field("Joined", format!("<t:{}:F>", joined_at.timestamp()), false);
+            }
+        }
+
+        logs_channel
+            .send_message(&ctx, serenity::CreateMessage::default().embed(embed))
             .await?;
     }
 
