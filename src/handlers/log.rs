@@ -1,8 +1,10 @@
-use color_eyre::eyre::Result;
-use once_cell::sync::Lazy;
+use humansize::{format_size, FormatSizeOptions};
 use poise::serenity_prelude::{self as serenity};
 
-use crate::{utils::serenity::unique_username, Data};
+use color_eyre::eyre::Result;
+use once_cell::sync::Lazy;
+
+use crate::{storage::log::MessageLog, utils::serenity::unique_username, Data};
 
 pub async fn handle_message(message: &serenity::Message, data: &Data) -> Result<()> {
     if let Some(storage) = &data.storage {
@@ -49,6 +51,7 @@ pub async fn edit(
     author: &Option<serenity::UserId>,
     prev_content: &Option<String>,
     new_content: &str,
+    attachments: &[serenity::Attachment],
     timestamp: &serenity::Timestamp,
 ) -> Result<()> {
     if author == &Some(ctx.cache.current_user().id) {
@@ -63,24 +66,46 @@ pub async fn edit(
             embed_author = embed_author.icon_url(author.to_user(&ctx).await?.face());
         }
 
+        let mut embed = serenity::CreateEmbed::default()
+            .author(embed_author)
+            .field("Channel", format!("<#{channel}>"), false)
+            .field(
+                "Previous content",
+                prev_content.to_owned().unwrap_or("*Unknown*".to_owned()),
+                false,
+            )
+            .field("New content", new_content, false)
+            .field("Author", format_user(author.as_ref()), false)
+            .color(0xffd43b)
+            .timestamp(timestamp);
+
+        if !attachments.is_empty() {
+            embed = embed.field(
+                "Attachments",
+                attachments
+                    .iter()
+                    .map(|att| {
+                        format!(
+                            "[{}]({}) ({})",
+                            att.filename,
+                            att.url,
+                            format_size(
+                                att.size,
+                                FormatSizeOptions::default().space_after_value(true)
+                            )
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n"),
+                false,
+            );
+        }
+
         logs_channel
             .send_message(
                 &ctx.http,
                 serenity::CreateMessage::default()
-                    .embed(
-                        serenity::CreateEmbed::default()
-                            .author(embed_author)
-                            .field("Channel", format!("<#{channel}>"), false)
-                            .field(
-                                "Previous content",
-                                prev_content.as_ref().unwrap_or(&"*Unknown*".to_owned()),
-                                false,
-                            )
-                            .field("New content", new_content, false)
-                            .field("Author", format_user(author.as_ref()), false)
-                            .color(0xffd43b)
-                            .timestamp(timestamp),
-                    )
+                    .embed(embed)
                     .components(make_link_components(&link, "Jump")),
             )
             .await?;
@@ -96,11 +121,17 @@ pub async fn delete(
         &serenity::ChannelId,
         &Option<serenity::GuildId>,
     ),
-    author: &Option<serenity::UserId>,
-    content: &Option<String>,
+    log: &Option<MessageLog>,
     timestamp: &serenity::Timestamp,
 ) -> Result<()> {
-    if author == &Some(ctx.cache.current_user().id) {
+    let content = log.as_ref().and_then(|l| l.content.clone());
+    let author = log.as_ref().and_then(|l| l.author);
+    let attachments = log
+        .as_ref()
+        .map(|l| l.attachments.clone())
+        .unwrap_or_default();
+
+    if author == Some(ctx.cache.current_user().id) {
         return Ok(());
     }
 
@@ -112,23 +143,41 @@ pub async fn delete(
             embed_author = embed_author.icon_url(author.to_user(&ctx).await?.face());
         }
 
+        let mut embed = serenity::CreateEmbed::default()
+            .author(embed_author)
+            .field("Channel", format!("<#{channel}>"), false)
+            .field("Content", content.unwrap_or("*Unknown*".to_owned()), false)
+            .field("Author", format_user(author.as_ref()), false)
+            .color(0xff6b6b)
+            .timestamp(timestamp);
+
+        if !attachments.is_empty() {
+            embed = embed.field(
+                "Attachments",
+                attachments
+                    .iter()
+                    .map(|att| {
+                        format!(
+                            "[{}]({}) ({})",
+                            att.filename,
+                            att.url,
+                            format_size(
+                                att.size,
+                                FormatSizeOptions::default().space_after_value(true)
+                            )
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n"),
+                false,
+            );
+        }
+
         logs_channel
             .send_message(
                 &ctx.http,
                 serenity::CreateMessage::default()
-                    .embed(
-                        serenity::CreateEmbed::default()
-                            .author(embed_author)
-                            .field("Channel", format!("<#{channel}>"), false)
-                            .field(
-                                "Content",
-                                content.as_ref().unwrap_or(&"*Unknown*".to_owned()),
-                                false,
-                            )
-                            .field("Author", format_user(author.as_ref()), false)
-                            .color(0xff6b6b)
-                            .timestamp(timestamp),
-                    )
+                    .embed(embed)
                     .components(make_link_components(&link, "Jump")),
             )
             .await?;

@@ -1,4 +1,5 @@
-use poise::serenity_prelude::{Message, UserId};
+use poise::serenity_prelude::{Attachment, Message, UserId};
+
 use redis_macros::{FromRedisValue, ToRedisArgs};
 use serde::{Deserialize, Serialize};
 
@@ -6,19 +7,19 @@ use serde::{Deserialize, Serialize};
 pub struct MessageLog {
     pub content: Option<String>,
     pub author: Option<UserId>,
+    pub attachments: Vec<Attachment>,
 }
 
 impl MessageLog {
-    pub const fn new(content: Option<String>, author: Option<UserId>) -> Self {
-        Self { content, author }
-    }
-}
-
-impl From<Message> for MessageLog {
-    fn from(value: Message) -> Self {
+    pub const fn new(
+        content: Option<String>,
+        author: Option<UserId>,
+        attachments: Vec<Attachment>,
+    ) -> Self {
         Self {
-            content: Some(value.content.into_string()),
-            author: Some(value.author.id),
+            content,
+            author,
+            attachments,
         }
     }
 }
@@ -28,6 +29,7 @@ impl From<&Message> for MessageLog {
         Self {
             content: Some(value.content.clone().into_string()),
             author: Some(value.author.id),
+            attachments: value.attachments.to_vec(),
         }
     }
 }

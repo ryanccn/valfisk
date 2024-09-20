@@ -35,7 +35,6 @@ pub fn to_vec() -> Vec<
         command!(fun, autoreply),
         command!(fun, intelligence, ask),
         command!(fun, owo),
-        command!(fun, pomelo),
         command!(fun, shiggy),
         command!(utils, ping),
         command!(utils, presence),

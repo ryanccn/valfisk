@@ -13,6 +13,7 @@ bytesize = "1.3.0"
 chrono = "0.4.38"
 color-eyre = "0.6.3"
 dotenvy = "0.15.7"
+humansize = "2.1.3"
 humantime = "2.1.0"
 indexmap = { version = "2.5.0", features = ["serde"] }
 nanoid = "0.4.0"

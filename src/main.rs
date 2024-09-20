@@ -64,11 +64,20 @@ async fn event_handler(
 
                 let content = event.content.clone();
                 let author = event.author.as_ref().map(|a| a.id);
+                let attachments = event
+                    .attachments
+                    .as_ref()
+                    .map(|a| a.to_vec())
+                    .unwrap_or_default();
 
                 storage
                     .set_message_log(
                         &event.id.to_string(),
-                        &MessageLog::new(content.as_ref().map(|s| s.to_string()), author),
+                        &MessageLog::new(
+                            content.as_ref().map(|s| s.to_string()),
+                            author,
+                            attachments.clone(),
+                        ),
                     )
                     .await?;
 
@@ -80,6 +89,7 @@ async fn event_handler(
                     &content
                         .as_ref()
                         .map_or("*Unknown*".to_owned(), |s| s.to_string()),
+                    &attachments,
                     &timestamp,
                 )
                 .await?;
@@ -104,8 +114,7 @@ async fn event_handler(
                 handlers::log::delete(
                     ctx.serenity_context,
                     (deleted_message_id, channel_id, guild_id),
-                    &prev.as_ref().and_then(|p| p.author),
-                    &prev.and_then(|p| p.content),
+                    &prev,
                     &timestamp,
                 )
                 .await?;
