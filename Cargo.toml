@@ -23,7 +23,7 @@ os_info = { version = "3.8.2", default-features = false }
 paste = "1.0.15"
 poise = { git = "https://github.com/serenity-rs/poise.git", branch = "serenity-next" }
 rand = "0.8.5"
-redis = { version = "0.26.1", features = ["tokio-comp", "tokio-rustls-comp"] }
+redis = { version = "0.27.2", features = ["tokio-comp", "tokio-rustls-comp"] }
 redis-macros = "0.4.0"
 regex = "1.10.6"
 reqwest = { version = "0.12.7", default-features = false, features = ["rustls-tls", "json", "brotli"] }
