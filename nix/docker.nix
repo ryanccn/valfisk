@@ -20,7 +20,7 @@
         pkgs.dockerTools.buildImage {
           name = "valfisk";
           tag = "latest-${arch}";
-          copyToRoot = [ pkgs.dockerTools.caCertificates ];
+          # copyToRoot = [ pkgs.dockerTools.caCertificates ];
 
           config.Cmd = [ (lib.getExe (pkgFor arch)) ];
 

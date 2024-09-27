@@ -22,4 +22,5 @@ fn main() {
     });
 
     println!("cargo:rustc-env=METADATA_LAST_MODIFIED={last_modified}");
+    println!("cargo:rerun-if-changed-env=METADATA_LAST_MODIFIED");
 }
