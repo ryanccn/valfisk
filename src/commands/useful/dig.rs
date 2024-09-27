@@ -1,5 +1,6 @@
 use hickory_resolver::{
     config::{ResolverConfig, ResolverOpts},
+    error::ResolveErrorKind,
     proto::rr::RecordType,
     TokioAsyncResolver,
 };
@@ -85,35 +86,45 @@ pub async fn dig(
 ) -> Result<()> {
     ctx.defer().await?;
 
-    let response = RESOLVER.lookup(&name, r#type.as_record_type()).await?;
+    match RESOLVER.lookup(&name, r#type.as_record_type()).await {
+        Ok(response) => {
+            ctx.send(
+                CreateReply::default().embed(
+                    CreateEmbed::default()
+                        .title(format!("{type} records on {name}"))
+                        .description(
+                            response
+                                .record_iter()
+                                .map(|r| {
+                                    format!(
+                                        "`{} {} {}`",
+                                        r.name(),
+                                        r.record_type(),
+                                        r.data()
+                                            .map_or_else(|| "<none>".to_owned(), |d| d.to_string())
+                                    )
+                                })
+                                .collect::<Vec<_>>()
+                                .join("\n"),
+                        )
+                        .color(0xffa94d)
+                        .footer(CreateEmbedFooter::new(
+                            "https://cloudflare-dns.com/dns-query",
+                        ))
+                        .timestamp(Timestamp::now()),
+                ),
+            )
+            .await?;
+        }
 
-    ctx.send(
-        CreateReply::default().embed(
-            CreateEmbed::default()
-                .title(format!("{type} records on {name}"))
-                .description(
-                    response
-                        .record_iter()
-                        .map(|r| {
-                            format!(
-                                "`{} {} {}`",
-                                r.name(),
-                                r.record_type(),
-                                r.data()
-                                    .map_or_else(|| "<none>".to_owned(), |d| d.to_string())
-                            )
-                        })
-                        .collect::<Vec<_>>()
-                        .join("\n"),
-                )
-                .color(0xffa94d)
-                .footer(CreateEmbedFooter::new(
-                    "https://cloudflare-dns.com/dns-query",
-                ))
-                .timestamp(Timestamp::now()),
-        ),
-    )
-    .await?;
+        Err(err) => {
+            if matches!(err.kind(), ResolveErrorKind::NoRecordsFound { .. }) {
+                ctx.say("No records found!").await?;
+            } else {
+                return Err(err.into());
+            }
+        }
+    }
 
     Ok(())
 }

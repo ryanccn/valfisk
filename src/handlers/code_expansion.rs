@@ -105,7 +105,7 @@ async fn rust_playground(message: &serenity::Message) -> Result<Vec<serenity::Cr
 }
 
 static GO_PLAYGROUND: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"https://go\.dev/play/p/(?P<id>\w+)").unwrap());
+    Lazy::new(|| Regex::new(r"https://go\.dev/play/p/(?P<id>[\w-]+)").unwrap());
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
 async fn go_playground(message: &serenity::Message) -> Result<Vec<serenity::CreateEmbed>> {
