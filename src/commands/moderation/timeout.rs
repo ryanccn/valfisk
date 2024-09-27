@@ -51,13 +51,21 @@ pub async fn timeout(
         );
 
         if dm.unwrap_or(true) {
-            member
+            if member
                 .user
                 .direct_message(
                     ctx.http(),
                     serenity::CreateMessage::default().embed(dm_embed.clone()),
                 )
-                .await?;
+                .await
+                .is_ok()
+            {
+                dm_embed = dm_embed.field("User notified", "Yes", false);
+            } else {
+                dm_embed = dm_embed.field("User notified", "Failed", false);
+            }
+        } else {
+            dm_embed = dm_embed.field("User notified", "No", false);
         }
 
         if let Some(logs_channel) = *LOGS_CHANNEL {
