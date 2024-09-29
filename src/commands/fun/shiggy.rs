@@ -1,7 +1,7 @@
 use poise::{serenity_prelude as serenity, CreateReply};
 
 use crate::{utils::error_handling::ValfiskError, Context};
-use color_eyre::eyre::Result;
+use color_eyre::eyre::{Report, Result};
 
 #[derive(serde::Deserialize)]
 struct SafebooruResponse {
@@ -55,8 +55,9 @@ pub async fn shiggy(
         }
 
         Err(err) => {
-            let err = color_eyre::eyre::Report::from(err);
-            let valfisk_err = ValfiskError::new(&err, &ctx);
+            let err = Report::from(err);
+
+            let valfisk_err = ValfiskError::error(&err, &ctx);
             valfisk_err.handle_log();
             valfisk_err.handle_report().await;
 

@@ -1,3 +1,4 @@
+use once_cell::sync::Lazy;
 use std::fmt::Debug;
 
 use nanoid::nanoid;
@@ -17,18 +18,6 @@ pub enum ErrorOrPanic<'a> {
     Panic(&'a Option<String>),
 }
 
-impl<'a> From<&'a color_eyre::eyre::Error> for ErrorOrPanic<'a> {
-    fn from(val: &'a color_eyre::eyre::Error) -> Self {
-        ErrorOrPanic::Error(val)
-    }
-}
-
-impl<'a> From<&'a Option<String>> for ErrorOrPanic<'a> {
-    fn from(val: &'a Option<String>) -> Self {
-        ErrorOrPanic::Panic(val)
-    }
-}
-
 impl ErrorOrPanic<'_> {
     /// Return whether `self` is a panic or an error.
     fn type_string(&self) -> String {
@@ -38,6 +27,12 @@ impl ErrorOrPanic<'_> {
         }
     }
 }
+
+pub static ERROR_LOGS_CHANNEL: Lazy<Option<ChannelId>> = Lazy::new(|| {
+    std::env::var("ERROR_LOGS_CHANNEL")
+        .ok()
+        .and_then(|s| s.parse::<ChannelId>().ok())
+});
 
 /// A wrapped type around errors or panics encapsulated in [`ErrorOrPanic`] that includes context from Poise and a randomly generated `error_id`.
 #[derive(Debug)]
@@ -51,14 +46,21 @@ pub struct ValfiskError<'a> {
 }
 
 impl ValfiskError<'_> {
-    /// Create a new [`ValfiskError`] from an error or a panic string and Poise context.
+    /// Create a new [`ValfiskError`] from an error and Poise context.
     #[must_use]
-    pub fn new<'a>(
-        error_or_panic: impl Into<ErrorOrPanic<'a>>,
-        ctx: &'a Context,
-    ) -> ValfiskError<'a> {
+    pub fn error<'a>(error: &'a color_eyre::eyre::Error, ctx: &'a Context) -> ValfiskError<'a> {
         ValfiskError {
-            error_or_panic: error_or_panic.into(),
+            error_or_panic: ErrorOrPanic::Error(error),
+            ctx,
+            error_id: nanoid!(8),
+        }
+    }
+
+    /// Create a new [`ValfiskError`] from a panic string and Poise context.
+    #[must_use]
+    pub fn panic<'a>(panic: &'a Option<String>, ctx: &'a Context) -> ValfiskError<'a> {
+        ValfiskError {
+            error_or_panic: ErrorOrPanic::Panic(panic),
             ctx,
             error_id: nanoid!(8),
         }
@@ -91,14 +93,7 @@ impl ValfiskError<'_> {
     /// Report the error to a channel defined through the environment variable `ERROR_LOGS_CHANNEL`.
     #[tracing::instrument(skip(self))]
     pub async fn handle_report(&self) {
-        if let Ok(channel_id) = match std::env::var("ERROR_LOGS_CHANNEL") {
-            Ok(channel_id_str) => channel_id_str
-                .parse::<u64>()
-                .map_err(color_eyre::eyre::Error::from),
-            Err(err) => Err(color_eyre::eyre::Error::from(err)),
-        } {
-            let channel = ChannelId::new(channel_id);
-
+        if let Some(channel) = *ERROR_LOGS_CHANNEL {
             let embed = CreateEmbed::default()
                 .title("An error occurred!")
                 .description(format!("```\n{:#?}\n```", self.error_or_panic))
