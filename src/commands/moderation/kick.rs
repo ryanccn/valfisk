@@ -2,7 +2,7 @@ use color_eyre::eyre::Result;
 use poise::serenity_prelude as serenity;
 
 use super::LOGS_CHANNEL;
-use crate::{utils::serenity::unique_username, Context};
+use crate::Context;
 
 /// Kick a member
 #[poise::command(
@@ -52,8 +52,7 @@ pub async fn kick(
 
     if let Some(logs_channel) = *LOGS_CHANNEL {
         let server_embed = dm_embed.footer(
-            serenity::CreateEmbedFooter::new(unique_username(ctx.author()))
-                .icon_url(ctx.author().face()),
+            serenity::CreateEmbedFooter::new(ctx.author().tag()).icon_url(ctx.author().face()),
         );
 
         logs_channel

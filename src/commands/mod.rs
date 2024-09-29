@@ -34,7 +34,6 @@ pub fn to_vec() -> Vec<
         command!(moderation, kick),
         command!(moderation, timeout),
         command!(fun, autoreply),
-        command!(fun, intelligence, ask),
         command!(fun, owo),
         command!(fun, shiggy),
         command!(utils, ping),

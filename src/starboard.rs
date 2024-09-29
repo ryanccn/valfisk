@@ -5,8 +5,6 @@ use poise::serenity_prelude as serenity;
 use color_eyre::eyre::{OptionExt, Result};
 use tracing::debug;
 
-use crate::utils::serenity::unique_username;
-
 fn channel_from_env(key: &str) -> Option<serenity::ChannelId> {
     env::var(key)
         .ok()
@@ -107,8 +105,7 @@ fn make_message_embed<'a>(
             content
         })
         .author(
-            serenity::CreateEmbedAuthor::new(unique_username(&message.author))
-                .icon_url(message.author.face()),
+            serenity::CreateEmbedAuthor::new(message.author.tag()).icon_url(message.author.face()),
         )
         .timestamp(message.timestamp);
 

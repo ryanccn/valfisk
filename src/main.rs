@@ -19,6 +19,7 @@ pub type Context<'a> = poise::Context<'a, Data, Report>;
 mod api;
 mod commands;
 mod handlers;
+mod intelligence;
 mod reqwest_client;
 mod starboard;
 mod storage;

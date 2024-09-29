@@ -1,15 +1,6 @@
 use color_eyre::eyre::Result;
 use poise::serenity_prelude as serenity;
 
-pub fn unique_username(user: &serenity::User) -> String {
-    let mut ret = user.name.clone().into_string();
-    if let Some(discrim) = user.discriminator {
-        ret.push_str(&format!("#{discrim}"));
-    }
-
-    ret
-}
-
 #[tracing::instrument(skip(ctx))]
 pub async fn suppress_embeds(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
     use poise::futures_util::StreamExt as _;

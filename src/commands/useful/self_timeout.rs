@@ -1,7 +1,7 @@
 use color_eyre::eyre::{eyre, Result};
 use poise::serenity_prelude as serenity;
 
-use crate::{utils::serenity::unique_username, Context};
+use crate::Context;
 
 /// Time yourself out for a specific duration
 #[poise::command(rename = "self-timeout", slash_command, guild_only)]
@@ -52,7 +52,7 @@ pub async fn self_timeout(
                     .unwrap_or(false)
                 {
                     let mut resp_embed = resp_embed.author(
-                        serenity::CreateEmbedAuthor::new(unique_username(ctx.author()))
+                        serenity::CreateEmbedAuthor::new(ctx.author().tag())
                             .icon_url(ctx.author().face()),
                     );
 

@@ -4,7 +4,7 @@ use poise::serenity_prelude::{self as serenity};
 use color_eyre::eyre::Result;
 use once_cell::sync::Lazy;
 
-use crate::{storage::log::MessageLog, utils::serenity::unique_username, Data};
+use crate::{storage::log::MessageLog, Data};
 
 pub async fn handle_message(message: &serenity::Message, data: &Data) -> Result<()> {
     if let Some(storage) = &data.storage {
@@ -194,11 +194,8 @@ pub async fn member_join(ctx: &serenity::Context, user: &serenity::User) -> Resu
                 serenity::CreateMessage::default().embed(
                     serenity::CreateEmbed::default()
                         .author(
-                            serenity::CreateEmbedAuthor::new(format!(
-                                "@{} joined",
-                                unique_username(user)
-                            ))
-                            .icon_url(user.face()),
+                            serenity::CreateEmbedAuthor::new(format!("@{} joined", user.tag()))
+                                .icon_url(user.face()),
                         )
                         .field("User", user.to_string(), false)
                         .field("ID", format!("`{}`", user.id), false)
@@ -220,7 +217,7 @@ pub async fn member_leave(
     if let Some(logs_channel) = *MEMBER_LOGS_CHANNEL {
         let mut embed = serenity::CreateEmbed::default()
             .author(
-                serenity::CreateEmbedAuthor::new(format!("@{} left", unique_username(user)))
+                serenity::CreateEmbedAuthor::new(format!("@{} left", user.tag()))
                     .icon_url(user.face()),
             )
             .field("User", user.to_string(), false)

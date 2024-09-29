@@ -4,6 +4,7 @@ use poise::serenity_prelude as serenity;
 mod autoreply;
 mod code_expansion;
 mod error_handling;
+mod intelligence;
 pub mod log;
 
 pub use error_handling::handle_error;
@@ -20,6 +21,7 @@ pub async fn handle_message(
         code_expansion::handle(message, ctx),
         autoreply::handle(message, ctx, data),
         log::handle_message(message, data),
+        intelligence::handle(message, ctx),
     )?;
 
     Ok(())
