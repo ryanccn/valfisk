@@ -31,54 +31,54 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
         return Ok(());
     }
 
-    let member = message.member(&ctx).await?;
-
-    if !member.permissions(&ctx.cache)?.administrator()
-        && !member.roles.iter().any(|r| ALLOWED_ROLES.contains(r))
-    {
-        return Ok(());
-    }
-
-    if let Some(query) = message
-        .content
-        .strip_prefix(&format!("<@{}>", ctx.cache.current_user().id))
-        .map(|s| s.trim())
-    {
-        if query.is_empty() {
+    if let Ok(member) = message.member(&ctx).await {
+        if !member.permissions(&ctx.cache)?.administrator()
+            && !member.roles.iter().any(|r| ALLOWED_ROLES.contains(r))
+        {
             return Ok(());
         }
 
-        let typing_task = task::spawn({
-            let http = ctx.http.clone();
-            let channel = message.channel_id;
-
-            async move {
-                let mut interval = time::interval(Duration::from_secs(10));
-
-                loop {
-                    interval.tick().await;
-                    let _ = http.broadcast_typing(channel).await;
-                }
+        if let Some(query) = message
+            .content
+            .strip_prefix(&format!("<@{}>", ctx.cache.current_user().id))
+            .map(|s| s.trim())
+        {
+            if query.is_empty() {
+                return Ok(());
             }
-        });
 
-        let username = message.author.tag();
-        let display_name = message.author.global_name.clone().map(|s| s.into_string());
+            let typing_task = task::spawn({
+                let http = ctx.http.clone();
+                let channel = message.channel_id;
 
-        let nick = member.nick.as_ref().map(|s| s.to_owned().into_string());
+                async move {
+                    let mut interval = time::interval(Duration::from_secs(10));
 
-        let resp = intelligence::query(intelligence::Request {
-            query: query.to_owned(),
-            metadata: intelligence::RequestMetadata {
-                username,
-                display_name,
-                nick,
-            },
-        })
-        .await?;
+                    loop {
+                        interval.tick().await;
+                        let _ = http.broadcast_typing(channel).await;
+                    }
+                }
+            });
 
-        message.reply_ping(&ctx.http, resp).await?;
-        typing_task.abort();
+            let username = message.author.tag();
+            let display_name = message.author.global_name.clone().map(|s| s.into_string());
+
+            let nick = member.nick.as_ref().map(|s| s.to_owned().into_string());
+
+            let resp = intelligence::query(intelligence::Request {
+                query: query.to_owned(),
+                metadata: intelligence::RequestMetadata {
+                    username,
+                    display_name,
+                    nick,
+                },
+            })
+            .await?;
+
+            message.reply_ping(&ctx.http, resp).await?;
+            typing_task.abort();
+        }
     }
 
     Ok(())
