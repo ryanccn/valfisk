@@ -3,6 +3,7 @@ use poise::serenity_prelude as serenity;
 
 mod autoreply;
 mod code_expansion;
+mod dm;
 mod error_handling;
 mod intelligence;
 pub mod log;
@@ -22,6 +23,7 @@ pub async fn handle_message(
         autoreply::handle(message, ctx, data),
         log::handle_message(message, data),
         intelligence::handle(message, ctx),
+        dm::handle(message, ctx)
     )?;
 
     Ok(())

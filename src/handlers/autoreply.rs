@@ -3,7 +3,7 @@ use poise::serenity_prelude as serenity;
 
 use rand::seq::SliceRandom as _;
 
-use crate::Data;
+use crate::{utils::GUILD_ID, Data};
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
 pub async fn handle(
@@ -11,6 +11,10 @@ pub async fn handle(
     ctx: &serenity::Context,
     data: &Data,
 ) -> Result<()> {
+    if message.guild_id != *GUILD_ID {
+        return Ok(());
+    }
+
     if message.author.id == ctx.cache.current_user().id {
         return Ok(());
     }

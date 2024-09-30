@@ -6,6 +6,7 @@ use tracing::{info, warn};
 use poise::{serenity_prelude as serenity, Framework, FrameworkContext, FrameworkOptions};
 use storage::Storage;
 use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
+use utils::GUILD_ID;
 
 use crate::utils::Pluralize as _;
 
@@ -52,48 +53,55 @@ async fn event_handler(
         }
 
         FullEvent::Message { new_message } => {
-            handlers::handle_message(new_message, ctx.serenity_context, &data).await?;
+            Box::pin(handlers::handle_message(
+                new_message,
+                ctx.serenity_context,
+                &data,
+            ))
+            .await?;
         }
 
         FullEvent::MessageUpdate { event, .. } => {
-            use storage::log::MessageLog;
+            if event.guild_id == *GUILD_ID {
+                use storage::log::MessageLog;
 
-            let timestamp = event.edited_timestamp.unwrap_or_else(Timestamp::now);
+                let timestamp = event.edited_timestamp.unwrap_or_else(Timestamp::now);
 
-            if let Some(storage) = &data.storage {
-                let prev = storage.get_message_log(&event.id.to_string()).await?;
+                if let Some(storage) = &data.storage {
+                    let prev = storage.get_message_log(&event.id.to_string()).await?;
 
-                let content = event.content.clone();
-                let author = event.author.as_ref().map(|a| a.id);
-                let attachments = event
-                    .attachments
-                    .as_ref()
-                    .map(|a| a.to_vec())
-                    .unwrap_or_default();
+                    let content = event.content.clone();
+                    let author = event.author.as_ref().map(|a| a.id);
+                    let attachments = event
+                        .attachments
+                        .as_ref()
+                        .map(|a| a.to_vec())
+                        .unwrap_or_default();
 
-                storage
-                    .set_message_log(
-                        &event.id.to_string(),
-                        &MessageLog::new(
-                            content.as_ref().map(|s| s.to_string()),
-                            author,
-                            attachments.clone(),
-                        ),
+                    storage
+                        .set_message_log(
+                            &event.id.to_string(),
+                            &MessageLog::new(
+                                content.as_ref().map(|s| s.to_string()),
+                                author,
+                                attachments.clone(),
+                            ),
+                        )
+                        .await?;
+
+                    handlers::log::edit(
+                        ctx.serenity_context,
+                        (&event.id, &event.channel_id, &event.guild_id),
+                        &author,
+                        &prev.and_then(|p| p.content),
+                        &content
+                            .as_ref()
+                            .map_or("*Unknown*".to_owned(), |s| s.to_string()),
+                        &attachments,
+                        &timestamp,
                     )
                     .await?;
-
-                handlers::log::edit(
-                    ctx.serenity_context,
-                    (&event.id, &event.channel_id, &event.guild_id),
-                    &author,
-                    &prev.and_then(|p| p.content),
-                    &content
-                        .as_ref()
-                        .map_or("*Unknown*".to_owned(), |s| s.to_string()),
-                    &attachments,
-                    &timestamp,
-                )
-                .await?;
+                }
             }
         }
 
@@ -102,53 +110,74 @@ async fn event_handler(
             channel_id,
             guild_id,
         } => {
-            starboard::handle_deletion(ctx.serenity_context, &data, deleted_message_id, channel_id)
-                .await?;
-
-            let timestamp = Timestamp::now();
-
-            if let Some(storage) = &data.storage {
-                let prev = storage
-                    .get_message_log(&deleted_message_id.to_string())
-                    .await?;
-
-                handlers::log::delete(
+            if *guild_id == *GUILD_ID {
+                starboard::handle_deletion(
                     ctx.serenity_context,
-                    (deleted_message_id, channel_id, guild_id),
-                    &prev,
-                    &timestamp,
+                    &data,
+                    deleted_message_id,
+                    channel_id,
                 )
                 .await?;
 
-                storage
-                    .del_message_log(&deleted_message_id.to_string())
+                let timestamp = Timestamp::now();
+
+                if let Some(storage) = &data.storage {
+                    let prev = storage
+                        .get_message_log(&deleted_message_id.to_string())
+                        .await?;
+
+                    handlers::log::delete(
+                        ctx.serenity_context,
+                        (deleted_message_id, channel_id, guild_id),
+                        &prev,
+                        &timestamp,
+                    )
                     .await?;
+
+                    storage
+                        .del_message_log(&deleted_message_id.to_string())
+                        .await?;
+                }
             }
         }
 
         FullEvent::ReactionAdd { add_reaction } => {
-            let message = add_reaction.message(ctx.serenity_context).await?;
-            starboard::handle(ctx.serenity_context, &data, &message).await?;
+            if add_reaction.guild_id == *GUILD_ID {
+                let message = add_reaction.message(ctx.serenity_context).await?;
+                starboard::handle(ctx.serenity_context, &data, &message).await?;
+            }
         }
 
         FullEvent::ReactionRemove { removed_reaction } => {
-            let message = removed_reaction.message(ctx.serenity_context).await?;
-            starboard::handle(ctx.serenity_context, &data, &message).await?;
+            if removed_reaction.guild_id == *GUILD_ID {
+                let message = removed_reaction.message(ctx.serenity_context).await?;
+                starboard::handle(ctx.serenity_context, &data, &message).await?;
+            }
         }
 
         FullEvent::ReactionRemoveAll {
             removed_from_message_id,
             channel_id,
         } => {
-            let message = channel_id
-                .message(ctx.serenity_context, *removed_from_message_id)
-                .await?;
-            starboard::handle(ctx.serenity_context, &data, &message).await?;
+            if Some(
+                channel_id
+                    .to_guild_channel(&ctx.serenity_context, None)
+                    .await?
+                    .guild_id,
+            ) == *GUILD_ID
+            {
+                let message = channel_id
+                    .message(ctx.serenity_context, *removed_from_message_id)
+                    .await?;
+                starboard::handle(ctx.serenity_context, &data, &message).await?;
+            }
         }
 
         FullEvent::ReactionRemoveEmoji { removed_reactions } => {
-            let message = removed_reactions.message(ctx.serenity_context).await?;
-            starboard::handle(ctx.serenity_context, &data, &message).await?;
+            if removed_reactions.guild_id == *GUILD_ID {
+                let message = removed_reactions.message(ctx.serenity_context).await?;
+                starboard::handle(ctx.serenity_context, &data, &message).await?;
+            }
         }
 
         FullEvent::GuildMemberAddition { new_member } => {
@@ -165,13 +194,19 @@ async fn event_handler(
         }
 
         FullEvent::PresenceUpdate { new_data, .. } => {
-            if new_data.guild_id.map(|g| g.to_string()) == std::env::var("GUILD_ID").ok() {
+            if new_data.guild_id == *GUILD_ID {
                 let mut store = api::PRESENCE_STORE.write().unwrap();
                 store.insert(
                     new_data.user.id,
                     api::ValfiskPresenceData::from_presence(new_data),
                 );
                 drop(store);
+            }
+        }
+
+        FullEvent::GuildCreate { guild, .. } => {
+            if Some(guild.id) != *GUILD_ID {
+                guild.leave(&ctx.serenity_context.http).await?;
             }
         }
 
@@ -199,7 +234,7 @@ async fn main() -> Result<()> {
         if let Ok(dotenv_path) = dotenvy::dotenv() {
             warn!(
                 "Loaded environment variables from {}",
-                dotenv_path.to_string_lossy()
+                dotenv_path.display()
             );
         }
     }

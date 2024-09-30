@@ -5,7 +5,7 @@ use once_cell::sync::Lazy;
 use std::time::Duration;
 use tokio::{task, time};
 
-use crate::intelligence;
+use crate::{intelligence, utils::GUILD_ID};
 
 static ALLOWED_ROLES: Lazy<Vec<serenity::RoleId>> = Lazy::new(|| {
     std::env::var("INTELLIGENCE_ALLOWED_ROLES")
@@ -20,6 +20,10 @@ static ALLOWED_ROLES: Lazy<Vec<serenity::RoleId>> = Lazy::new(|| {
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
 pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Result<()> {
+    if message.guild_id != *GUILD_ID {
+        return Ok(());
+    }
+
     if message
         .flags
         .is_some_and(|flags| flags.contains(serenity::MessageFlags::SUPPRESS_NOTIFICATIONS))

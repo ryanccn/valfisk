@@ -1,6 +1,9 @@
 use poise::serenity_prelude as serenity;
 
-use crate::{reqwest_client, utils::serenity::suppress_embeds};
+use crate::{
+    reqwest_client,
+    utils::{serenity::suppress_embeds, GUILD_ID},
+};
 use regex::Regex;
 
 use color_eyre::eyre::Result;
@@ -143,6 +146,10 @@ async fn go_playground(message: &serenity::Message) -> Result<Vec<serenity::Crea
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
 pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Result<()> {
+    if message.guild_id != *GUILD_ID {
+        return Ok(());
+    }
+
     let mut embeds: Vec<serenity::CreateEmbed> = Vec::new();
 
     embeds.extend(github(message).await?);
