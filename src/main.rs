@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use color_eyre::eyre::{Report, Result, WrapErr as _};
+use eyre::{Report, Result, WrapErr as _};
 use tracing::{info, warn};
 
 use poise::{serenity_prelude as serenity, Framework, FrameworkContext, FrameworkOptions};
@@ -262,7 +262,7 @@ async fn main() -> Result<()> {
     let client_http_2 = client.http.clone();
 
     tokio::select! {
-        result = client.start() => { result.map_err(color_eyre::eyre::Error::from) },
+        result = client.start() => { result.map_err(eyre::Error::from) },
         result = api::serve(client_http_2) => { result },
         _ = tokio::signal::ctrl_c() => {
             warn!("Interrupted with SIGINT, exiting");

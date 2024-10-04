@@ -1,7 +1,7 @@
-use color_eyre::eyre::Result;
+use eyre::Result;
 use poise::{serenity_prelude as serenity, CreateReply};
 
-use crate::Context;
+use crate::{reqwest_client::HTTP, Context};
 
 #[derive(serde::Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -49,7 +49,7 @@ pub async fn translate(ctx: Context<'_>, message: serenity::Message) -> Result<(
         .append_pair("source", "input")
         .append_pair("q", &message.content);
 
-    let resp = crate::reqwest_client::HTTP.get(api_url).send().await?;
+    let resp = HTTP.get(api_url).send().await?.error_for_status()?;
 
     let data: GoogleTranslateResponse = resp.json().await?;
     let translation = data

@@ -1,15 +1,24 @@
 use poise::serenity_prelude as serenity;
 
-use actix_web::{get, head, middleware, post, web, App, HttpResponse, HttpServer, Responder};
+use axum::{
+    extract::{Form, Path, Request, State},
+    http::StatusCode,
+    middleware,
+    response::{IntoResponse, Json, Response},
+    routing::{get, post, Router},
+};
+
 use serde_json::json;
-use tracing_actix_web::TracingLogger;
 
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use tokio::net::TcpListener;
 
-use crate::utils::actix::ActixError;
+use tower_http::trace::TraceLayer;
 use tracing::info;
+
+use crate::utils::axum::AxumResult;
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ValfiskPresenceData {
@@ -32,56 +41,60 @@ impl ValfiskPresenceData {
 pub static PRESENCE_STORE: Lazy<RwLock<HashMap<serenity::UserId, ValfiskPresenceData>>> =
     Lazy::new(|| RwLock::new(HashMap::new()));
 
-#[tracing::instrument]
-#[get("/")]
-async fn route_ping() -> Result<impl Responder, ActixError> {
-    Ok(HttpResponse::Ok().json(json!({ "ok": true })))
+async fn route_ping() -> impl IntoResponse {
+    (StatusCode::OK, Json(json!({ "ok": true })))
 }
 
-#[tracing::instrument]
-#[head("/")]
-async fn route_ping_head() -> Result<impl Responder, ActixError> {
-    Ok(HttpResponse::Ok().finish())
+async fn route_ping_head() -> impl IntoResponse {
+    StatusCode::OK
 }
 
-#[tracing::instrument]
-#[get("/presence/{user}")]
-async fn route_get_presence(path: web::Path<(u64,)>) -> Result<impl Responder, ActixError> {
-    let path = path.into_inner();
-    if path.0 == 0 {
-        return Ok(HttpResponse::BadRequest().json(json!({ "error": "User ID cannot be 0!" })));
+async fn route_not_found() -> impl IntoResponse {
+    (StatusCode::NOT_FOUND, Json(json!({ "error": "Not found" })))
+}
+
+async fn route_presence(Path(user_id): Path<u64>) -> AxumResult<Response> {
+    if user_id == 0 {
+        return Ok((
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "User ID cannot be 0" })),
+        )
+            .into_response());
     }
 
-    let user_id = serenity::UserId::from(path.0);
+    let user_id = serenity::UserId::from(user_id);
 
     let store = PRESENCE_STORE.read().unwrap();
     let presence_data = store.get(&user_id).cloned();
     drop(store);
 
     presence_data.map_or_else(
-        || Ok(HttpResponse::NotFound().json(json!({ "error": "User not found!" }))),
-        |presence_data| Ok(HttpResponse::Ok().json(presence_data)),
+        || {
+            Ok((
+                StatusCode::NOT_FOUND,
+                Json(json!({ "error": "User not found" })),
+            )
+                .into_response())
+        },
+        |presence_data| Ok((StatusCode::OK, Json(presence_data)).into_response()),
     )
 }
 
-#[tracing::instrument]
-#[head("/presence/{user}")]
-async fn route_get_presence_head(path: web::Path<(u64,)>) -> Result<impl Responder, ActixError> {
-    let path = path.into_inner();
-    if path.0 == 0 {
-        return Ok(HttpResponse::BadRequest().finish());
+async fn route_presence_head(Path(user_id): Path<u64>) -> AxumResult<StatusCode> {
+    if user_id == 0 {
+        return Ok(StatusCode::BAD_REQUEST);
     }
 
-    let user_id = serenity::UserId::from(path.0);
+    let user_id = serenity::UserId::from(user_id);
 
     let store = PRESENCE_STORE.read().unwrap();
     let presence_exists = store.contains_key(&user_id);
     drop(store);
 
     if presence_exists {
-        Ok(HttpResponse::Ok().finish())
+        Ok(StatusCode::OK)
     } else {
-        Ok(HttpResponse::NotFound().finish())
+        Ok(StatusCode::NOT_FOUND)
     }
 }
 
@@ -103,17 +116,18 @@ struct KofiData {
     timestamp: serenity::Timestamp,
 }
 
-#[tracing::instrument]
-#[post("/ko-fi")]
 async fn route_kofi_webhook(
-    app_data: web::Data<AppState>,
-    form: web::Form<KofiFormData>,
-) -> Result<impl Responder, ActixError> {
+    State(state): State<Arc<AppState>>,
+    form: Form<KofiFormData>,
+) -> AxumResult<(StatusCode, impl IntoResponse)> {
     let data: KofiData = serde_json::from_str(&form.0.data)?;
     let verification_token = std::env::var("KOFI_VERIFICATION_TOKEN")?;
 
     if data.verification_token != verification_token {
-        return Ok(HttpResponse::Unauthorized().json(json!({ "error": "unauthorized" })));
+        return Ok((
+            StatusCode::UNAUTHORIZED,
+            Json(json!({ "error": "Unauthorized" })),
+        ));
     }
 
     if data.is_public {
@@ -137,14 +151,14 @@ async fn route_kofi_webhook(
 
             channel
                 .send_message(
-                    &app_data.into_inner().serenity_http,
+                    &state.serenity_http,
                     serenity::CreateMessage::default().embed(embed),
                 )
                 .await?;
         }
     }
 
-    Ok(HttpResponse::Ok().json(json!({ "ok": true })))
+    Ok((StatusCode::OK, Json(json!({ "ok": true }))))
 }
 
 #[derive(Debug)]
@@ -152,46 +166,61 @@ struct AppState {
     serenity_http: Arc<serenity::Http>,
 }
 
+async fn security_middleware(request: Request, next: middleware::Next) -> Response {
+    let mut response = next.run(request).await;
+
+    let h = response.headers_mut();
+    h.insert(
+        "content-security-policy",
+        "default-src 'none'".parse().unwrap(),
+    );
+    h.insert("access-control-allow-origin", "*".parse().unwrap());
+    h.insert("cross-origin-opener-policy", "same-origin".parse().unwrap());
+    h.insert(
+        "cross-origin-resource-policy",
+        "same-origin".parse().unwrap(),
+    );
+    h.insert("origin-agent-cluster", "?1".parse().unwrap());
+    h.insert("referrer-policy", "no-referrer".parse().unwrap());
+    h.insert("x-content-type-options", "nosniff".parse().unwrap());
+    h.insert("x-dns-prefetch-control", "off".parse().unwrap());
+    h.insert("x-download-options", "noopen".parse().unwrap());
+    h.insert("x-frame-options", "DENY".parse().unwrap());
+    h.insert("x-permitted-cross-domain-policies", "none".parse().unwrap());
+    h.insert("x-xss-protection", "1; mode=block".parse().unwrap());
+
+    response
+}
+
 #[tracing::instrument(skip(serenity_http))]
-pub async fn serve(serenity_http: Arc<serenity::Http>) -> color_eyre::eyre::Result<()> {
+pub async fn serve(serenity_http: Arc<serenity::Http>) -> eyre::Result<()> {
     #[cfg(debug_assertions)]
     let default_host = "127.0.0.1";
     #[cfg(not(debug_assertions))]
     let default_host = "0.0.0.0";
+
     let host = std::env::var("HOST").unwrap_or_else(|_| default_host.to_owned());
     let port = std::env::var("PORT").map_or(Ok(8080), |v| v.parse::<u16>())?;
 
-    let app_state = web::Data::new(AppState { serenity_http });
+    let state = Arc::new(AppState { serenity_http });
 
     info!("Started API server {}", format!("http://{host}:{port}"));
 
-    HttpServer::new(move || {
-        let security_middleware = middleware::DefaultHeaders::new()
-            .add(("access-control-allow-origin", "*"))
-            .add(("cross-origin-opener-policy", "same-origin"))
-            .add(("cross-origin-resource-policy", "same-origin"))
-            .add(("origin-agent-cluster", "?1"))
-            .add(("referrer-policy", "no-referrer"))
-            .add(("x-content-type-options", "nosniff"))
-            .add(("x-dns-prefetch-control", "off"))
-            .add(("x-download-options", "noopen"))
-            .add(("x-frame-options", "SAMEORIGIN"))
-            .add(("x-permitted-cross-domain-policies", "none"))
-            .add(("x-xss-protection", "1; mode=block"));
+    let listener = TcpListener::bind((host, port)).await?;
 
-        App::new()
-            .wrap(TracingLogger::default())
-            .wrap(security_middleware)
-            .app_data(app_state.clone())
-            .service(route_ping_head)
-            .service(route_ping)
-            .service(route_get_presence_head)
-            .service(route_get_presence)
-            .service(route_kofi_webhook)
-    })
-    .bind((host, port))?
-    .run()
-    .await?;
+    let app = Router::new()
+        .route("/", get(route_ping).head(route_ping_head))
+        .route(
+            "/presence/:user",
+            get(route_presence).head(route_presence_head),
+        )
+        .route("/ko-fi", post(route_kofi_webhook))
+        .fallback(route_not_found)
+        .layer(middleware::from_fn(security_middleware))
+        .layer(TraceLayer::new_for_http())
+        .with_state(state);
+
+    axum::serve(listener, app).await?;
 
     Ok(())
 }

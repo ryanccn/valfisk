@@ -11,7 +11,7 @@ use crate::{
 };
 
 #[tracing::instrument(skip(err))]
-pub async fn handle_error(err: FrameworkError<'_, Data, color_eyre::eyre::Report>) {
+pub async fn handle_error(err: FrameworkError<'_, Data, eyre::Report>) {
     match err {
         FrameworkError::EventHandler {
             error,

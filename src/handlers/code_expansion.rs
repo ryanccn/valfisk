@@ -6,7 +6,7 @@ use crate::{
 };
 use regex::Regex;
 
-use color_eyre::eyre::Result;
+use eyre::Result;
 use once_cell::sync::Lazy;
 use tracing::debug;
 

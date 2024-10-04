@@ -1,6 +1,6 @@
 use poise::serenity_prelude as serenity;
 
-use color_eyre::eyre::Result;
+use eyre::Result;
 use once_cell::sync::Lazy;
 use std::time::Duration;
 use tokio::{task, time};
@@ -52,12 +52,15 @@ pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Res
                 let channel = message.channel_id;
 
                 async move {
-                    let mut interval = time::interval(Duration::from_secs(10));
+                    let _ = time::timeout(Duration::from_secs(60), async move {
+                        let mut interval = time::interval(Duration::from_secs(10));
 
-                    loop {
-                        interval.tick().await;
-                        let _ = http.broadcast_typing(channel).await;
-                    }
+                        loop {
+                            interval.tick().await;
+                            let _ = http.broadcast_typing(channel).await;
+                        }
+                    })
+                    .await;
                 }
             });
 

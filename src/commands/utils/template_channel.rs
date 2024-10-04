@@ -1,4 +1,4 @@
-use color_eyre::eyre::Result;
+use eyre::Result;
 use poise::{
     serenity_prelude::{futures::StreamExt, ChannelId, CreateEmbed},
     CreateReply,
@@ -24,7 +24,14 @@ pub async fn template_channel(
     let clear = clear.unwrap_or(true);
     ctx.defer_ephemeral().await?;
 
-    let source = HTTP.get(&url).send().await?.text().await?;
+    let source = HTTP
+        .get(&url)
+        .send()
+        .await?
+        .error_for_status()?
+        .text()
+        .await?;
+
     let data = TemplateChannelConfig::parse(&source)?;
     let messages = data.to_messages();
 

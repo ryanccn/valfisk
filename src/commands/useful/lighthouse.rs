@@ -1,4 +1,4 @@
-use color_eyre::eyre::Result;
+use eyre::Result;
 use std::{collections::HashMap, env, time::Duration};
 
 use poise::{serenity_prelude as serenity, CreateReply};
@@ -66,7 +66,8 @@ pub async fn lighthouse(
             .get(api_url)
             .timeout(Duration::from_secs(60))
             .send()
-            .await?;
+            .await?
+            .error_for_status()?;
 
         let data: PagespeedResponse = resp.json().await?;
 

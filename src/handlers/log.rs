@@ -1,7 +1,7 @@
 use humansize::{format_size, FormatSizeOptions};
 use poise::serenity_prelude::{self as serenity};
 
-use color_eyre::eyre::Result;
+use eyre::Result;
 use once_cell::sync::Lazy;
 
 use crate::{storage::log::MessageLog, Data};

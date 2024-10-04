@@ -2,7 +2,7 @@ use poise::{serenity_prelude::CreateEmbed, CreateReply};
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, RefreshKind, System};
 
 use crate::Context;
-use color_eyre::eyre::Result;
+use eyre::Result;
 
 /// Get system information for the bot host
 #[poise::command(slash_command, guild_only)]

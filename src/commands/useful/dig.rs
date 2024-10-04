@@ -11,7 +11,7 @@ use poise::{
     ChoiceParameter, CreateReply,
 };
 
-use color_eyre::eyre::Result;
+use eyre::Result;
 use once_cell::sync::Lazy;
 
 pub static RESOLVER: Lazy<TokioAsyncResolver> = Lazy::new(|| {

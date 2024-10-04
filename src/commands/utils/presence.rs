@@ -1,7 +1,7 @@
 use crate::{storage::presence::PresenceChoice, Context};
 use poise::{serenity_prelude as serenity, CreateReply};
 
-use color_eyre::eyre::Result;
+use eyre::Result;
 use tracing::info;
 
 /// Modify the Discord presence shown by the bot

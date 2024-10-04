@@ -2,7 +2,7 @@ use std::env;
 
 use poise::serenity_prelude as serenity;
 
-use color_eyre::eyre::{OptionExt, Result};
+use eyre::{OptionExt, Result};
 use tracing::debug;
 
 fn channel_from_env(key: &str) -> Option<serenity::ChannelId> {

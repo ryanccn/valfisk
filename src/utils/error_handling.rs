@@ -10,10 +10,10 @@ use poise::{
 use crate::Context;
 use tracing::error;
 
-/// A wrapper type that encapsulates errors ([`color_eyre::eyre::Error`]) or panic strings ([`Option<String>`]).
+/// A wrapper type that encapsulates errors ([`eyre::Error`]) or panic strings ([`Option<String>`]).
 pub enum ErrorOrPanic<'a> {
-    /// A reference to an error, [`color_eyre::eyre::Error`]
-    Error(&'a color_eyre::eyre::Error),
+    /// A reference to an error, [`eyre::Error`]
+    Error(&'a eyre::Error),
     /// A reference to a panic string, [`Option<String>`]
     Panic(&'a Option<String>),
 }
@@ -48,7 +48,7 @@ pub struct ValfiskError<'a> {
 impl ValfiskError<'_> {
     /// Create a new [`ValfiskError`] from an error and Poise context.
     #[must_use]
-    pub fn error<'a>(error: &'a color_eyre::eyre::Error, ctx: &'a Context) -> ValfiskError<'a> {
+    pub fn error<'a>(error: &'a eyre::Error, ctx: &'a Context) -> ValfiskError<'a> {
         ValfiskError {
             error_or_panic: ErrorOrPanic::Error(error),
             ctx,

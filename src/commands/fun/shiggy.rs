@@ -1,7 +1,7 @@
 use poise::{serenity_prelude as serenity, CreateReply};
 
 use crate::{utils::error_handling::ValfiskError, Context};
-use color_eyre::eyre::{Report, Result};
+use eyre::{Report, Result};
 
 #[derive(serde::Deserialize)]
 struct SafebooruResponse {

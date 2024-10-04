@@ -1,6 +1,6 @@
 use poise::serenity_prelude as serenity;
 
-use color_eyre::eyre::Result;
+use eyre::Result;
 use humansize::{format_size, FormatSizeOptions};
 use once_cell::sync::Lazy;
 
