@@ -19,11 +19,11 @@ pub async fn handle_message(
     data: &Data,
 ) -> Result<()> {
     tokio::try_join!(
-        code_expansion::handle(message, ctx),
-        autoreply::handle(message, ctx, data),
-        log::handle_message(message, data),
-        intelligence::handle(message, ctx),
-        dm::handle(message, ctx)
+        code_expansion::handle(ctx, message),
+        autoreply::handle(ctx, data, message),
+        log::handle_message(ctx, data, message),
+        intelligence::handle(ctx, message),
+        dm::handle(ctx, message)
     )?;
 
     Ok(())

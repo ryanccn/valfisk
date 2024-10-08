@@ -7,9 +7,9 @@ use crate::{utils::GUILD_ID, Data};
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
 pub async fn handle(
-    message: &serenity::Message,
     ctx: &serenity::Context,
     data: &Data,
+    message: &serenity::Message,
 ) -> Result<()> {
     if message.guild_id != *GUILD_ID {
         return Ok(());

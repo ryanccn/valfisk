@@ -1,13 +1,21 @@
 use humansize::{format_size, FormatSizeOptions};
-use poise::serenity_prelude::{self as serenity};
+use poise::serenity_prelude as serenity;
 
 use eyre::Result;
 use once_cell::sync::Lazy;
 
 use crate::{storage::log::MessageLog, Data};
 
-pub async fn handle_message(message: &serenity::Message, data: &Data) -> Result<()> {
+pub async fn handle_message(
+    ctx: &serenity::Context,
+    data: &Data,
+    message: &serenity::Message,
+) -> Result<()> {
     if let Some(storage) = &data.storage {
+        if message.author.id == ctx.cache.current_user().id {
+            return Ok(());
+        }
+
         storage
             .set_message_log(&message.id.to_string(), &message.into())
             .await?;
@@ -63,7 +71,9 @@ pub async fn edit(
 
         let mut embed_author = serenity::CreateEmbedAuthor::new("Message Edited");
         if let Some(author) = author {
-            embed_author = embed_author.icon_url(author.to_user(&ctx).await?.face());
+            if let Ok(user) = author.to_user(&ctx).await {
+                embed_author = embed_author.icon_url(user.face());
+            }
         }
 
         let mut embed = serenity::CreateEmbed::default()
@@ -140,7 +150,9 @@ pub async fn delete(
 
         let mut embed_author = serenity::CreateEmbedAuthor::new("Message Deleted");
         if let Some(author) = author {
-            embed_author = embed_author.icon_url(author.to_user(&ctx).await?.face());
+            if let Ok(user) = author.to_user(&ctx).await {
+                embed_author = embed_author.icon_url(user.face());
+            }
         }
 
         let mut embed = serenity::CreateEmbed::default()

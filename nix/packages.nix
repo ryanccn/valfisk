@@ -2,9 +2,6 @@
 {
   perSystem =
     { pkgs, config, ... }:
-    let
-      inherit (pkgs) lib;
-    in
     {
       packages = {
         valfisk = pkgs.callPackage ./package.nix {
@@ -13,6 +10,6 @@
         };
 
         default = config.packages.valfisk;
-      } // (lib.attrsets.mapAttrs' (name: value: lib.nameValuePair "check-${name}" value) config.checks);
+      };
     };
 }

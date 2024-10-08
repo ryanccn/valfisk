@@ -11,7 +11,7 @@ static DM_LOGS_CHANNEL: Lazy<Option<serenity::ChannelId>> = Lazy::new(|| {
 });
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
-pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Result<()> {
+pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
     if message.author.id == ctx.cache.current_user().id {
         return Ok(());
     }

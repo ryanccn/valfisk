@@ -145,7 +145,7 @@ async fn go_playground(message: &serenity::Message) -> Result<Vec<serenity::Crea
 }
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
-pub async fn handle(message: &serenity::Message, ctx: &serenity::Context) -> Result<()> {
+pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
     if message.guild_id != *GUILD_ID {
         return Ok(());
     }
