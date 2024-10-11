@@ -1,3 +1,8 @@
+# SPDX-FileCopyrightText: 2024 Ryan Cao <hello@ryanccn.dev>
+#
+# SPDX-License-Identifier: AGPL-3.0-only
+
+{ self, ... }:
 {
   perSystem =
     { pkgs, config, ... }:
@@ -10,6 +15,7 @@
           nativeBuildInputs ? [ ],
           command,
           includeCargoDeps ? false,
+          extraConfig ? { },
         }:
         pkgs.stdenv.mkDerivation (
           {
@@ -29,6 +35,7 @@
           // lib.optionalAttrs includeCargoDeps {
             inherit (config.packages.valfisk) cargoDeps buildInputs;
           }
+          // extraConfig
         );
     in
     {
@@ -67,6 +74,22 @@
             cargo clippy --all-features --all-targets --tests \
               --offline --message-format=json \
               | clippy-sarif | tee $out | sarif-fmt
+          '';
+        };
+
+        reuse = mkFlakeCheck {
+          name = "reuse";
+          extraConfig = {
+            src = self;
+          };
+
+          nativeBuildInputs = with pkgs; [
+            reuse
+          ];
+
+          command = ''
+            reuse lint
+            reuse spdx > "$out"
           '';
         };
       };

@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2024 Ryan Cao <hello@ryanccn.dev>
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 use eyre::{eyre, Result};
 use poise::serenity_prelude as serenity;
 use tokio::{task, time};
@@ -16,36 +20,14 @@ pub async fn remind(
 
     if let Ok(duration) = humantime::parse_duration(&duration) {
         if let Some(member) = ctx.author_member().await {
-            let end = chrono::Utc::now() + duration;
-
-            ctx.send(
-                poise::CreateReply::default().embed(
-                    serenity::CreateEmbed::default()
-                        .title("Reminder set!")
-                        .field(
-                            "Time",
-                            format!("<t:{0}:F> (<t:{0}:R>)", end.timestamp()),
-                            false,
-                        )
-                        .field(
-                            "Content",
-                            content.clone().unwrap_or_else(|| "*No content*".to_owned()),
-                            false,
-                        )
-                        .author(
-                            serenity::CreateEmbedAuthor::new(member.user.tag())
-                                .icon_url(member.face()),
-                        )
-                        .color(0x3bc9db),
-                ),
-            )
-            .await?;
-
             if let Some(channel) = ctx.guild_channel().await {
+                let end = chrono::Utc::now() + duration;
+
                 task::spawn({
                     let http = ctx.serenity_context().http.clone();
                     let author = ctx.author().id;
-                    let member = member.into_owned();
+                    let content = content.clone();
+                    let member = member.clone().into_owned();
 
                     async move {
                         time::sleep(duration).await;
@@ -75,6 +57,31 @@ pub async fn remind(
                         };
                     }
                 });
+
+                ctx.send(
+                    poise::CreateReply::default().embed(
+                        serenity::CreateEmbed::default()
+                            .title("Reminder set!")
+                            .field(
+                                "Time",
+                                format!("<t:{0}:F> (<t:{0}:R>)", end.timestamp()),
+                                false,
+                            )
+                            .field(
+                                "Content",
+                                content.clone().unwrap_or_else(|| "*No content*".to_owned()),
+                                false,
+                            )
+                            .author(
+                                serenity::CreateEmbedAuthor::new(member.user.tag())
+                                    .icon_url(member.face()),
+                            )
+                            .color(0x3bc9db),
+                    ),
+                )
+                .await?;
+            } else {
+                ctx.say("Error: Guild channel unavailable!").await?;
             }
         } else {
             ctx.say("Error: Member unavailable!").await?;

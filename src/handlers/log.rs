@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2024 Ryan Cao <hello@ryanccn.dev>
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 use humansize::{format_size, FormatSizeOptions};
 use poise::serenity_prelude as serenity;
 
@@ -37,9 +41,9 @@ static MEMBER_LOGS_CHANNEL: Lazy<Option<serenity::ChannelId>> = Lazy::new(|| {
 });
 
 fn make_link_components<'a>(link: &'a str, label: &'a str) -> Vec<serenity::CreateActionRow<'a>> {
-    vec![serenity::CreateActionRow::Buttons(vec![
-        serenity::CreateButton::new_link(link).label(label),
-    ])]
+    vec![serenity::CreateActionRow::Buttons(
+        vec![serenity::CreateButton::new_link(link).label(label)].into(),
+    )]
 }
 
 fn format_user(user: Option<&serenity::UserId>) -> String {

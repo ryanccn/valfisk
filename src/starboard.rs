@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2024 Ryan Cao <hello@ryanccn.dev>
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 use std::env;
 
 use poise::serenity_prelude as serenity;
@@ -184,9 +188,10 @@ pub async fn handle(
             let content = serialize_reactions(message.channel_id, &significant_reactions);
             let embed = make_message_embed(&ctx.http, message);
 
-            let link_button =
-                serenity::CreateButton::new_link(message.link()).label("Jump to message");
-            let row = serenity::CreateActionRow::Buttons(vec![link_button]);
+            let row = serenity::CreateActionRow::Buttons(
+                vec![serenity::CreateButton::new_link(message.link()).label("Jump to message")]
+                    .into(),
+            );
 
             let starboard_message = starboard
                 .send_message(

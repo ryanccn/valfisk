@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2024 Ryan Cao <hello@ryanccn.dev>
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 use eyre::Result;
 use poise::{serenity_prelude as serenity, CreateReply};
 
@@ -70,9 +74,10 @@ pub async fn translate(ctx: Context<'_>, message: serenity::Message) -> Result<(
                         data.src
                     ))),
             )
-            .components(vec![serenity::CreateActionRow::Buttons(vec![
-                serenity::CreateButton::new_link(message.link()).label("Original message"),
-            ])]),
+            .components(vec![serenity::CreateActionRow::Buttons(
+                vec![serenity::CreateButton::new_link(message.link()).label("Original message")]
+                    .into(),
+            )]),
     )
     .await?;
 

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024 Ryan Cao <hello@ryanccn.dev>
+#
+# SPDX-License-Identifier: AGPL-3.0-only
+
 {
   lib,
   stdenv,
@@ -35,8 +39,8 @@ rustPlatform.buildRustPackage rec {
   cargoLock = {
     lockFile = ../Cargo.lock;
     outputHashes = {
-      "poise-0.6.1" = "sha256-RKVIf1iNFOYr7SP/e5jXYzttPAR5EM1+q4ZfmtIisds=";
-      "serenity-0.12.2" = "sha256-kiwz4zEQnV/vq42Ld3coNTfRxZfJqjRaLgtqfTIjZAs=";
+      "poise-0.6.1" = "sha256-O/vUkpm8NgrILRLm79cN/nON/D2rx6QBjPMw/VT77qs=";
+      "serenity-0.12.2" = "sha256-kVHmHQY4xWbKOkaywl7nt2d3ZnwdYdLfqW2DbZU5Jy4=";
     };
   };
 
