@@ -26,6 +26,7 @@ pub fn to_vec() -> Vec<
     vec![
         command!(useful, dig),
         command!(useful, lighthouse),
+        command!(useful, remind),
         command!(useful, self_timeout),
         command!(useful, self_timeout, transparency),
         command!(useful, translate),

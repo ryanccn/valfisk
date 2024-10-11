@@ -12,9 +12,7 @@ pub async fn say(
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
-    let channel = ctx.channel_id();
-
-    channel
+    ctx.channel_id()
         .send_message(
             ctx.http(),
             serenity::CreateMessage::default().content(content),
