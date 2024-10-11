@@ -2,8 +2,10 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
+use std::net::SocketAddr;
+
 use hickory_resolver::{
-    config::{ResolverConfig, ResolverOpts},
+    config::{NameServerConfig, Protocol, ResolverConfig, ResolverOpts},
     error::ResolveErrorKind,
     proto::rr::RecordType,
     TokioAsyncResolver,
@@ -18,13 +20,13 @@ use poise::{
 use eyre::Result;
 use once_cell::sync::Lazy;
 
-pub static RESOLVER: Lazy<TokioAsyncResolver> = Lazy::new(|| {
-    TokioAsyncResolver::tokio(ResolverConfig::cloudflare_https(), ResolverOpts::default())
+pub static BOOTSTRAP_RESOLVER: Lazy<TokioAsyncResolver> = Lazy::new(|| {
+    TokioAsyncResolver::tokio(ResolverConfig::cloudflare_https(), make_resolver_opts(true))
 });
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(ChoiceParameter, Debug, Copy, Clone)]
-enum DiscordRecordType {
+enum RecordTypeChoice {
     A,
     AAAA,
     ANAME,
@@ -47,7 +49,7 @@ enum DiscordRecordType {
     TXT,
 }
 
-impl DiscordRecordType {
+impl RecordTypeChoice {
     fn as_record_type(self) -> RecordType {
         match self {
             Self::A => RecordType::A,
@@ -74,10 +76,106 @@ impl DiscordRecordType {
     }
 }
 
-impl std::fmt::Display for DiscordRecordType {
+impl std::fmt::Display for RecordTypeChoice {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.as_record_type().fmt(f)
     }
+}
+
+#[derive(ChoiceParameter, Debug, Copy, Clone)]
+enum ResolverChoice {
+    Cloudflare,
+    #[name = "Cloudflare (security)"]
+    CloudflareSecurity,
+    #[name = "Cloudflare (family)"]
+    CloudflareFamily,
+    Google,
+    Quad9,
+    #[name = "dns0.eu"]
+    DNS0EU,
+    Mullvad,
+    #[name = "Mullvad (adblock)"]
+    MullvadAdblock,
+    #[name = "Mullvad (base)"]
+    MullvadBase,
+    #[name = "Mullvad (extended)"]
+    MullvadExtended,
+    #[name = "Mullvad (family)"]
+    MullvadFamily,
+    #[name = "Mullvad (all)"]
+    MullvadAll,
+    AdGuard,
+    #[name = "AdGuard (non-filtering)"]
+    AdGuardNonfiltering,
+    #[name = "AdGuard (family)"]
+    AdGuardFamily,
+    OpenDNS,
+    #[name = "OpenDNS (FamilyShield)"]
+    OpenDNSFamilyShield,
+    #[name = "Wikimedia DNS"]
+    Wikimedia,
+}
+
+impl ResolverChoice {
+    fn domain(self) -> String {
+        match self {
+            Self::Cloudflare => "cloudflare-dns.com".into(),
+            Self::CloudflareSecurity => "security.cloudflare-dns.com".into(),
+            Self::CloudflareFamily => "family.cloudflare-dns.com".into(),
+            Self::Google => "dns.google".into(),
+            Self::Quad9 => "dns.quad9.net".into(),
+            Self::DNS0EU => "dns0.eu".into(),
+            Self::Mullvad => "dns.mullvad.net".into(),
+            Self::MullvadAdblock => "adblock.dns.mullvad.net".into(),
+            Self::MullvadBase => "base.dns.mullvad.net".into(),
+            Self::MullvadExtended => "extended.dns.mullvad.net".into(),
+            Self::MullvadFamily => "family.dns.mullvad.net".into(),
+            Self::MullvadAll => "all.dns.mullvad.net".into(),
+            Self::AdGuard => "dns.adguard-dns.com".into(),
+            Self::AdGuardNonfiltering => "unfiltered.adguard-dns.com".into(),
+            Self::AdGuardFamily => "family.adguard-dns.com".into(),
+            Self::OpenDNS => "doh.opendns.com".into(),
+            Self::OpenDNSFamilyShield => "doh.familyshield.opendns.com".into(),
+            Self::Wikimedia => "wikimedia-dns.org".into(),
+        }
+    }
+
+    async fn doh_config(&self) -> Result<ResolverConfig> {
+        let name_servers = BOOTSTRAP_RESOLVER
+            .lookup_ip(self.domain() + ".")
+            .await?
+            .into_iter()
+            .map(|ip| NameServerConfig {
+                socket_addr: SocketAddr::new(ip, 443),
+                tls_dns_name: Some(self.domain()),
+                protocol: Protocol::Https,
+                bind_addr: None,
+                tls_config: None,
+                trust_negative_responses: true,
+            })
+            .collect::<Vec<_>>();
+
+        let mut config = ResolverConfig::new();
+        for name_server in name_servers {
+            config.add_name_server(name_server);
+        }
+
+        Ok(config)
+    }
+}
+
+fn make_resolver_opts(bootstrap: bool) -> ResolverOpts {
+    let mut opts = ResolverOpts::default();
+
+    opts.attempts = 5;
+    opts.use_hosts_file = false;
+    opts.validate = true;
+
+    if !bootstrap {
+        opts.cache_size = 0;
+    }
+
+    opts
 }
 
 /// Make a DNS lookup
@@ -86,11 +184,17 @@ impl std::fmt::Display for DiscordRecordType {
 pub async fn dig(
     ctx: Context<'_>,
     #[description = "The domain name to query for"] name: String,
-    #[description = "The record type to query for"] r#type: DiscordRecordType,
+    #[description = "The record type to query for"] r#type: RecordTypeChoice,
+    #[description = "The resolver to use for queries"] resolver: Option<ResolverChoice>,
 ) -> Result<()> {
+    let resolver = resolver.unwrap_or(ResolverChoice::Cloudflare);
+
     ctx.defer().await?;
 
-    match RESOLVER.lookup(&name, r#type.as_record_type()).await {
+    let hickory =
+        TokioAsyncResolver::tokio(resolver.doh_config().await?, make_resolver_opts(false));
+
+    match hickory.lookup(&name, r#type.as_record_type()).await {
         Ok(response) => {
             ctx.send(
                 CreateReply::default().embed(
@@ -112,9 +216,7 @@ pub async fn dig(
                                 .join("\n"),
                         )
                         .color(0xffa94d)
-                        .footer(CreateEmbedFooter::new(
-                            "https://cloudflare-dns.com/dns-query",
-                        ))
+                        .footer(CreateEmbedFooter::new(resolver.domain()))
                         .timestamp(Timestamp::now()),
                 ),
             )
