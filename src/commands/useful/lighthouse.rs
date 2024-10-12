@@ -53,8 +53,9 @@ pub async fn lighthouse(
             )
             .await?;
 
-        let mut api_url = "https://pagespeedonline.googleapis.com/pagespeedonline/v5/runPagespeed"
-            .parse::<reqwest::Url>()?;
+        let mut api_url = reqwest::Url::parse(
+            "https://pagespeedonline.googleapis.com/pagespeedonline/v5/runPagespeed",
+        )?;
 
         api_url
             .query_pairs_mut()

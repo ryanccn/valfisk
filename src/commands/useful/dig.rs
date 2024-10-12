@@ -119,25 +119,26 @@ enum ResolverChoice {
 impl ResolverChoice {
     fn domain(self) -> String {
         match self {
-            Self::Cloudflare => "cloudflare-dns.com".into(),
-            Self::CloudflareSecurity => "security.cloudflare-dns.com".into(),
-            Self::CloudflareFamily => "family.cloudflare-dns.com".into(),
-            Self::Google => "dns.google".into(),
-            Self::Quad9 => "dns.quad9.net".into(),
-            Self::DNS0EU => "dns0.eu".into(),
-            Self::Mullvad => "dns.mullvad.net".into(),
-            Self::MullvadAdblock => "adblock.dns.mullvad.net".into(),
-            Self::MullvadBase => "base.dns.mullvad.net".into(),
-            Self::MullvadExtended => "extended.dns.mullvad.net".into(),
-            Self::MullvadFamily => "family.dns.mullvad.net".into(),
-            Self::MullvadAll => "all.dns.mullvad.net".into(),
-            Self::AdGuard => "dns.adguard-dns.com".into(),
-            Self::AdGuardNonfiltering => "unfiltered.adguard-dns.com".into(),
-            Self::AdGuardFamily => "family.adguard-dns.com".into(),
-            Self::OpenDNS => "doh.opendns.com".into(),
-            Self::OpenDNSFamilyShield => "doh.familyshield.opendns.com".into(),
-            Self::Wikimedia => "wikimedia-dns.org".into(),
+            Self::Cloudflare => "cloudflare-dns.com",
+            Self::CloudflareSecurity => "security.cloudflare-dns.com",
+            Self::CloudflareFamily => "family.cloudflare-dns.com",
+            Self::Google => "dns.google",
+            Self::Quad9 => "dns.quad9.net",
+            Self::DNS0EU => "dns0.eu",
+            Self::Mullvad => "dns.mullvad.net",
+            Self::MullvadAdblock => "adblock.dns.mullvad.net",
+            Self::MullvadBase => "base.dns.mullvad.net",
+            Self::MullvadExtended => "extended.dns.mullvad.net",
+            Self::MullvadFamily => "family.dns.mullvad.net",
+            Self::MullvadAll => "all.dns.mullvad.net",
+            Self::AdGuard => "dns.adguard-dns.com",
+            Self::AdGuardNonfiltering => "unfiltered.adguard-dns.com",
+            Self::AdGuardFamily => "family.adguard-dns.com",
+            Self::OpenDNS => "doh.opendns.com",
+            Self::OpenDNSFamilyShield => "doh.familyshield.opendns.com",
+            Self::Wikimedia => "wikimedia-dns.org",
         }
+        .into()
     }
 
     async fn doh_config(&self) -> Result<ResolverConfig> {
