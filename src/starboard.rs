@@ -6,7 +6,7 @@ use std::env;
 
 use poise::serenity_prelude as serenity;
 
-use eyre::{OptionExt, Result};
+use eyre::Result;
 use tracing::debug;
 
 fn channel_from_env(key: &str) -> Option<serenity::ChannelId> {
@@ -97,8 +97,8 @@ fn serialize_reactions(
     format!("**{reaction_string}** in <#{channel}>")
 }
 
-fn make_message_embed<'a>(
-    _http: &serenity::Http,
+async fn make_message_embed<'a>(
+    ctx: &serenity::Context,
     message: &serenity::Message,
 ) -> serenity::CreateEmbed<'a> {
     let content = message.content.to_string();
@@ -113,7 +113,7 @@ fn make_message_embed<'a>(
         )
         .timestamp(message.timestamp);
 
-    if let Some(reference) = message.message_reference.as_ref() {
+    if let Some(reference) = &message.message_reference {
         if let Some(message_id) = reference.message_id {
             builder = builder.field(
                 "Replying to",
@@ -131,8 +131,21 @@ fn make_message_embed<'a>(
         builder = builder.image(image_attachment.url.to_string());
     }
 
-    // TODO: implement top-most role color
     builder = builder.color(0xffd43b);
+
+    if let Some(guild_id) = ctx
+        .http
+        .get_channel(message.channel_id)
+        .await
+        .ok()
+        .and_then(|c| c.guild().map(|c| c.guild_id))
+    {
+        if let Ok(member) = ctx.http.get_member(guild_id, message.author.id).await {
+            if let Some(top_role) = member.roles(&ctx.cache).unwrap_or_default().first() {
+                builder = builder.color(top_role.colour);
+            }
+        }
+    }
 
     builder
 }
@@ -143,74 +156,71 @@ pub async fn handle(
     data: &crate::Data,
     message: &serenity::Message,
 ) -> Result<()> {
-    let storage = data
-        .storage
-        .as_ref()
-        .ok_or_eyre("no storage available for starboard features")?;
+    if let Some(storage) = &data.storage {
+        if let Some(starboard) = get_starboard_channel(&ctx, &message.channel_id).await? {
+            let significant_reactions = get_significant_reactions(message);
 
-    if let Some(starboard) = get_starboard_channel(&ctx, &message.channel_id).await? {
-        let significant_reactions = get_significant_reactions(message);
+            if let Some(existing_starboard_message) = storage
+                .get_starboard(&message.id.to_string())
+                .await?
+                .and_then(|s| s.parse::<serenity::MessageId>().ok())
+            {
+                if significant_reactions.is_empty() {
+                    starboard
+                        .delete_message(&ctx.http, existing_starboard_message, None)
+                        .await?;
 
-        if let Some(existing_starboard_message) = storage
-            .get_starboard(&message.id.to_string())
-            .await?
-            .and_then(|s| s.parse::<serenity::MessageId>().ok())
-        {
-            if significant_reactions.is_empty() {
-                starboard
-                    .delete_message(&ctx.http, existing_starboard_message, None)
-                    .await?;
+                    storage.del_starboard(&message.id.to_string()).await?;
 
-                storage.del_starboard(&message.id.to_string()).await?;
+                    debug!(
+                        "Deleted starboard message {} for {}",
+                        existing_starboard_message, message.id
+                    );
+                } else {
+                    starboard
+                        .edit_message(
+                            &ctx.http,
+                            existing_starboard_message,
+                            serenity::EditMessage::default().content(serialize_reactions(
+                                message.channel_id,
+                                &significant_reactions,
+                            )),
+                        )
+                        .await?;
 
-                debug!(
-                    "Deleted starboard message {} for {}",
-                    existing_starboard_message, message.id
+                    debug!(
+                        "Edited starboard message {} for {}",
+                        existing_starboard_message, message.id
+                    );
+                }
+            } else if !significant_reactions.is_empty() {
+                let content = serialize_reactions(message.channel_id, &significant_reactions);
+                let embed = make_message_embed(ctx, message).await;
+
+                let row = serenity::CreateActionRow::Buttons(
+                    vec![serenity::CreateButton::new_link(message.link()).label("Jump to message")]
+                        .into(),
                 );
-            } else {
-                starboard
-                    .edit_message(
+
+                let starboard_message = starboard
+                    .send_message(
                         &ctx.http,
-                        existing_starboard_message,
-                        serenity::EditMessage::default().content(serialize_reactions(
-                            message.channel_id,
-                            &significant_reactions,
-                        )),
+                        serenity::CreateMessage::default()
+                            .content(content)
+                            .embed(embed)
+                            .components(vec![row]),
                     )
                     .await?;
 
+                storage
+                    .set_starboard(&message.id.to_string(), &starboard_message.id.to_string())
+                    .await?;
+
                 debug!(
-                    "Edited starboard message {} for {}",
-                    existing_starboard_message, message.id
+                    "Created starboard message {} for {}",
+                    starboard_message.id, message.id
                 );
             }
-        } else if !significant_reactions.is_empty() {
-            let content = serialize_reactions(message.channel_id, &significant_reactions);
-            let embed = make_message_embed(&ctx.http, message);
-
-            let row = serenity::CreateActionRow::Buttons(
-                vec![serenity::CreateButton::new_link(message.link()).label("Jump to message")]
-                    .into(),
-            );
-
-            let starboard_message = starboard
-                .send_message(
-                    &ctx.http,
-                    serenity::CreateMessage::default()
-                        .content(content)
-                        .embed(embed)
-                        .components(vec![row]),
-                )
-                .await?;
-
-            storage
-                .set_starboard(&message.id.to_string(), &starboard_message.id.to_string())
-                .await?;
-
-            debug!(
-                "Created starboard message {} for {}",
-                starboard_message.id, message.id
-            );
         }
     }
 
