@@ -43,6 +43,7 @@ pub fn to_vec() -> Vec<
         command!(fun, shiggy),
         command!(utils, ping),
         command!(utils, presence),
+        command!(utils, rotate_color_roles),
         command!(utils, say),
         command!(utils, sysinfo),
         command!(utils, template_channel),

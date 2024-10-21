@@ -26,6 +26,7 @@ mod commands;
 mod handlers;
 mod intelligence;
 mod reqwest_client;
+mod schedule;
 mod starboard;
 mod storage;
 mod template_channel;
@@ -263,11 +264,10 @@ async fn main() -> Result<()> {
         .data(Arc::new(Data { storage }))
         .await?;
 
-    let client_http_2 = client.http.clone();
-
     tokio::select! {
-        result = client.start() => { result.map_err(eyre::Error::from) },
-        result = api::serve(client_http_2) => { result },
+        result = api::serve(client.http.clone()) => { result },
+        result = schedule::start(client.http.clone()) => { result },
+        result = client.start() => { result.map_err(eyre::Report::from) },
         _ = tokio::signal::ctrl_c() => {
             warn!("Interrupted with SIGINT, exiting");
             std::process::exit(130);
