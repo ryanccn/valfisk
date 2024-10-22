@@ -19,16 +19,39 @@
           inherit (inputs) nix-filter;
         };
 
+      osReleaseFor =
+        arch:
+        pkgs.writeTextFile {
+          name = "valfisk-etc-os-release";
+          text =
+            let
+              version = (pkgFor arch).version;
+            in
+            ''
+              NAME="Valfisk Linux"
+              ID=valfisk
+              VERSION_ID=${version}
+              PRETTY_NAME="Valfisk Linux v${version}"
+              HOME_URL="https://github.com/ryanccn/valfisk"
+              BUG_REPORT_URL="https://github.com/ryanccn/valfisk/issues"
+            '';
+          destination = "/etc/os-release";
+        };
+
       containerFor =
         arch:
         pkgs.dockerTools.buildImage {
           name = "valfisk";
           tag = "latest-${arch}";
-          # copyToRoot = [ pkgs.dockerTools.caCertificates ];
+          architecture = crossPkgs.${arch}.go.GOARCH;
+
+          copyToRoot = pkgs.buildEnv {
+            name = "valfisk-image-root-${arch}";
+            paths = [ (osReleaseFor arch) ];
+            pathsToLink = [ "/etc" ];
+          };
 
           config.Cmd = [ (lib.getExe (pkgFor arch)) ];
-
-          architecture = crossPkgs.${arch}.go.GOARCH;
         };
     in
     {

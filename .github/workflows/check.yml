@@ -66,3 +66,19 @@ jobs:
 
       - name: Check
         run: nix build --fallback --print-build-logs '.#checks.x86_64-linux.nixfmt'
+
+  reuse:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Check
+        run: nix build --fallback --print-build-logs '.#checks.x86_64-linux.reuse'

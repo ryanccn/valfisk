@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
+use std::time::Duration;
+
 use poise::{serenity_prelude::CreateEmbed, CreateReply};
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, RefreshKind, System};
 
@@ -18,7 +20,6 @@ pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
             .with_cpu(CpuRefreshKind::new().with_cpu_usage())
             .with_memory(MemoryRefreshKind::new().with_ram()),
     );
-    let os = os_info::get();
 
     let mut embed = CreateEmbed::default()
         .title("System information")
@@ -51,11 +52,16 @@ pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
         "Operating system",
         format!(
             "**{}** {}{}",
-            os.os_type(),
-            os.version(),
-            os.architecture()
-                .map_or_else(String::new, |arch| format!(" ({arch})")),
+            System::name().unwrap_or_else(|| "Unknown".into()),
+            System::os_version().unwrap_or_else(|| "Unknown".into()),
+            System::cpu_arch().map_or_else(String::new, |arch| format!(" ({arch})")),
         ),
+        false,
+    );
+
+    embed = embed.field(
+        "Uptime",
+        humantime::format_duration(Duration::from_secs(System::uptime())).to_string(),
         false,
     );
 
