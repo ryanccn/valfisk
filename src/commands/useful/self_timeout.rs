@@ -21,14 +21,13 @@ pub async fn self_timeout(
         if let Some(mut member) = ctx.author_member().await {
             let start = chrono::Utc::now();
             let end = start + duration;
-            let end_serenity = serenity::Timestamp::from_unix_timestamp(end.timestamp())?;
 
             member
                 .to_mut()
                 .edit(
                     ctx.http(),
                     serenity::EditMember::default()
-                        .disable_communication_until(end_serenity)
+                        .disable_communication_until(end.into())
                         .audit_log_reason(&format!(
                             "Requested self timeout{}",
                             reason.as_ref().map_or(String::new(), |r| format!(": {r}"))
