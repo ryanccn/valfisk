@@ -11,6 +11,7 @@ mod dm;
 mod error_handling;
 mod intelligence;
 pub mod log;
+mod safe_browsing;
 
 pub use error_handling::handle_error;
 
@@ -22,10 +23,14 @@ pub async fn handle_message(
     ctx: &serenity::Context,
     data: &Data,
 ) -> Result<()> {
+    if safe_browsing::handle(ctx, data, message).await? {
+        return Ok(());
+    }
+
     tokio::try_join!(
-        code_expansion::handle(ctx, message),
-        autoreply::handle(ctx, data, message),
         log::handle_message(ctx, data, message),
+        autoreply::handle(ctx, data, message),
+        code_expansion::handle(ctx, message),
         intelligence::handle(ctx, message),
         dm::handle(ctx, message)
     )?;

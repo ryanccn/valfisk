@@ -28,7 +28,7 @@ pub async fn handle_message(
     Ok(())
 }
 
-static MESSAGE_LOGS_CHANNEL: Lazy<Option<serenity::ChannelId>> = Lazy::new(|| {
+pub static MESSAGE_LOGS_CHANNEL: Lazy<Option<serenity::ChannelId>> = Lazy::new(|| {
     std::env::var("MESSAGE_LOGS_CHANNEL")
         .ok()
         .and_then(|s| s.parse::<serenity::ChannelId>().ok())
@@ -46,7 +46,7 @@ fn make_link_components<'a>(link: &'a str, label: &'a str) -> Vec<serenity::Crea
     )]
 }
 
-fn format_user(user: Option<&serenity::UserId>) -> String {
+pub fn format_user(user: Option<&serenity::UserId>) -> String {
     user.map_or_else(
         || "*Unknown*".to_owned(),
         |user| format!("<@{user}> ({user})"),

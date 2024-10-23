@@ -23,7 +23,7 @@ pub async fn handle_error(err: FrameworkError<'_, Data, eyre::Report>) {
             framework,
             ..
         } => {
-            error!("{:?}", error);
+            error!("{error:?}");
 
             let embed = CreateEmbed::default()
                 .title("An error occurred in an event handler!")

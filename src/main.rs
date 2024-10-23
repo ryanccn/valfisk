@@ -12,11 +12,13 @@ use storage::Storage;
 use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
 use utils::GUILD_ID;
 
+use crate::safe_browsing::SafeBrowsing;
 use crate::utils::Pluralize as _;
 
 #[derive(Debug)]
 pub struct Data {
     storage: Option<Storage>,
+    safe_browsing: Option<SafeBrowsing>,
 }
 
 pub type Context<'a> = poise::Context<'a, Data, Report>;
@@ -26,6 +28,7 @@ mod commands;
 mod handlers;
 mod intelligence;
 mod reqwest_client;
+mod safe_browsing;
 mod schedule;
 mod starboard;
 mod storage;
@@ -254,6 +257,17 @@ async fn main() -> Result<()> {
         None
     };
 
+    let safe_browsing = if let Ok(token) = std::env::var("SAFE_BROWSING_API_KEY") {
+        Some(SafeBrowsing::new(&token))
+    } else {
+        None
+    };
+
+    let data = Arc::new(Data {
+        storage,
+        safe_browsing,
+    });
+
     let mut client = serenity::Client::builder(&token, serenity::GatewayIntents::all())
         .framework(Framework::new(FrameworkOptions {
             commands: commands::to_vec(),
@@ -261,12 +275,12 @@ async fn main() -> Result<()> {
             on_error: |err| Box::pin(handlers::handle_error(err)),
             ..Default::default()
         }))
-        .data(Arc::new(Data { storage }))
+        .data(data.clone())
         .await?;
 
     tokio::select! {
         result = api::serve(client.http.clone()) => { result },
-        result = schedule::start(client.http.clone()) => { result },
+        result = schedule::start(client.http.clone(), data.clone()) => { result },
         result = client.start() => { result.map_err(eyre::Report::from) },
         _ = tokio::signal::ctrl_c() => {
             warn!("Interrupted with SIGINT, exiting");
