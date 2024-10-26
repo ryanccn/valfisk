@@ -9,11 +9,7 @@ use poise::serenity_prelude as serenity;
 use eyre::Result;
 use tracing::debug;
 
-fn channel_from_env(key: &str) -> Option<serenity::ChannelId> {
-    env::var(key)
-        .ok()
-        .and_then(|s| s.parse::<serenity::ChannelId>().ok())
-}
+use crate::config::CONFIG;
 
 #[tracing::instrument(skip(http))]
 async fn get_starboard_channel(
@@ -24,14 +20,14 @@ async fn get_starboard_channel(
         return Ok(None);
     };
 
-    if channel_from_env("FREN_CATEGORY") == message_channel.parent_id {
-        if let Some(fren_category) = channel_from_env("FREN_STARBOARD_CHANNEL") {
-            return Ok(Some(fren_category));
+    if CONFIG.fren_category == message_channel.parent_id {
+        if let Some(fren_channel) = CONFIG.fren_starboard_channel {
+            return Ok(Some(fren_channel));
         }
     }
 
-    if let Some(fren_category) = channel_from_env("STARBOARD_CHANNEL") {
-        return Ok(Some(fren_category));
+    if let Some(general_channel) = CONFIG.starboard_channel {
+        return Ok(Some(general_channel));
     }
 
     Ok(None)

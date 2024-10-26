@@ -3,18 +3,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 use poise::serenity_prelude as serenity;
-
-use crate::{
-    reqwest_client,
-    utils::{serenity::suppress_embeds, GUILD_ID},
-};
 use regex::Regex;
 
 use eyre::Result;
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use tracing::debug;
 
-static GITHUB: Lazy<Regex> = Lazy::new(|| {
+use crate::{config::CONFIG, reqwest_client, utils::serenity::suppress_embeds};
+
+static GITHUB: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"https?://github\.com/(?P<repo>[\w-]+/[\w.-]+)/blob/(?P<ref>\S+?)/(?P<file>[^\s?]+)(\?\S*)?#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
 });
 
@@ -72,8 +69,9 @@ async fn github(message: &serenity::Message) -> Result<Vec<serenity::CreateEmbed
     Ok(embeds)
 }
 
-static RUST_PLAYGROUND: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"https://play\.rust-lang\.org/\S*[?&]gist=(?P<gist>\w+)").unwrap());
+static RUST_PLAYGROUND: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"https://play\.rust-lang\.org/\S*[?&]gist=(?P<gist>\w+)").unwrap()
+});
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
 async fn rust_playground(message: &serenity::Message) -> Result<Vec<serenity::CreateEmbed>> {
@@ -110,8 +108,8 @@ async fn rust_playground(message: &serenity::Message) -> Result<Vec<serenity::Cr
     Ok(embeds)
 }
 
-static GO_PLAYGROUND: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"https://go\.dev/play/p/(?P<id>[\w-]+)").unwrap());
+static GO_PLAYGROUND: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"https://go\.dev/play/p/(?P<id>[\w-]+)").unwrap());
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
 async fn go_playground(message: &serenity::Message) -> Result<Vec<serenity::CreateEmbed>> {
@@ -149,7 +147,7 @@ async fn go_playground(message: &serenity::Message) -> Result<Vec<serenity::Crea
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
 pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
-    if message.guild_id != *GUILD_ID {
+    if message.guild_id != CONFIG.guild_id {
         return Ok(());
     }
 

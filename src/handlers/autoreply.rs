@@ -4,10 +4,9 @@
 
 use eyre::Result;
 use poise::serenity_prelude as serenity;
-
 use rand::seq::SliceRandom as _;
 
-use crate::{utils::GUILD_ID, Data};
+use crate::{config::CONFIG, Data};
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
 pub async fn handle(
@@ -15,7 +14,7 @@ pub async fn handle(
     data: &Data,
     message: &serenity::Message,
 ) -> Result<()> {
-    if message.guild_id != *GUILD_ID {
+    if message.guild_id != CONFIG.guild_id {
         return Ok(());
     }
 

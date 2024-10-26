@@ -5,8 +5,7 @@
 use eyre::Result;
 use poise::serenity_prelude as serenity;
 
-use super::LOGS_CHANNEL;
-use crate::Context;
+use crate::{config::CONFIG, Context};
 
 /// Ban a member
 #[poise::command(
@@ -72,7 +71,7 @@ pub async fn ban(
         dm_embed = dm_embed.field("User notified", "No", false);
     }
 
-    if let Some(logs_channel) = *LOGS_CHANNEL {
+    if let Some(logs_channel) = CONFIG.moderation_logs_channel {
         let server_embed = dm_embed.footer(
             serenity::CreateEmbedFooter::new(ctx.author().tag()).icon_url(ctx.author().face()),
         );

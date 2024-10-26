@@ -5,8 +5,7 @@
 use eyre::Result;
 use poise::serenity_prelude as serenity;
 
-use super::LOGS_CHANNEL;
-use crate::Context;
+use crate::{config::CONFIG, Context};
 
 /// Timeout a member
 #[poise::command(
@@ -27,10 +26,9 @@ pub async fn timeout(
 
     if let Ok(duration) = humantime::parse_duration(&duration) {
         let end = chrono::Utc::now() + duration;
-        let end_serenity = serenity::Timestamp::from_unix_timestamp(end.timestamp())?;
 
         let mut edit_member =
-            serenity::EditMember::default().disable_communication_until(end_serenity);
+            serenity::EditMember::default().disable_communication_until(end.into());
 
         if let Some(reason) = &reason {
             edit_member = edit_member.audit_log_reason(reason);
@@ -72,7 +70,7 @@ pub async fn timeout(
             dm_embed = dm_embed.field("User notified", "No", false);
         }
 
-        if let Some(logs_channel) = *LOGS_CHANNEL {
+        if let Some(logs_channel) = CONFIG.moderation_logs_channel {
             let server_embed = dm_embed.footer(
                 serenity::CreateEmbedFooter::new(ctx.author().tag()).icon_url(ctx.author().face()),
             );

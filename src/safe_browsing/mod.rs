@@ -4,7 +4,7 @@
 
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use eyre::eyre;
-use sha2::{Digest, Sha256};
+use sha2::{Digest as _, Sha256};
 
 use std::{
     collections::{HashMap, HashSet},
@@ -153,7 +153,7 @@ impl SafeBrowsing {
             let url_prefixes = Self::generate_url_prefixes(url)?;
 
             for url_prefix in url_prefixes {
-                let url_hash = Self::sha256(&url_prefix);
+                let url_hash = Sha256::digest(&url_prefix).to_vec();
 
                 if let Some(v) = url_hashes.get_mut(*url) {
                     v.insert(url_hash);
@@ -238,15 +238,15 @@ impl SafeBrowsing {
         Ok(Vec::new())
     }
 
-    fn generate_url_prefixes(url: &str) -> eyre::Result<Vec<String>> {
+    fn generate_url_prefixes(url: &str) -> eyre::Result<HashSet<String>> {
         let mut url = canonicalize(url)?;
 
-        let mut prefixes = Vec::new();
-        prefixes.push(url.to_string());
+        let mut prefixes = HashSet::new();
+        prefixes.insert(url.to_string());
 
         if url.query().is_some() {
             url.set_query(None);
-            prefixes.push(url.to_string());
+            prefixes.insert(url.to_string());
         }
 
         while url.path() != "/" {
@@ -254,7 +254,7 @@ impl SafeBrowsing {
                 .map_err(|()| eyre!("could not obtain path segments"))?
                 .pop();
 
-            prefixes.push(url.to_string());
+            prefixes.insert(url.to_string());
         }
 
         let prefixes = prefixes
@@ -267,11 +267,5 @@ impl SafeBrowsing {
             .collect();
 
         Ok(prefixes)
-    }
-
-    fn sha256(input: &str) -> Vec<u8> {
-        let mut hasher = Sha256::new();
-        hasher.update(input.as_bytes());
-        hasher.finalize().to_vec()
     }
 }

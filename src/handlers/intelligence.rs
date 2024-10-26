@@ -5,26 +5,18 @@
 use poise::serenity_prelude as serenity;
 
 use eyre::Result;
-use once_cell::sync::Lazy;
 use std::time::Duration;
 use tokio::{task, time};
 
-use crate::{intelligence, utils::GUILD_ID};
-
-static ALLOWED_ROLES: Lazy<Vec<serenity::RoleId>> = Lazy::new(|| {
-    std::env::var("INTELLIGENCE_ALLOWED_ROLES")
-        .ok()
-        .map(|s| {
-            s.split(',')
-                .filter_map(|f| f.trim().parse::<serenity::RoleId>().ok())
-                .collect::<Vec<_>>()
-        })
-        .unwrap_or_default()
-});
+use crate::{config::CONFIG, intelligence};
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
 pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
-    if message.guild_id != *GUILD_ID {
+    if CONFIG.intelligence_secret.is_none() {
+        return Ok(());
+    }
+
+    if message.guild_id != CONFIG.guild_id {
         return Ok(());
     }
 
@@ -37,7 +29,10 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
 
     if let Ok(member) = message.member(&ctx).await {
         if !member.permissions(&ctx.cache)?.administrator()
-            && !member.roles.iter().any(|r| ALLOWED_ROLES.contains(r))
+            && !member
+                .roles
+                .iter()
+                .any(|r| CONFIG.intelligence_allowed_roles.contains(r))
         {
             return Ok(());
         }

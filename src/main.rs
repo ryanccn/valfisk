@@ -4,27 +4,20 @@
 
 use std::sync::Arc;
 
-use eyre::{Report, Result, WrapErr as _};
+use eyre::{Report, Result};
 use tracing::{info, warn};
 
 use poise::{serenity_prelude as serenity, Framework, FrameworkContext, FrameworkOptions};
-use storage::Storage;
 use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
-use utils::GUILD_ID;
 
+use crate::config::CONFIG;
 use crate::safe_browsing::SafeBrowsing;
+use crate::storage::Storage;
 use crate::utils::Pluralize as _;
-
-#[derive(Debug)]
-pub struct Data {
-    storage: Option<Storage>,
-    safe_browsing: Option<SafeBrowsing>,
-}
-
-pub type Context<'a> = poise::Context<'a, Data, Report>;
 
 mod api;
 mod commands;
+mod config;
 mod handlers;
 mod intelligence;
 mod reqwest_client;
@@ -34,6 +27,35 @@ mod starboard;
 mod storage;
 mod template_channel;
 mod utils;
+
+#[derive(Debug)]
+pub struct Data {
+    storage: Option<Storage>,
+    safe_browsing: Option<SafeBrowsing>,
+}
+
+impl Data {
+    fn new() -> Result<Self> {
+        let storage = if let Some(redis_url) = &CONFIG.redis_url {
+            let client = redis::Client::open(redis_url.clone())?;
+            Some(Storage::from(client))
+        } else {
+            None
+        };
+
+        let safe_browsing = CONFIG
+            .safe_browsing_api_key
+            .as_ref()
+            .map(|key| SafeBrowsing::new(key));
+
+        Ok(Self {
+            storage,
+            safe_browsing,
+        })
+    }
+}
+
+pub type Context<'a> = poise::Context<'a, Data, Report>;
 
 #[tracing::instrument(skip_all)]
 async fn event_handler(
@@ -70,7 +92,7 @@ async fn event_handler(
         }
 
         FullEvent::MessageUpdate { event, .. } => {
-            if event.guild_id == *GUILD_ID {
+            if event.guild_id == CONFIG.guild_id {
                 use storage::log::MessageLog;
 
                 let timestamp = event.edited_timestamp.unwrap_or_else(Timestamp::now);
@@ -118,7 +140,7 @@ async fn event_handler(
             channel_id,
             guild_id,
         } => {
-            if *guild_id == *GUILD_ID {
+            if *guild_id == CONFIG.guild_id {
                 starboard::handle_deletion(
                     ctx.serenity_context,
                     &data,
@@ -150,14 +172,14 @@ async fn event_handler(
         }
 
         FullEvent::ReactionAdd { add_reaction } => {
-            if add_reaction.guild_id == *GUILD_ID {
+            if add_reaction.guild_id == CONFIG.guild_id {
                 let message = add_reaction.message(ctx.serenity_context).await?;
                 starboard::handle(ctx.serenity_context, &data, &message).await?;
             }
         }
 
         FullEvent::ReactionRemove { removed_reaction } => {
-            if removed_reaction.guild_id == *GUILD_ID {
+            if removed_reaction.guild_id == CONFIG.guild_id {
                 let message = removed_reaction.message(ctx.serenity_context).await?;
                 starboard::handle(ctx.serenity_context, &data, &message).await?;
             }
@@ -172,7 +194,7 @@ async fn event_handler(
                     .to_guild_channel(&ctx.serenity_context, None)
                     .await?
                     .guild_id,
-            ) == *GUILD_ID
+            ) == CONFIG.guild_id
             {
                 let message = channel_id
                     .message(ctx.serenity_context, *removed_from_message_id)
@@ -182,7 +204,7 @@ async fn event_handler(
         }
 
         FullEvent::ReactionRemoveEmoji { removed_reactions } => {
-            if removed_reactions.guild_id == *GUILD_ID {
+            if removed_reactions.guild_id == CONFIG.guild_id {
                 let message = removed_reactions.message(ctx.serenity_context).await?;
                 starboard::handle(ctx.serenity_context, &data, &message).await?;
             }
@@ -202,8 +224,8 @@ async fn event_handler(
         }
 
         FullEvent::PresenceUpdate { new_data, .. } => {
-            if new_data.guild_id == *GUILD_ID {
-                let mut store = api::PRESENCE_STORE.write().unwrap();
+            if new_data.guild_id == CONFIG.guild_id {
+                let mut store = api::PRESENCE_STORE.write().await;
                 store.insert(
                     new_data.user.id,
                     api::ValfiskPresenceData::from_presence(new_data),
@@ -213,7 +235,7 @@ async fn event_handler(
         }
 
         FullEvent::GuildCreate { guild, .. } => {
-            if Some(guild.id) != *GUILD_ID {
+            if Some(guild.id) != CONFIG.guild_id {
                 guild.leave(&ctx.serenity_context.http).await?;
             }
         }
@@ -247,36 +269,21 @@ async fn main() -> Result<()> {
         }
     }
 
-    let token = std::env::var("DISCORD_TOKEN")
-        .wrap_err_with(|| "Could not obtain DISCORD_TOKEN from environment!")?;
+    // Preload config from environment
+    let _ = *CONFIG;
 
-    let storage = if let Ok(redis_url) = std::env::var("REDIS_URL") {
-        let client = redis::Client::open(redis_url)?;
-        Some(Storage::from(client))
-    } else {
-        None
-    };
+    let data = Arc::new(Data::new()?);
 
-    let safe_browsing = if let Ok(token) = std::env::var("SAFE_BROWSING_API_KEY") {
-        Some(SafeBrowsing::new(&token))
-    } else {
-        None
-    };
-
-    let data = Arc::new(Data {
-        storage,
-        safe_browsing,
-    });
-
-    let mut client = serenity::Client::builder(&token, serenity::GatewayIntents::all())
-        .framework(Framework::new(FrameworkOptions {
-            commands: commands::to_vec(),
-            event_handler: |ctx, ev| Box::pin(event_handler(ctx, ev)),
-            on_error: |err| Box::pin(handlers::handle_error(err)),
-            ..Default::default()
-        }))
-        .data(data.clone())
-        .await?;
+    let mut client =
+        serenity::Client::builder(&CONFIG.discord_token, serenity::GatewayIntents::all())
+            .framework(Framework::new(FrameworkOptions {
+                commands: commands::to_vec(),
+                event_handler: |ctx, ev| Box::pin(event_handler(ctx, ev)),
+                on_error: |err| Box::pin(handlers::handle_error(err)),
+                ..Default::default()
+            }))
+            .data(data.clone())
+            .await?;
 
     tokio::select! {
         result = api::serve(client.http.clone()) => { result },

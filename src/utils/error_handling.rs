@@ -2,16 +2,15 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use once_cell::sync::Lazy;
 use std::fmt::Debug;
 
 use nanoid::nanoid;
 use poise::{
-    serenity_prelude::{ChannelId, CreateEmbed, CreateEmbedFooter, CreateMessage, Timestamp},
+    serenity_prelude::{CreateEmbed, CreateEmbedFooter, CreateMessage, Timestamp},
     CreateReply,
 };
 
-use crate::Context;
+use crate::{config::CONFIG, Context};
 use tracing::error;
 
 /// A wrapper type that encapsulates errors ([`eyre::Error`]) or panic strings ([`Option<String>`]).
@@ -31,12 +30,6 @@ impl ErrorOrPanic<'_> {
         }
     }
 }
-
-pub static ERROR_LOGS_CHANNEL: Lazy<Option<ChannelId>> = Lazy::new(|| {
-    std::env::var("ERROR_LOGS_CHANNEL")
-        .ok()
-        .and_then(|s| s.parse::<ChannelId>().ok())
-});
 
 /// A wrapped type around errors or panics encapsulated in [`ErrorOrPanic`] that includes context from Poise and a randomly generated `error_id`.
 #[derive(Debug)]
@@ -73,7 +66,7 @@ impl ValfiskError<'_> {
     /// Log the error to the console.
     #[tracing::instrument(skip(self), fields(id = self.error_id, r#type = self.error_or_panic.type_string(), command = self.ctx.invocation_string(), channel = self.ctx.channel_id().get(), author = self.ctx.author().id.get()))]
     pub fn handle_log(&self) {
-        error!("{:#?}", self.error_or_panic);
+        error!("{:?}", self.error_or_panic);
     }
 
     /// Reply to the interaction with an embed informing the user of an error, containing the randomly generated error ID.
@@ -97,7 +90,7 @@ impl ValfiskError<'_> {
     /// Report the error to a channel defined through the environment variable `ERROR_LOGS_CHANNEL`.
     #[tracing::instrument(skip(self))]
     pub async fn handle_report(&self) {
-        if let Some(channel) = *ERROR_LOGS_CHANNEL {
+        if let Some(channel) = CONFIG.error_logs_channel {
             let embed = CreateEmbed::default()
                 .title("An error occurred!")
                 .description(format!("```\n{:#?}\n```", self.error_or_panic))

@@ -3,12 +3,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 use eyre::Result;
-use std::{collections::HashMap, env, time::Duration};
+use std::{collections::HashMap, time::Duration};
 
 use poise::{serenity_prelude as serenity, CreateReply};
 use serde::{Deserialize, Serialize};
 
-use crate::{reqwest_client::HTTP, Context};
+use crate::{config::CONFIG, reqwest_client::HTTP, Context};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -40,7 +40,7 @@ pub async fn lighthouse(
 ) -> Result<()> {
     ctx.defer().await?;
 
-    if let Ok(pagespeed_token) = env::var("PAGESPEED_API_KEY") {
+    if let Some(pagespeed_token) = &CONFIG.pagespeed_api_key {
         let reply_handle = ctx
             .send(
                 CreateReply::default().embed(
@@ -65,7 +65,7 @@ pub async fn lighthouse(
             .append_pair("category", "ACCESSIBILITY")
             .append_pair("category", "BEST_PRACTICES")
             .append_pair("category", "SEO")
-            .append_pair("key", &pagespeed_token);
+            .append_pair("key", pagespeed_token);
 
         let resp = HTTP
             .get(api_url)

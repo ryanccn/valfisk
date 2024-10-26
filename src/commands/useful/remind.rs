@@ -53,7 +53,7 @@ pub async fn remind(
                             )
                             .await
                         {
-                            tracing::error!("{err}");
+                            tracing::error!("{err:?}");
                         };
                     }
                 });

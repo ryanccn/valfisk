@@ -6,9 +6,8 @@ use humansize::{format_size, FormatSizeOptions};
 use poise::serenity_prelude as serenity;
 
 use eyre::Result;
-use once_cell::sync::Lazy;
 
-use crate::{storage::log::MessageLog, Data};
+use crate::{config::CONFIG, storage::log::MessageLog, Data};
 
 pub async fn handle_message(
     ctx: &serenity::Context,
@@ -27,18 +26,6 @@ pub async fn handle_message(
 
     Ok(())
 }
-
-pub static MESSAGE_LOGS_CHANNEL: Lazy<Option<serenity::ChannelId>> = Lazy::new(|| {
-    std::env::var("MESSAGE_LOGS_CHANNEL")
-        .ok()
-        .and_then(|s| s.parse::<serenity::ChannelId>().ok())
-});
-
-static MEMBER_LOGS_CHANNEL: Lazy<Option<serenity::ChannelId>> = Lazy::new(|| {
-    std::env::var("MEMBER_LOGS_CHANNEL")
-        .ok()
-        .and_then(|s| s.parse::<serenity::ChannelId>().ok())
-});
 
 fn make_link_components<'a>(link: &'a str, label: &'a str) -> Vec<serenity::CreateActionRow<'a>> {
     vec![serenity::CreateActionRow::Buttons(
@@ -70,7 +57,7 @@ pub async fn edit(
         return Ok(());
     }
 
-    if let Some(logs_channel) = *MESSAGE_LOGS_CHANNEL {
+    if let Some(logs_channel) = CONFIG.message_logs_channel {
         let link = id.link(channel.to_owned(), guild.to_owned());
 
         let mut embed_author = serenity::CreateEmbedAuthor::new("Message Edited");
@@ -149,7 +136,7 @@ pub async fn delete(
         return Ok(());
     }
 
-    if let Some(logs_channel) = *MESSAGE_LOGS_CHANNEL {
+    if let Some(logs_channel) = CONFIG.message_logs_channel {
         let link = id.link(channel.to_owned(), guild.to_owned());
 
         let mut embed_author = serenity::CreateEmbedAuthor::new("Message Deleted");
@@ -203,7 +190,7 @@ pub async fn delete(
 }
 
 pub async fn member_join(ctx: &serenity::Context, user: &serenity::User) -> Result<()> {
-    if let Some(logs_channel) = *MEMBER_LOGS_CHANNEL {
+    if let Some(logs_channel) = CONFIG.member_logs_channel {
         logs_channel
             .send_message(
                 &ctx.http,
@@ -230,7 +217,7 @@ pub async fn member_leave(
     user: &serenity::User,
     member: &Option<serenity::Member>,
 ) -> Result<()> {
-    if let Some(logs_channel) = *MEMBER_LOGS_CHANNEL {
+    if let Some(logs_channel) = CONFIG.member_logs_channel {
         let mut embed = serenity::CreateEmbed::default()
             .author(
                 serenity::CreateEmbedAuthor::new(format!("@{} left", user.tag()))

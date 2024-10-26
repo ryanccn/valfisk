@@ -2,9 +2,9 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
-pub static HTTP: Lazy<reqwest::Client> = Lazy::new(|| {
+pub static HTTP: LazyLock<reqwest::Client> = LazyLock::new(|| {
     let user_agent = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 
     reqwest::Client::builder()

@@ -2,10 +2,10 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
+use eyre::{Report, Result};
 use poise::{serenity_prelude as serenity, CreateReply};
 
 use crate::{utils::error_handling::ValfiskError, Context};
-use eyre::{Report, Result};
 
 #[derive(serde::Deserialize)]
 struct SafebooruResponse {

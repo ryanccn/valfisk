@@ -9,10 +9,7 @@ use poise::{
     FrameworkError,
 };
 
-use crate::{
-    utils::error_handling::{ValfiskError, ERROR_LOGS_CHANNEL},
-    Data,
-};
+use crate::{config::CONFIG, utils::error_handling::ValfiskError, Data};
 
 #[tracing::instrument(skip(err))]
 pub async fn handle_error(err: FrameworkError<'_, Data, eyre::Report>) {
@@ -33,7 +30,7 @@ pub async fn handle_error(err: FrameworkError<'_, Data, eyre::Report>) {
                 .timestamp(Timestamp::now())
                 .color(0xff6b6b);
 
-            if let Some(channel) = *ERROR_LOGS_CHANNEL {
+            if let Some(channel) = CONFIG.error_logs_channel {
                 channel
                     .send_message(
                         framework.serenity_context.http(),

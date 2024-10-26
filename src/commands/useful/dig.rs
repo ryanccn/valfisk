@@ -2,7 +2,10 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use std::net::SocketAddr;
+use poise::{
+    serenity_prelude::{CreateEmbed, CreateEmbedFooter, Timestamp},
+    ChoiceParameter, CreateReply,
+};
 
 use hickory_resolver::{
     config::{NameServerConfig, Protocol, ResolverConfig, ResolverOpts},
@@ -11,16 +14,12 @@ use hickory_resolver::{
     TokioAsyncResolver,
 };
 
-use crate::Context;
-use poise::{
-    serenity_prelude::{CreateEmbed, CreateEmbedFooter, Timestamp},
-    ChoiceParameter, CreateReply,
-};
-
 use eyre::Result;
-use once_cell::sync::Lazy;
+use std::{net::SocketAddr, sync::LazyLock};
 
-pub static BOOTSTRAP_RESOLVER: Lazy<TokioAsyncResolver> = Lazy::new(|| {
+use crate::Context;
+
+pub static BOOTSTRAP_RESOLVER: LazyLock<TokioAsyncResolver> = LazyLock::new(|| {
     TokioAsyncResolver::tokio(ResolverConfig::cloudflare_https(), make_resolver_opts(true))
 });
 

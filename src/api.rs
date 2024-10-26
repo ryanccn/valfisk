@@ -14,15 +14,16 @@ use axum::{
 
 use serde_json::json;
 
-use once_cell::sync::Lazy;
-use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
-use tokio::net::TcpListener;
+use std::{
+    collections::HashMap,
+    sync::{Arc, LazyLock},
+};
+use tokio::{net::TcpListener, sync::RwLock};
 
 use tower_http::trace::TraceLayer;
 use tracing::info;
 
-use crate::utils::axum::AxumResult;
+use crate::{config::CONFIG, utils::axum::AxumResult};
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ValfiskPresenceData {
@@ -42,8 +43,8 @@ impl ValfiskPresenceData {
     }
 }
 
-pub static PRESENCE_STORE: Lazy<RwLock<HashMap<serenity::UserId, ValfiskPresenceData>>> =
-    Lazy::new(|| RwLock::new(HashMap::new()));
+pub static PRESENCE_STORE: LazyLock<RwLock<HashMap<serenity::UserId, ValfiskPresenceData>>> =
+    LazyLock::new(|| RwLock::new(HashMap::new()));
 
 async fn route_ping() -> impl IntoResponse {
     (StatusCode::OK, Json(json!({ "ok": true })))
@@ -68,7 +69,7 @@ async fn route_presence(Path(user_id): Path<u64>) -> AxumResult<Response> {
 
     let user_id = serenity::UserId::from(user_id);
 
-    let store = PRESENCE_STORE.read().unwrap();
+    let store = PRESENCE_STORE.read().await;
     let presence_data = store.get(&user_id).cloned();
     drop(store);
 
@@ -91,7 +92,7 @@ async fn route_presence_head(Path(user_id): Path<u64>) -> AxumResult<StatusCode>
 
     let user_id = serenity::UserId::from(user_id);
 
-    let store = PRESENCE_STORE.read().unwrap();
+    let store = PRESENCE_STORE.read().await;
     let presence_exists = store.contains_key(&user_id);
     drop(store);
 
@@ -125,9 +126,8 @@ async fn route_kofi_webhook(
     form: Form<KofiFormData>,
 ) -> AxumResult<(StatusCode, impl IntoResponse)> {
     let data: KofiData = serde_json::from_str(&form.0.data)?;
-    let verification_token = std::env::var("KOFI_VERIFICATION_TOKEN")?;
 
-    if data.verification_token != verification_token {
+    if Some(data.verification_token) != CONFIG.kofi_verification_token {
         return Ok((
             StatusCode::UNAUTHORIZED,
             Json(json!({ "error": "Unauthorized" })),
@@ -135,11 +135,7 @@ async fn route_kofi_webhook(
     }
 
     if data.is_public {
-        if let Some(channel) = std::env::var("KOFI_NOTIFY_CHANNEL")
-            .ok()
-            .and_then(|c| c.parse::<u64>().ok())
-            .map(serenity::ChannelId::new)
-        {
+        if let Some(channel) = CONFIG.kofi_notify_channel {
             let mut embed = serenity::CreateEmbed::default()
                 .title(format!("Thank you to {}!", data.from_name))
                 .description(format!(

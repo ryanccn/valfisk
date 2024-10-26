@@ -40,7 +40,7 @@ rustPlatform.buildRustPackage rec {
     lockFile = ../Cargo.lock;
     outputHashes = {
       "poise-0.6.1" = "sha256-O/vUkpm8NgrILRLm79cN/nON/D2rx6QBjPMw/VT77qs=";
-      "serenity-0.12.2" = "sha256-kVHmHQY4xWbKOkaywl7nt2d3ZnwdYdLfqW2DbZU5Jy4=";
+      "serenity-0.12.2" = "sha256-x/m1l2D3sY9I7s3E6UzfRbfdZIWzqw6J1JW5LdybQto=";
     };
   };
 

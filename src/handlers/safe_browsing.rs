@@ -2,26 +2,20 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use once_cell::sync::Lazy;
 use poise::serenity_prelude as serenity;
 use regex::Regex;
+use std::sync::LazyLock;
 
 use eyre::Result;
 
-use super::log::{format_user, MESSAGE_LOGS_CHANNEL};
-use crate::{utils::GUILD_ID, Data};
+use super::log::format_user;
+use crate::{config::CONFIG, Data};
 
-static URL_REGEX: Lazy<Regex> = Lazy::new(|| {
+static URL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
         r"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)",
     )
     .unwrap()
-});
-
-static MODERATOR_ROLE: Lazy<Option<serenity::RoleId>> = Lazy::new(|| {
-    std::env::var("MODERATOR_ROLE")
-        .ok()
-        .and_then(|s| s.parse::<serenity::RoleId>().ok())
 });
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
@@ -30,7 +24,7 @@ pub async fn handle(
     data: &Data,
     message: &serenity::Message,
 ) -> Result<bool> {
-    if message.guild_id != *GUILD_ID {
+    if message.guild_id != CONFIG.guild_id {
         return Ok(false);
     }
 
@@ -51,7 +45,7 @@ pub async fn handle(
             .await?;
 
         if !matches.is_empty() {
-            if let Some(logs_channel) = *MESSAGE_LOGS_CHANNEL {
+            if let Some(logs_channel) = CONFIG.message_logs_channel {
                 let embed = serenity::CreateEmbed::default()
                     .title("Safe Browsing")
                     .field("Channel", format!("<#{}>", message.channel_id), false)
@@ -73,7 +67,7 @@ pub async fn handle(
                     .send_message(
                         &ctx.http,
                         serenity::CreateMessage::default()
-                            .content(match *MODERATOR_ROLE {
+                            .content(match CONFIG.moderator_role {
                                 Some(role) => format!("<@&{role}>"),
                                 None => String::new(),
                             })

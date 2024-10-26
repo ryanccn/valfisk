@@ -6,13 +6,8 @@ use poise::serenity_prelude as serenity;
 
 use eyre::Result;
 use humansize::{format_size, FormatSizeOptions};
-use once_cell::sync::Lazy;
 
-static DM_LOGS_CHANNEL: Lazy<Option<serenity::ChannelId>> = Lazy::new(|| {
-    std::env::var("DM_LOGS_CHANNEL")
-        .ok()
-        .and_then(|s| s.parse::<serenity::ChannelId>().ok())
-});
+use crate::config::CONFIG;
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
 pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
@@ -21,7 +16,7 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
     }
 
     if message.channel(&ctx).await?.private().is_some() {
-        if let Some(logs_channel) = *DM_LOGS_CHANNEL {
+        if let Some(logs_channel) = CONFIG.dm_logs_channel {
             let mut embed = serenity::CreateEmbed::default()
                 .description(message.content.clone())
                 .author(

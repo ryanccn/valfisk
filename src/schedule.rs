@@ -4,7 +4,6 @@
 
 use poise::serenity_prelude::{EditRole, Http, RoleId};
 
-use once_cell::sync::Lazy;
 use rand::Rng as _;
 use std::{sync::Arc, time::Duration};
 use tokio::{task::JoinSet, time};
@@ -12,18 +11,7 @@ use tokio::{task::JoinSet, time};
 use chrono::{NaiveTime, TimeDelta, Utc};
 use eyre::{eyre, Result};
 
-use crate::{utils, Data};
-
-static RANDOM_COLOR_ROLES: Lazy<Vec<RoleId>> = Lazy::new(|| {
-    std::env::var("RANDOM_COLOR_ROLES")
-        .ok()
-        .map(|s| {
-            s.split(',')
-                .filter_map(|f| f.trim().parse::<RoleId>().ok())
-                .collect::<Vec<_>>()
-        })
-        .unwrap_or_default()
-});
+use crate::{config::CONFIG, Data};
 
 pub async fn rotate_color_roles(
     http: &Arc<Http>,
@@ -31,10 +19,10 @@ pub async fn rotate_color_roles(
 ) -> Result<Vec<RoleId>> {
     let roles = match override_role {
         Some(role) => vec![role],
-        None => RANDOM_COLOR_ROLES.clone(),
+        None => CONFIG.random_color_roles.clone(),
     };
 
-    if let Some(guild) = *utils::GUILD_ID {
+    if let Some(guild) = CONFIG.guild_id {
         for role in &roles {
             let mut role = guild.role(http, *role).await?;
             let color = {
@@ -67,7 +55,7 @@ pub async fn start(http: Arc<Http>, data: Arc<Data>) -> Result<()> {
                 time::sleep((next - now).to_std()?).await;
 
                 if let Err(err) = rotate_color_roles(&http, None).await {
-                    tracing::error!("{err:#?}");
+                    tracing::error!("{err:?}");
                 }
 
                 time::sleep(Duration::from_secs(1)).await;
@@ -86,7 +74,7 @@ pub async fn start(http: Arc<Http>, data: Arc<Data>) -> Result<()> {
 
                 if let Some(safe_browsing) = &data.safe_browsing {
                     if let Err(err) = safe_browsing.update().await {
-                        tracing::error!("{err:#?}");
+                        tracing::error!("{err:?}");
                     }
                 }
             }

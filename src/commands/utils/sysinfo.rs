@@ -2,13 +2,13 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
+use eyre::Result;
 use std::time::Duration;
 
 use poise::{serenity_prelude::CreateEmbed, CreateReply};
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, RefreshKind, System};
 
 use crate::Context;
-use eyre::Result;
 
 /// Get system information for the bot host
 #[poise::command(slash_command, guild_only)]

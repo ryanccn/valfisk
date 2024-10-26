@@ -2,11 +2,12 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use crate::{storage::presence::PresenceChoice, Context};
 use poise::{serenity_prelude as serenity, CreateReply};
 
 use eyre::Result;
 use tracing::info;
+
+use crate::{storage::presence::PresenceChoice, Context};
 
 /// Modify the Discord presence shown by the bot
 #[poise::command(

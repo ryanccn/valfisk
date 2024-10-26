@@ -2,12 +2,10 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use std::env;
-
 use eyre::{eyre, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::reqwest_client::HTTP;
+use crate::{config::CONFIG, reqwest_client::HTTP};
 
 static API_URL: &str = "https://intelligence.valfisk.ryanccn.dev/v2";
 
@@ -31,12 +29,14 @@ pub struct Response {
 }
 
 pub async fn query(request: Request) -> Result<String> {
-    let secret = env::var("INTELLIGENCE_SECRET")
-        .map_err(|_| eyre!("Valfisk Intelligence API secret is not set!"))?;
-
     let resp: Response = HTTP
         .post(API_URL)
-        .bearer_auth(secret)
+        .bearer_auth(
+            CONFIG
+                .intelligence_secret
+                .as_ref()
+                .ok_or_else(|| eyre!("could not obtain intelligence API secret"))?,
+        )
         .json(&request)
         .send()
         .await?

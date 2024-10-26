@@ -14,7 +14,7 @@ pub struct AxumError(eyre::Report);
 
 impl IntoResponse for AxumError {
     fn into_response(self) -> Response {
-        error!("{}", self.0);
+        error!("{:?}", self.0);
 
         (
             StatusCode::INTERNAL_SERVER_ERROR,

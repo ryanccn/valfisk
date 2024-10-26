@@ -11,13 +11,6 @@ pub fn canonicalize(input: &str) -> eyre::Result<Url> {
     let _ = url.set_port(None);
     url.set_fragment(None);
 
-    canonicalize_host(&mut url)?;
-    canonicalize_path(&mut url);
-
-    Ok(url)
-}
-
-fn canonicalize_host(url: &mut Url) -> eyre::Result<()> {
     if let Some(host) = url.host_str() {
         let host = host.trim_matches('.').to_lowercase();
 
@@ -30,10 +23,6 @@ fn canonicalize_host(url: &mut Url) -> eyre::Result<()> {
         url.set_host(Some(&canonical_host))?;
     }
 
-    Ok(())
-}
-
-fn canonicalize_path(url: &mut Url) {
     let segments: Vec<String> = url
         .path_segments()
         .map(|path| path.collect::<Vec<_>>())
@@ -59,4 +48,6 @@ fn canonicalize_path(url: &mut Url) {
     };
 
     url.set_path(new_path);
+
+    Ok(url)
 }
