@@ -7,7 +7,7 @@ use poise::serenity_prelude::{self as serenity, Mentionable as _};
 
 use eyre::Result;
 
-use crate::{config::CONFIG, storage::log::MessageLog, Data};
+use crate::{config::CONFIG, storage::log::MessageLog, utils, Data};
 
 pub async fn handle_message(
     ctx: &serenity::Context,
@@ -74,10 +74,10 @@ pub async fn edit(
                 "Previous content",
                 prev_content
                     .clone()
-                    .map_or_else(|| "*Unknown*".to_owned(), |s| s[..1024].to_owned()),
+                    .map_or_else(|| "*Unknown*".to_owned(), |s| utils::truncate(&s, 1024)),
                 false,
             )
-            .field("New content", &new_content[..1024], false)
+            .field("New content", utils::truncate(new_content, 1024), false)
             .field("Author", format_user(author.as_ref()), false)
             .color(0xffd43b)
             .timestamp(timestamp);
@@ -153,7 +153,7 @@ pub async fn delete(
             .field("Channel", channel.mention().to_string(), false)
             .field(
                 "Content",
-                content.map_or_else(|| "*Unknown*".to_owned(), |s| s[..1024].to_owned()),
+                content.map_or_else(|| "*Unknown*".to_owned(), |s| utils::truncate(&s, 1024)),
                 false,
             )
             .field("Author", format_user(author.as_ref()), false)

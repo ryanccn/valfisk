@@ -24,7 +24,10 @@ use tokio::{net::TcpListener, sync::RwLock};
 use tower_http::trace::TraceLayer;
 use tracing::info;
 
-use crate::{config::CONFIG, utils::axum::AxumResult};
+use crate::{
+    config::CONFIG,
+    utils::{self, axum::AxumResult},
+};
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ValfiskPresenceData {
@@ -158,7 +161,7 @@ async fn route_kofi_webhook(
                 .color(0xffd43b);
 
             if let Some(message) = data.message {
-                embed = embed.field("Message", message[..1024].to_owned(), false);
+                embed = embed.field("Message", utils::truncate(&message, 1024), false);
             }
 
             channel

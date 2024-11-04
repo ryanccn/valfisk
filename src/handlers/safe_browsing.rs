@@ -9,7 +9,7 @@ use std::sync::LazyLock;
 use eyre::Result;
 
 use super::log::format_user;
-use crate::{config::CONFIG, Data};
+use crate::{config::CONFIG, utils, Data};
 
 static URL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
@@ -63,7 +63,7 @@ pub async fn handle(
                     .title("Safe Browsing")
                     .field("Channel", message.channel_id.mention().to_string(), false)
                     .field("Author", format_user(Some(&message.author.id)), false)
-                    .field("Content", &content[..1024], false)
+                    .field("Content", utils::truncate(&content, 1024), false)
                     .field(
                         "URLs",
                         matches
