@@ -86,7 +86,7 @@ pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
     }
 
     if let Some(storage) = &ctx.data().storage {
-        embed = embed.field("KV keys", format!("{}", storage.size().await?), false);
+        embed = embed.field("KV keys", format!("{}", storage.size().await?), true);
     }
 
     ctx.send(CreateReply::default().embed(embed)).await?;
