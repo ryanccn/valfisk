@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use poise::serenity_prelude as serenity;
+use poise::serenity_prelude::{self as serenity, Mentionable as _};
 use regex::Regex;
 use std::sync::LazyLock;
 
@@ -48,7 +48,7 @@ pub async fn handle(
             if let Some(logs_channel) = CONFIG.message_logs_channel {
                 let embed = serenity::CreateEmbed::default()
                     .title("Safe Browsing")
-                    .field("Channel", format!("<#{}>", message.channel_id), false)
+                    .field("Channel", message.channel_id.mention().to_string(), false)
                     .field("Author", format_user(Some(&message.author.id)), false)
                     .field("Content", &content, false)
                     .field(
@@ -68,7 +68,7 @@ pub async fn handle(
                         &ctx.http,
                         serenity::CreateMessage::default()
                             .content(match CONFIG.moderator_role {
-                                Some(role) => format!("<@&{role}>"),
+                                Some(role) => role.mention().to_string(),
                                 None => String::new(),
                             })
                             .embed(embed),

@@ -5,8 +5,9 @@
 use poise::serenity_prelude as serenity;
 use regex::Regex;
 
-use eyre::Result;
+use eyre::{eyre, Result};
 use std::sync::LazyLock;
+use tokio::task::JoinSet;
 use tracing::debug;
 
 use crate::{config::CONFIG, reqwest_client, utils::serenity::suppress_embeds};
@@ -15,134 +16,116 @@ static GITHUB: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"https?://github\.com/(?P<repo>[\w-]+/[\w.-]+)/blob/(?P<ref>\S+?)/(?P<file>[^\s?]+)(\?\S*)?#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
 });
 
-#[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
-async fn github(message: &serenity::Message) -> Result<Vec<serenity::CreateEmbed>> {
-    let mut embeds: Vec<serenity::CreateEmbed> = Vec::new();
+#[tracing::instrument(skip_all)]
+async fn github<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>> {
+    let captures = GITHUB
+        .captures(m)
+        .ok_or_else(|| eyre!("could not obtain captures"))?;
 
-    for captures in GITHUB.captures_iter(&message.content) {
-        debug!(
-            "Handling GitHub link {} on message {}",
-            &captures[0], message.id
-        );
+    debug!("Handling GitHub link {}", &captures[0]);
 
-        let repo = &captures["repo"];
-        let ref_ = &captures["ref"];
-        let file = &captures["file"];
+    let repo = &captures["repo"];
+    let ref_ = &captures["ref"];
+    let file = &captures["file"];
 
-        let language = file.split('.').last().unwrap_or("");
+    let language = file.split('.').last().unwrap_or_default();
 
-        let start = captures["start"].parse::<usize>()?;
-        let end = captures
-            .name("end")
-            .and_then(|end| end.as_str().parse::<usize>().ok());
+    let start = captures["start"].parse::<usize>()?;
+    let end = captures
+        .name("end")
+        .and_then(|end| end.as_str().parse::<usize>().ok());
 
-        let lines: Vec<String> = reqwest_client::HTTP
-            .get(format!(
-                "https://raw.githubusercontent.com/{repo}/{ref_}/{file}"
-            ))
-            .send()
-            .await?
-            .error_for_status()?
-            .text()
-            .await?
-            .lines()
-            .map(|s| s.to_owned())
-            .collect();
+    let lines: Vec<String> = reqwest_client::HTTP
+        .get(format!(
+            "https://raw.githubusercontent.com/{repo}/{ref_}/{file}"
+        ))
+        .send()
+        .await?
+        .error_for_status()?
+        .text()
+        .await?
+        .lines()
+        .map(|s| s.to_owned())
+        .collect();
 
-        let idx_start = start - 1;
-        let idx_end = end.unwrap_or(start);
+    let selected_lines = &lines[(start - 1)..(end.unwrap_or(start))];
 
-        let selected_lines = &lines[idx_start..idx_end];
+    let embed = serenity::CreateEmbed::default()
+        .title(format!(
+            "{repo} {file} L{start}{}",
+            end.map_or_else(String::new, |end| format!("-{end}"))
+        ))
+        .description("```".to_owned() + language + "\n" + &selected_lines.join("\n") + "\n```")
+        .footer(serenity::CreateEmbedFooter::new(ref_.to_owned()))
+        .timestamp(serenity::Timestamp::now());
 
-        let embed = serenity::CreateEmbed::default()
-            .title(format!(
-                "{repo} {file} L{start}{}",
-                end.map_or_else(String::new, |end| format!("-{end}"))
-            ))
-            .description("```".to_owned() + language + "\n" + &selected_lines.join("\n") + "\n```")
-            .footer(serenity::CreateEmbedFooter::new(ref_.to_owned()))
-            .timestamp(serenity::Timestamp::now());
-
-        embeds.push(embed);
-    }
-
-    Ok(embeds)
+    Ok(embed)
 }
 
 static RUST_PLAYGROUND: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"https://play\.rust-lang\.org/\S*[?&]gist=(?P<gist>\w+)").unwrap()
 });
 
-#[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
-async fn rust_playground(message: &serenity::Message) -> Result<Vec<serenity::CreateEmbed>> {
-    let mut embeds: Vec<serenity::CreateEmbed> = Vec::new();
+#[tracing::instrument(skip_all)]
+async fn rust_playground<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>> {
+    let captures = RUST_PLAYGROUND
+        .captures(m)
+        .ok_or_else(|| eyre!("could not obtain captures"))?;
 
-    for captures in RUST_PLAYGROUND.captures_iter(&message.content) {
-        debug!(
-            "Handling Rust Playground link {} on message {}",
-            &captures[0], message.id
-        );
+    debug!("Handling Rust playground link {}", &captures[0]);
 
-        let gist_id = &captures["gist"];
+    let gist_id = &captures["gist"];
 
-        let gist = reqwest_client::HTTP
-            .get(format!(
-                "https://gist.githubusercontent.com/rust-play/{gist_id}/raw/playground.rs"
-            ))
-            .send()
-            .await?
-            .error_for_status()?
-            .text()
-            .await?;
+    let gist = reqwest_client::HTTP
+        .get(format!(
+            "https://gist.githubusercontent.com/rust-play/{gist_id}/raw/playground.rs"
+        ))
+        .send()
+        .await?
+        .error_for_status()?
+        .text()
+        .await?;
 
-        let embed = serenity::CreateEmbed::default()
-            .title("Rust Playground")
-            .description("```rust\n".to_owned() + &gist + "\n```")
-            .footer(serenity::CreateEmbedFooter::new(gist_id.to_owned()))
-            .timestamp(serenity::Timestamp::now())
-            .color(0xdea584);
+    let embed = serenity::CreateEmbed::default()
+        .title("Rust Playground")
+        .description("```rust\n".to_owned() + &gist + "\n```")
+        .footer(serenity::CreateEmbedFooter::new(gist_id.to_owned()))
+        .timestamp(serenity::Timestamp::now())
+        .color(0xdea584);
 
-        embeds.push(embed);
-    }
-
-    Ok(embeds)
+    Ok(embed)
 }
 
 static GO_PLAYGROUND: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"https://go\.dev/play/p/(?P<id>[\w-]+)").unwrap());
 
-#[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
-async fn go_playground(message: &serenity::Message) -> Result<Vec<serenity::CreateEmbed>> {
-    let mut embeds: Vec<serenity::CreateEmbed> = Vec::new();
+#[tracing::instrument(skip_all)]
+async fn go_playground<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>> {
+    let captures = GO_PLAYGROUND
+        .captures(m)
+        .ok_or_else(|| eyre!("could not obtain captures"))?;
 
-    for captures in GO_PLAYGROUND.captures_iter(&message.content) {
-        debug!(
-            "Handling Go Playground link {} on message {}",
-            &captures[0], message.id
-        );
+    debug!("Handling Go playground link {}", &captures[0]);
 
-        let id = &captures["id"];
+    let id = &captures["id"];
 
-        let code = reqwest_client::HTTP
-            .get("https://go.dev/_/share")
-            .query(&[("id", &id)])
-            .send()
-            .await?
-            .error_for_status()?
-            .text()
-            .await?;
+    let code = reqwest_client::HTTP
+        .get("https://go.dev/_/share")
+        .query(&[("id", &id)])
+        .send()
+        .await?
+        .error_for_status()?
+        .text()
+        .await?;
 
-        let embed = serenity::CreateEmbed::default()
-            .title("Go Playground")
-            .description("```go\n".to_owned() + &code + "\n```")
-            .footer(serenity::CreateEmbedFooter::new(id.to_owned()))
-            .timestamp(serenity::Timestamp::now())
-            .color(0x00b7e7);
+    let embed = serenity::CreateEmbed::default()
+        .title("Go Playground")
+        .description("```go\n".to_owned() + &code + "\n```")
+        .footer(serenity::CreateEmbedFooter::new(id.to_owned()))
+        .timestamp(serenity::Timestamp::now())
+        .color(0x00b7e7);
 
-        embeds.push(embed);
-    }
-
-    Ok(embeds)
+    Ok(embed)
 }
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
@@ -151,17 +134,28 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
         return Ok(());
     }
 
-    let mut embeds: Vec<serenity::CreateEmbed> = Vec::new();
+    let mut embeds_tasks: JoinSet<Result<serenity::CreateEmbed>> = JoinSet::new();
 
-    let (one, two, three) = tokio::try_join!(
-        github(message),
-        rust_playground(message),
-        go_playground(message),
-    )?;
+    for m in GITHUB.find_iter(&message.content) {
+        let m = m.as_str().to_owned();
+        embeds_tasks.spawn(async move { github(&m).await });
+    }
 
-    embeds.extend(one);
-    embeds.extend(two);
-    embeds.extend(three);
+    for m in RUST_PLAYGROUND.find_iter(&message.content) {
+        let m = m.as_str().to_owned();
+        embeds_tasks.spawn(async move { rust_playground(&m).await });
+    }
+
+    for m in GO_PLAYGROUND.find_iter(&message.content) {
+        let m = m.as_str().to_owned();
+        embeds_tasks.spawn(async move { go_playground(&m).await });
+    }
+
+    let embeds = embeds_tasks
+        .join_all()
+        .await
+        .into_iter()
+        .collect::<Result<Vec<_>>>()?;
 
     if !embeds.is_empty() {
         suppress_embeds(ctx, message).await?;

@@ -4,7 +4,7 @@
 
 use std::env;
 
-use poise::serenity_prelude as serenity;
+use poise::serenity_prelude::{self as serenity, Mentionable as _};
 
 use eyre::Result;
 use tracing::debug;
@@ -13,24 +13,19 @@ use crate::config::CONFIG;
 
 #[tracing::instrument(skip(http))]
 async fn get_starboard_channel(
-    http: impl serenity::CacheHttp + std::fmt::Debug,
+    http: impl serenity::CacheHttp,
     message_channel: &serenity::ChannelId,
 ) -> Result<Option<serenity::ChannelId>> {
     let Some(message_channel) = message_channel.to_channel(&http, None).await?.guild() else {
         return Ok(None);
     };
 
-    if CONFIG.fren_category == message_channel.parent_id {
-        if let Some(fren_channel) = CONFIG.fren_starboard_channel {
-            return Ok(Some(fren_channel));
-        }
+    if CONFIG.fren_category == message_channel.parent_id && CONFIG.fren_starboard_channel.is_some()
+    {
+        return Ok(CONFIG.fren_starboard_channel);
     }
 
-    if let Some(general_channel) = CONFIG.starboard_channel {
-        return Ok(Some(general_channel));
-    }
-
-    Ok(None)
+    Ok(CONFIG.starboard_channel)
 }
 
 #[allow(clippy::redundant_closure_for_method_calls)]
@@ -90,7 +85,7 @@ fn serialize_reactions(
         .collect::<Vec<_>>()
         .join(" ");
 
-    format!("**{reaction_string}** in <#{channel}>")
+    format!("**{reaction_string}** in {}", channel.mention())
 }
 
 async fn make_message_embed<'a>(
@@ -129,14 +124,14 @@ async fn make_message_embed<'a>(
 
     builder = builder.color(0xffd43b);
 
-    if let Some(guild_id) = ctx
-        .http
-        .get_channel(message.channel_id)
+    if let Some(guild_id) = message
+        .channel_id
+        .to_guild_channel(&ctx, None)
         .await
         .ok()
-        .and_then(|c| c.guild().map(|c| c.guild_id))
+        .map(|c| c.guild_id)
     {
-        if let Ok(member) = ctx.http.get_member(guild_id, message.author.id).await {
+        if let Ok(member) = guild_id.member(&ctx, message.author.id).await {
             if let Some(top_role) = member.roles(&ctx.cache).unwrap_or_default().first() {
                 builder = builder.color(top_role.colour);
             }

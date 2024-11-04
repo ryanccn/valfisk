@@ -146,8 +146,8 @@ impl Storage {
     impl_storage!(message_log, "message-log-v1:{}", log::MessageLog, ttl = 86400, message_id: &str);
 }
 
-#[allow(dead_code)]
 impl Storage {
+    #[tracing::instrument(skip(self))]
     pub async fn getall_autoreply(&self) -> ::redis::RedisResult<Vec<(String, String)>> {
         use ::redis::AsyncCommands as _;
         let mut conn = self.redis.get_multiplexed_async_connection().await?;
@@ -155,6 +155,7 @@ impl Storage {
         Ok(values)
     }
 
+    #[tracing::instrument(skip(self))]
     pub async fn add_autoreply(&self, f: &str, v: &str) -> ::redis::RedisResult<()> {
         use ::redis::AsyncCommands as _;
         let mut conn = self.redis.get_multiplexed_async_connection().await?;
@@ -162,6 +163,7 @@ impl Storage {
         Ok(())
     }
 
+    #[tracing::instrument(skip(self))]
     pub async fn del_autoreply(&self, f: &str) -> ::redis::RedisResult<()> {
         use ::redis::AsyncCommands as _;
         let mut conn = self.redis.get_multiplexed_async_connection().await?;
@@ -169,6 +171,7 @@ impl Storage {
         Ok(())
     }
 
+    #[tracing::instrument(skip(self))]
     pub async fn delall_autoreply(&self) -> ::redis::RedisResult<()> {
         use ::redis::AsyncCommands as _;
         let mut conn = self.redis.get_multiplexed_async_connection().await?;

@@ -53,28 +53,23 @@ pub async fn lighthouse(
             )
             .await?;
 
-        let mut api_url = reqwest::Url::parse(
-            "https://pagespeedonline.googleapis.com/pagespeedonline/v5/runPagespeed",
-        )?;
-
-        api_url
-            .query_pairs_mut()
-            .append_pair("url", &url)
-            .append_pair("strategy", "MOBILE")
-            .append_pair("category", "PERFORMANCE")
-            .append_pair("category", "ACCESSIBILITY")
-            .append_pair("category", "BEST_PRACTICES")
-            .append_pair("category", "SEO")
-            .append_pair("key", pagespeed_token);
-
-        let resp = HTTP
-            .get(api_url)
+        let data: PagespeedResponse = HTTP
+            .get("https://pagespeedonline.googleapis.com/pagespeedonline/v5/runPagespeed")
+            .query(&[
+                ("url", &url),
+                ("strategy", &"MOBILE".to_owned()),
+                ("category", &"PERFORMANCE".to_owned()),
+                ("category", &"ACCESSIBILITY".to_owned()),
+                ("category", &"BEST_PRACTICES".to_owned()),
+                ("category", &"SEO".to_owned()),
+                ("key", pagespeed_token),
+            ])
             .timeout(Duration::from_secs(60))
             .send()
             .await?
-            .error_for_status()?;
-
-        let data: PagespeedResponse = resp.json().await?;
+            .error_for_status()?
+            .json()
+            .await?;
 
         let mut report_embed = serenity::CreateEmbed::new()
             .title("Lighthouse report")

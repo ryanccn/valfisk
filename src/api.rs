@@ -16,6 +16,7 @@ use serde_json::json;
 
 use std::{
     collections::HashMap,
+    env,
     sync::{Arc, LazyLock},
 };
 use tokio::{net::TcpListener, sync::RwLock};
@@ -27,18 +28,29 @@ use crate::{config::CONFIG, utils::axum::AxumResult};
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ValfiskPresenceData {
+    #[serde(default)]
     pub status: serenity::OnlineStatus,
     pub client_status: Option<serenity::ClientStatus>,
     #[serde(default)]
     pub activities: Vec<serenity::Activity>,
 }
 
-impl ValfiskPresenceData {
-    pub fn from_presence(presence: &serenity::Presence) -> Self {
+impl From<serenity::Presence> for ValfiskPresenceData {
+    fn from(value: serenity::Presence) -> Self {
         Self {
-            status: presence.status,
-            client_status: presence.client_status.clone(),
-            activities: presence.activities.to_vec(),
+            status: value.status,
+            client_status: value.client_status.clone(),
+            activities: value.activities.to_vec(),
+        }
+    }
+}
+
+impl From<&serenity::Presence> for ValfiskPresenceData {
+    fn from(value: &serenity::Presence) -> Self {
+        Self {
+            status: value.status,
+            client_status: value.client_status.clone(),
+            activities: value.activities.to_vec(),
         }
     }
 }
@@ -199,14 +211,15 @@ pub async fn serve(serenity_http: Arc<serenity::Http>) -> eyre::Result<()> {
     #[cfg(not(debug_assertions))]
     let default_host = "0.0.0.0";
 
-    let host = std::env::var("HOST").unwrap_or_else(|_| default_host.to_owned());
-    let port = std::env::var("PORT").map_or(Ok(8080), |v| v.parse::<u16>())?;
+    let host = env::var("HOST").unwrap_or_else(|_| default_host.to_owned());
+    let port = env::var("PORT").map_or(Ok(8080), |v| v.parse::<u16>())?;
 
     let state = Arc::new(AppState { serenity_http });
 
-    info!("Started API server {}", format!("http://{host}:{port}"));
-
     let listener = TcpListener::bind((host, port)).await?;
+    let local_addr = listener.local_addr()?;
+
+    info!("Started API server {}", format!("http://{}", local_addr));
 
     let app = Router::new()
         .route("/", get(route_ping).head(route_ping_head))

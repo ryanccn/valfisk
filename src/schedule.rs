@@ -82,15 +82,7 @@ pub async fn start(http: Arc<Http>, data: Arc<Data>) -> Result<()> {
     });
 
     while let Some(res) = tasks.join_next().await {
-        match res {
-            Ok(res) => match res {
-                Ok(()) => {}
-                Err(err) => {
-                    return Err(err);
-                }
-            },
-            Err(err) => return Err(err.into()),
-        }
+        res??;
     }
 
     Ok(())

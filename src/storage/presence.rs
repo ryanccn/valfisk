@@ -46,17 +46,13 @@ impl Default for PresenceChoice {
 
 impl std::fmt::Display for PresenceChoice {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::Custom => "Custom".to_owned(),
-                Self::Playing => "Playing".to_owned(),
-                Self::Watching => "Watching".to_owned(),
-                Self::Listening => "Listening".to_owned(),
-                Self::Competing => "Competing".to_owned(),
-            }
-        )
+        f.write_str(match self {
+            Self::Custom => "Custom",
+            Self::Playing => "Playing",
+            Self::Watching => "Watching",
+            Self::Listening => "Listening",
+            Self::Competing => "Competing",
+        })
     }
 }
 

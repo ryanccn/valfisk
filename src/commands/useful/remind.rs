@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 use eyre::{eyre, Result};
-use poise::serenity_prelude as serenity;
+use poise::serenity_prelude::{self as serenity, Mentionable as _};
 use tokio::{task, time};
 
 use crate::Context;
@@ -27,7 +27,8 @@ pub async fn remind(
                     let http = ctx.serenity_context().http.clone();
                     let author = ctx.author().id;
                     let content = content.clone();
-                    let member = member.clone().into_owned();
+                    let embed_author =
+                        serenity::CreateEmbedAuthor::new(member.user.tag()).icon_url(member.face());
 
                     async move {
                         time::sleep(duration).await;
@@ -36,7 +37,7 @@ pub async fn remind(
                             .send_message(
                                 &http,
                                 serenity::CreateMessage::default()
-                                    .content(format!("<@!{author}>"))
+                                    .content(author.mention().to_string())
                                     .embed(
                                         serenity::CreateEmbed::default()
                                             .title("Reminder")
@@ -44,10 +45,7 @@ pub async fn remind(
                                                 content
                                                     .unwrap_or_else(|| "*No content*".to_owned()),
                                             )
-                                            .author(
-                                                serenity::CreateEmbedAuthor::new(member.user.tag())
-                                                    .icon_url(member.face()),
-                                            )
+                                            .author(embed_author)
                                             .color(0x3bc9db),
                                     ),
                             )

@@ -226,10 +226,7 @@ async fn event_handler(
         FullEvent::PresenceUpdate { new_data, .. } => {
             if new_data.guild_id == CONFIG.guild_id {
                 let mut store = api::PRESENCE_STORE.write().await;
-                store.insert(
-                    new_data.user.id,
-                    api::ValfiskPresenceData::from_presence(new_data),
-                );
+                store.insert(new_data.user.id, new_data.into());
                 drop(store);
             }
         }
@@ -271,6 +268,10 @@ async fn main() -> Result<()> {
 
     // Preload config from environment
     let _ = *CONFIG;
+
+    if CONFIG.redis_url.is_none() {
+        warn!("`REDIS_URL` is not configured, some features may be disabled");
+    }
 
     let data = Arc::new(Data::new()?);
 

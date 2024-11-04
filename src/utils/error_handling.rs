@@ -6,17 +6,19 @@ use std::fmt::Debug;
 
 use nanoid::nanoid;
 use poise::{
-    serenity_prelude::{CreateEmbed, CreateEmbedFooter, CreateMessage, Timestamp},
+    serenity_prelude::{
+        CreateEmbed, CreateEmbedFooter, CreateMessage, Mentionable as _, Timestamp,
+    },
     CreateReply,
 };
 
 use crate::{config::CONFIG, Context};
 use tracing::error;
 
-/// A wrapper type that encapsulates errors ([`eyre::Error`]) or panic strings ([`Option<String>`]).
+/// A wrapper type that encapsulates errors ([`eyre::Report`]) or panic strings ([`Option<String>`]).
 pub enum ErrorOrPanic<'a> {
-    /// A reference to an error, [`eyre::Error`]
-    Error(&'a eyre::Error),
+    /// A reference to an error, [`eyre::Report`]
+    Error(&'a eyre::Report),
     /// A reference to a panic string, [`Option<String>`]
     Panic(&'a Option<String>),
 }
@@ -45,7 +47,7 @@ pub struct ValfiskError<'a> {
 impl ValfiskError<'_> {
     /// Create a new [`ValfiskError`] from an error and Poise context.
     #[must_use]
-    pub fn error<'a>(error: &'a eyre::Error, ctx: &'a Context) -> ValfiskError<'a> {
+    pub fn error<'a>(error: &'a eyre::Report, ctx: &'a Context) -> ValfiskError<'a> {
         ValfiskError {
             error_or_panic: ErrorOrPanic::Error(error),
             ctx,
@@ -104,10 +106,10 @@ impl ValfiskError<'_> {
                 )
                 .field(
                     "Channel",
-                    format!("<#{}>", self.ctx.channel_id().get()),
+                    self.ctx.channel_id().mention().to_string(),
                     false,
                 )
-                .field("User", format!("<@{}>", self.ctx.author().id.get()), false);
+                .field("User", self.ctx.author().mention().to_string(), false);
 
             channel
                 .send_message(self.ctx.http(), CreateMessage::default().embed(embed))

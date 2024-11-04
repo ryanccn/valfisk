@@ -169,12 +169,14 @@ impl SafeBrowsing {
         let states = self.states.read().await;
 
         for hash in url_hashes.values().flatten() {
-            let hash_prefix = hash[0..4].to_vec();
-
             for list_state in states.values() {
-                if list_state.prefixes.contains(&hash_prefix) {
-                    matched_hash_prefixes.insert(hash_prefix.clone());
-                }
+                matched_hash_prefixes.extend(
+                    list_state
+                        .prefixes
+                        .iter()
+                        .filter(|prefix| hash.starts_with(prefix))
+                        .map(|p| p.to_owned()),
+                );
             }
         }
 

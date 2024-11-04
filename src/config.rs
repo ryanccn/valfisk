@@ -2,11 +2,12 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
+use serde::Deserialize;
 use std::sync::LazyLock;
 
 use poise::serenity_prelude::{ChannelId, GuildId, RoleId};
 
-#[derive(serde::Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct EnvConfig {
     pub discord_token: String,
     pub redis_url: Option<String>,

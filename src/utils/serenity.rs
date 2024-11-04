@@ -19,7 +19,7 @@ pub async fn suppress_embeds(ctx: &serenity::Context, message: &serenity::Messag
         _ => None,
     });
 
-    let _ = timeout(Duration::from_millis(2000), message_updates.next()).await;
+    let _ = timeout(Duration::from_millis(2500), message_updates.next()).await;
 
     ctx.http
         .edit_message(

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use poise::serenity_prelude as serenity;
+use poise::serenity_prelude::{self as serenity, Mentionable as _};
 
 use eyre::Result;
 use std::time::Duration;
@@ -37,11 +37,9 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
             return Ok(());
         }
 
-        if let Some(query) = message
-            .content
-            .strip_prefix(&format!("<@{}>", ctx.cache.current_user().id))
-            .map(|s| s.trim())
-        {
+        let self_prefix = ctx.cache.current_user().mention().to_string();
+
+        if let Some(query) = message.content.strip_prefix(&self_prefix).map(|s| s.trim()) {
             if query.is_empty() {
                 return Ok(());
             }
@@ -52,7 +50,7 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
 
                 async move {
                     let _ = time::timeout(Duration::from_secs(60), async move {
-                        let mut interval = time::interval(Duration::from_secs(10));
+                        let mut interval = time::interval(Duration::from_secs(5));
 
                         loop {
                             interval.tick().await;

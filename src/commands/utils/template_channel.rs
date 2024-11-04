@@ -4,7 +4,7 @@
 
 use eyre::Result;
 use poise::{
-    serenity_prelude::{futures::StreamExt, ChannelId, CreateEmbed},
+    serenity_prelude::{futures::StreamExt, ChannelId, CreateEmbed, Mentionable as _},
     CreateReply,
 };
 
@@ -57,8 +57,8 @@ pub async fn template_channel(
             CreateEmbed::default()
                 .title("Applied channel template!")
                 .field("URL", format!("`{url}`"), false)
-                .field("Channel", format!("<#{channel}>"), false)
-                .field("Components", format!("{}", data.components.len()), false)
+                .field("Channel", channel.mention().to_string(), false)
+                .field("Components", data.components.len().to_string(), false)
                 .color(0x22d3ee),
         ),
     )
