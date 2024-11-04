@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use std::sync::Arc;
+use std::{env, sync::Arc};
 
 use eyre::{Report, Result};
 use tracing::{info, warn};
@@ -245,8 +245,8 @@ async fn event_handler(
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    if std::env::var("RUST_LOG").is_err() {
-        std::env::set_var("RUST_LOG", "valfisk,warn,error");
+    if env::var("RUST_LOG").is_err() {
+        env::set_var("RUST_LOG", "valfisk=info,warn,error");
     };
 
     color_eyre::install()?;

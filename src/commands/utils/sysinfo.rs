@@ -16,16 +16,16 @@ use crate::Context;
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 #[allow(clippy::cast_precision_loss)]
 pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
-    let mut sys = System::new_with_specifics(
-        RefreshKind::new()
-            .with_cpu(CpuRefreshKind::new().with_cpu_usage())
-            .with_memory(MemoryRefreshKind::new().with_ram())
-            .with_processes(ProcessRefreshKind::new().with_cpu().with_memory()),
-    );
+    let refresh_kind = RefreshKind::new()
+        .with_cpu(CpuRefreshKind::new().with_cpu_usage())
+        .with_memory(MemoryRefreshKind::new().with_ram())
+        .with_processes(ProcessRefreshKind::new().with_cpu().with_memory());
 
-    sys.refresh_all();
+    let mut sys = System::new();
+
+    sys.refresh_specifics(refresh_kind);
     sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL).await;
-    sys.refresh_all();
+    sys.refresh_specifics(refresh_kind);
 
     let mut embed = CreateEmbed::default()
         .title("System information")

@@ -158,7 +158,7 @@ async fn route_kofi_webhook(
                 .color(0xffd43b);
 
             if let Some(message) = data.message {
-                embed = embed.field("Message", message, false);
+                embed = embed.field("Message", message[..1024].to_owned(), false);
             }
 
             channel

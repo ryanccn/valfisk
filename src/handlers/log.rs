@@ -72,10 +72,12 @@ pub async fn edit(
             .field("Channel", channel.mention().to_string(), false)
             .field(
                 "Previous content",
-                prev_content.to_owned().unwrap_or("*Unknown*".to_owned()),
+                prev_content
+                    .clone()
+                    .map_or_else(|| "*Unknown*".to_owned(), |s| s[..1024].to_owned()),
                 false,
             )
-            .field("New content", new_content, false)
+            .field("New content", &new_content[..1024], false)
             .field("Author", format_user(author.as_ref()), false)
             .color(0xffd43b)
             .timestamp(timestamp);
@@ -149,7 +151,11 @@ pub async fn delete(
         let mut embed = serenity::CreateEmbed::default()
             .author(embed_author)
             .field("Channel", channel.mention().to_string(), false)
-            .field("Content", content.unwrap_or("*Unknown*".to_owned()), false)
+            .field(
+                "Content",
+                content.map_or_else(|| "*Unknown*".to_owned(), |s| s[..1024].to_owned()),
+                false,
+            )
             .field("Author", format_user(author.as_ref()), false)
             .color(0xff6b6b)
             .timestamp(timestamp);

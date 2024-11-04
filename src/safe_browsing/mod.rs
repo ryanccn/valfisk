@@ -9,6 +9,7 @@ use sha2::{Digest as _, Sha256};
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
+    time::Instant,
 };
 use tokio::sync::RwLock;
 
@@ -147,6 +148,8 @@ impl SafeBrowsing {
 
     #[tracing::instrument(skip_all)]
     pub async fn check_urls(&self, urls: &[&str]) -> eyre::Result<Vec<(String, ThreatMatch)>> {
+        let bench_start = Instant::now();
+
         let mut url_hashes: HashMap<String, HashSet<Vec<u8>>> = HashMap::new();
 
         for url in urls {
@@ -234,8 +237,23 @@ impl SafeBrowsing {
                 })
                 .collect::<Vec<_>>();
 
+            let bench_elapsed = bench_start.elapsed();
+            tracing::trace!(
+                "Scanned {} URLs in {:.2}ms (prefixes matched) => {} matches",
+                urls.len(),
+                bench_elapsed.as_millis(),
+                matches.len()
+            );
+
             return Ok(matches);
         }
+
+        let bench_elapsed = bench_start.elapsed();
+        tracing::trace!(
+            "Scanned {} URLs in {:.2}ms (no prefixes matched) => no matches",
+            urls.len(),
+            bench_elapsed.as_millis(),
+        );
 
         Ok(Vec::new())
     }

@@ -154,7 +154,7 @@ pub async fn handle(
             if let Some(existing_starboard_message) = storage
                 .get_starboard(&message.id.to_string())
                 .await?
-                .and_then(|s| s.parse::<serenity::MessageId>().ok())
+                .map(|s| s.into())
             {
                 if significant_reactions.is_empty() {
                     starboard
@@ -204,7 +204,7 @@ pub async fn handle(
                     .await?;
 
                 storage
-                    .set_starboard(&message.id.to_string(), &starboard_message.id.to_string())
+                    .set_starboard(&message.id.to_string(), &starboard_message.id.get())
                     .await?;
 
                 debug!(
@@ -241,11 +241,7 @@ pub async fn handle_deletion(
                     .await?;
 
                 ctx.http
-                    .delete_message(
-                        starboard_channel,
-                        starboard_id.parse::<serenity::MessageId>()?,
-                        None,
-                    )
+                    .delete_message(starboard_channel, starboard_id.into(), None)
                     .await?;
             }
         }

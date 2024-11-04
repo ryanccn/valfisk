@@ -45,12 +45,25 @@ pub async fn handle(
             .await?;
 
         if !matches.is_empty() {
+            message
+                .delete(&ctx.http, Some("URL(s) flagged by Safe Browsing"))
+                .await?;
+
+            if let Ok(mut member) = message.member(&ctx).await {
+                member
+                    .disable_communication_until(
+                        &ctx.http,
+                        (chrono::Utc::now() + chrono::TimeDelta::minutes(10)).into(),
+                    )
+                    .await?;
+            }
+
             if let Some(logs_channel) = CONFIG.message_logs_channel {
                 let embed = serenity::CreateEmbed::default()
                     .title("Safe Browsing")
                     .field("Channel", message.channel_id.mention().to_string(), false)
                     .field("Author", format_user(Some(&message.author.id)), false)
-                    .field("Content", &content, false)
+                    .field("Content", &content[..1024], false)
                     .field(
                         "URLs",
                         matches
@@ -72,19 +85,6 @@ pub async fn handle(
                                 None => String::new(),
                             })
                             .embed(embed),
-                    )
-                    .await?;
-            }
-
-            message
-                .delete(&ctx.http, Some("URL(s) flagged by Safe Browsing"))
-                .await?;
-
-            if let Ok(mut member) = message.member(&ctx).await {
-                member
-                    .disable_communication_until(
-                        &ctx.http,
-                        (chrono::Utc::now() + chrono::TimeDelta::minutes(10)).into(),
                     )
                     .await?;
             }
