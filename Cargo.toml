@@ -30,6 +30,7 @@ num-traits = "0.2.19"
 paste = "1.0.15"
 poise = { git = "https://github.com/serenity-rs/poise.git", branch = "serenity-next" }
 rand = "0.8.5"
+rayon = "1.10.0"
 redis = { version = "0.27.5", features = ["tokio-comp", "tokio-rustls", "rustls", "rustls-pemfile", "rustls-pki-types", "webpki-roots"] }
 redis-macros = "0.4.2"
 regex = "1.11.1"

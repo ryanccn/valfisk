@@ -4,11 +4,9 @@
 
 {
   lib,
-  stdenv,
   rustPlatform,
-  darwin,
-  nix-filter,
   pkg-config,
+  nix-filter,
   self,
   enableLTO ? true,
   enableOptimizeSize ? false,
@@ -46,15 +44,7 @@ rustPlatform.buildRustPackage rec {
 
   doCheck = false;
 
-  buildInputs = lib.optionals stdenv.isDarwin [
-    darwin.apple_sdk.frameworks.CoreFoundation
-    darwin.apple_sdk.frameworks.Security
-    darwin.apple_sdk.frameworks.SystemConfiguration
-    darwin.apple_sdk.frameworks.IOKit
-    darwin.libiconv
-  ];
-
-  nativeBuildInputs = lib.optionals stdenv.isDarwin [ pkg-config ];
+  nativeBuildInputs = [ pkg-config ];
 
   env =
     {

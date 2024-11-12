@@ -6,6 +6,7 @@ use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use eyre::eyre;
 use sha2::{Digest as _, Sha256};
 
+use rayon::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
@@ -153,35 +154,39 @@ impl SafeBrowsing {
         let mut url_hashes: HashMap<String, HashSet<Vec<u8>>> = HashMap::new();
 
         for url in urls {
-            let url_prefixes = Self::generate_url_prefixes(url)?;
+            url_hashes.insert((*url).to_string(), HashSet::new());
 
-            for url_prefix in url_prefixes {
+            for url_prefix in Self::generate_url_prefixes(url)? {
                 let url_hash = Sha256::digest(&url_prefix).to_vec();
 
-                if let Some(v) = url_hashes.get_mut(*url) {
-                    v.insert(url_hash);
-                } else {
-                    let mut hs = HashSet::new();
-                    hs.insert(url_hash);
-                    url_hashes.insert((*url).to_string(), hs);
-                }
+                url_hashes
+                    .get_mut(*url)
+                    .ok_or_else(|| eyre!("could not obtain `url_hashes` {url}"))?
+                    .insert(url_hash);
             }
         }
 
-        let mut matched_hash_prefixes = HashSet::new();
         let states = self.states.read().await;
 
-        for hash in url_hashes.values().flatten() {
-            for list_state in states.values() {
-                matched_hash_prefixes.extend(
-                    list_state
-                        .prefixes
-                        .iter()
-                        .filter(|prefix| hash.starts_with(prefix))
-                        .map(|p| p.to_owned()),
-                );
-            }
-        }
+        let matched_hash_prefixes = states
+            .values()
+            .par_bridge()
+            .map(|list_state| {
+                url_hashes
+                    .values()
+                    .flatten()
+                    .par_bridge()
+                    .map(|hash| {
+                        list_state
+                            .prefixes
+                            .par_iter()
+                            .filter(|prefix| hash.starts_with(prefix))
+                            .map(|p| p.to_owned())
+                    })
+                    .flatten()
+            })
+            .flatten()
+            .collect::<HashSet<_>>();
 
         drop(states);
 
@@ -202,7 +207,7 @@ impl SafeBrowsing {
                     platform_types: vec!["ANY_PLATFORM".to_string()],
                     threat_entry_types: vec!["URL".to_string()],
                     threat_entries: matched_hash_prefixes
-                        .iter()
+                        .par_iter()
                         .map(|hash| ThreatEntry {
                             hash: BASE64.encode(hash),
                         })
@@ -223,13 +228,14 @@ impl SafeBrowsing {
             let matches = response
                 .matches
                 .unwrap_or_default()
-                .into_iter()
+                .into_par_iter()
                 .filter_map(|m| {
-                    for (url, hashes) in &url_hashes {
-                        if let Ok(raw_threat_hash) = BASE64.decode(&m.threat.hash) {
-                            if hashes.contains(&raw_threat_hash) {
-                                return Some((url.to_owned(), m));
-                            }
+                    if let Ok(raw_threat_hash) = BASE64.decode(&m.threat.hash) {
+                        if let Some((url, _)) = url_hashes
+                            .par_iter()
+                            .find_any(|(_, h)| h.contains(&raw_threat_hash))
+                        {
+                            return Some((url.to_owned(), m));
                         }
                     }
 
@@ -237,22 +243,20 @@ impl SafeBrowsing {
                 })
                 .collect::<Vec<_>>();
 
-            let bench_elapsed = bench_start.elapsed();
             tracing::trace!(
                 "Scanned {} URLs in {:.2}ms (prefixes matched) => {} matches",
                 urls.len(),
-                bench_elapsed.as_millis(),
+                bench_start.elapsed().as_millis(),
                 matches.len()
             );
 
             return Ok(matches);
         }
 
-        let bench_elapsed = bench_start.elapsed();
         tracing::trace!(
             "Scanned {} URLs in {:.2}ms (no prefixes matched) => no matches",
             urls.len(),
-            bench_elapsed.as_millis(),
+            bench_start.elapsed().as_millis(),
         );
 
         Ok(Vec::new())
