@@ -53,16 +53,20 @@ pub async fn timeout(
         );
 
         if dm.unwrap_or(true) {
-            if member
-                .user
-                .direct_message(
-                    ctx.http(),
-                    serenity::CreateMessage::default().embed(dm_embed.clone()),
-                )
-                .await
-                .is_ok()
-            {
-                dm_embed = dm_embed.field("User notified", "Yes", false);
+            if let Ok(dm) = member.user.create_dm_channel(ctx.http()).await {
+                if dm
+                    .id
+                    .send_message(
+                        ctx.http(),
+                        serenity::CreateMessage::default().embed(dm_embed.clone()),
+                    )
+                    .await
+                    .is_ok()
+                {
+                    dm_embed = dm_embed.field("User notified", "Yes", false);
+                } else {
+                    dm_embed = dm_embed.field("User notified", "Failed", false);
+                }
             } else {
                 dm_embed = dm_embed.field("User notified", "Failed", false);
             }

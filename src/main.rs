@@ -233,7 +233,7 @@ async fn event_handler(
 
         FullEvent::GuildCreate { guild, .. } => {
             if Some(guild.id) != CONFIG.guild_id {
-                guild.leave(&ctx.serenity_context.http).await?;
+                guild.id.leave(&ctx.serenity_context.http).await?;
             }
         }
 
