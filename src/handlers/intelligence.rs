@@ -28,7 +28,9 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
     }
 
     if let Ok(member) = message.member(&ctx).await {
-        if !member.permissions(&ctx.cache)?.administrator()
+        if !member
+            .permissions(&ctx.cache)
+            .is_ok_and(|p| p.administrator())
             && !member
                 .roles
                 .iter()
