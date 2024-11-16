@@ -99,29 +99,25 @@ impl SafeBrowsing {
                 .map(|s| s.prefixes.clone())
                 .unwrap_or_default();
 
-            if let Some(removals) = list_update.removals {
-                for entry_set in removals {
-                    if let Some(raw_indices) = entry_set.raw_indices {
-                        for index in raw_indices.indices {
-                            if (index as usize) < current_prefixes.len() {
-                                current_prefixes.remove(index as usize);
-                            }
+            for entry_set in &list_update.removals {
+                if let Some(raw_indices) = &entry_set.raw_indices {
+                    for index in &raw_indices.indices {
+                        if (*index as usize) < current_prefixes.len() {
+                            current_prefixes.remove(*index as usize);
                         }
                     }
                 }
             }
 
-            if let Some(additions) = list_update.additions {
-                for entry_set in additions {
-                    if let Some(raw_hashes) = entry_set.raw_hashes {
-                        let hashes = BASE64.decode(raw_hashes.raw_hashes)?;
+            for entry_set in &list_update.additions {
+                if let Some(raw_hashes) = &entry_set.raw_hashes {
+                    let hashes = BASE64.decode(&raw_hashes.raw_hashes)?;
 
-                        current_prefixes.extend(
-                            hashes
-                                .chunks(raw_hashes.prefix_size as usize)
-                                .map(|c| c.to_vec()),
-                        );
-                    }
+                    current_prefixes.extend(
+                        hashes
+                            .chunks(raw_hashes.prefix_size as usize)
+                            .map(|c| c.to_vec()),
+                    );
                 }
             }
 
@@ -137,7 +133,7 @@ impl SafeBrowsing {
 
             if checksum != list_update.checksum.sha256 {
                 tracing::error!(
-                    "list {:?} checksum has drifted, correcting (actual: {:?}, expected: {:?})",
+                    "List {:?} checksum has drifted, resetting (actual: {:?}, expected: {:?})",
                     list_update.threat_type,
                     checksum,
                     list_update.checksum.sha256
@@ -165,7 +161,7 @@ impl SafeBrowsing {
                 .await
                 .values()
                 .map(|v| v.prefixes.len())
-                .sum::<usize>()
+                .sum::<usize>(),
         );
 
         Ok(())
@@ -255,7 +251,6 @@ impl SafeBrowsing {
 
             let matches = response
                 .matches
-                .unwrap_or_default()
                 .into_par_iter()
                 .filter_map(|m| {
                     if let Ok(raw_threat_hash) = BASE64.decode(&m.threat.hash) {

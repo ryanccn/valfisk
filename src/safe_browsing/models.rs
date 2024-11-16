@@ -57,9 +57,12 @@ pub struct ThreatListUpdateResponse {
 pub struct ListUpdateResponse {
     pub threat_type: String,
     pub new_client_state: String,
-    pub additions: Option<Vec<ThreatEntrySet>>,
-    pub removals: Option<Vec<ThreatEntrySet>>,
     pub checksum: ListUpdateChecksum,
+
+    #[serde(default)]
+    pub additions: Vec<ThreatEntrySet>,
+    #[serde(default)]
+    pub removals: Vec<ThreatEntrySet>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -114,7 +117,8 @@ pub struct ThreatEntry {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FindFullHashesResponse {
-    pub matches: Option<Vec<ThreatMatch>>,
+    #[serde(default)]
+    pub matches: Vec<ThreatMatch>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

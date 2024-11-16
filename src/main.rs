@@ -275,6 +275,10 @@ async fn main() -> Result<()> {
 
     let data = Arc::new(Data::new()?);
 
+    if let Some(safe_browsing) = &data.safe_browsing {
+        safe_browsing.update().await?;
+    }
+
     let mut client =
         serenity::Client::builder(&CONFIG.discord_token, serenity::GatewayIntents::all())
             .framework(Framework::new(FrameworkOptions {
