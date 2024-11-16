@@ -11,6 +11,7 @@ use poise::{
 use crate::{schedule, Context};
 
 /// Rotate color roles to a random color
+#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
     guild_only,
@@ -18,7 +19,6 @@ use crate::{schedule, Context};
     rename = "rotate-color-roles",
     default_member_permissions = "MANAGE_GUILD"
 )]
-#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 pub async fn rotate_color_roles(
     ctx: Context<'_>,
     #[description = "The role color to rotate"] role: Option<serenity::RoleId>,

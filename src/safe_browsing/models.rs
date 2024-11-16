@@ -59,6 +59,13 @@ pub struct ListUpdateResponse {
     pub new_client_state: String,
     pub additions: Option<Vec<ThreatEntrySet>>,
     pub removals: Option<Vec<ThreatEntrySet>>,
+    pub checksum: ListUpdateChecksum,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListUpdateChecksum {
+    pub sha256: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]

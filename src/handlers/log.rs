@@ -9,6 +9,7 @@ use eyre::Result;
 
 use crate::{config::CONFIG, storage::log::MessageLog, utils, Data};
 
+#[tracing::instrument(skip_all, fields(id = message.id.get()))]
 pub async fn handle_message(
     ctx: &serenity::Context,
     data: &Data,
@@ -40,6 +41,7 @@ pub fn format_user(user: Option<&serenity::UserId>) -> String {
     )
 }
 
+#[tracing::instrument(skip_all, fields(id = id.get()))]
 pub async fn edit(
     ctx: &serenity::Context,
     (id, channel, guild): (
@@ -117,6 +119,7 @@ pub async fn edit(
     Ok(())
 }
 
+#[tracing::instrument(skip_all, fields(id = id.get()))]
 pub async fn delete(
     ctx: &serenity::Context,
     (id, channel, guild): (
@@ -195,6 +198,7 @@ pub async fn delete(
     Ok(())
 }
 
+#[tracing::instrument(skip_all, fields(id = user.id.get()))]
 pub async fn member_join(ctx: &serenity::Context, user: &serenity::User) -> Result<()> {
     if let Some(logs_channel) = CONFIG.member_logs_channel {
         logs_channel
@@ -218,6 +222,7 @@ pub async fn member_join(ctx: &serenity::Context, user: &serenity::User) -> Resu
     Ok(())
 }
 
+#[tracing::instrument(skip_all, fields(id = user.id.get()))]
 pub async fn member_leave(
     ctx: &serenity::Context,
     user: &serenity::User,

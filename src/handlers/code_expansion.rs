@@ -16,7 +16,7 @@ static GITHUB: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"https?://github\.com/(?P<repo>[\w-]+/[\w.-]+)/blob/(?P<ref>\S+?)/(?P<file>[^\s?]+)(\?\S*)?#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
 });
 
-#[tracing::instrument(skip_all)]
+#[tracing::instrument]
 async fn github<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>> {
     let captures = GITHUB
         .captures(m)
@@ -53,7 +53,7 @@ async fn github<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>> {
     let embed = serenity::CreateEmbed::default()
         .title(format!(
             "{repo} {file} L{start}{}",
-            end.map_or_else(String::new, |end| format!("-{end}"))
+            end.map(|end| format!("-{end}")).unwrap_or_default()
         ))
         .description("```".to_owned() + language + "\n" + &selected_lines.join("\n") + "\n```")
         .footer(serenity::CreateEmbedFooter::new(ref_.to_owned()))
@@ -66,7 +66,7 @@ static RUST_PLAYGROUND: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"https://play\.rust-lang\.org/\S*[?&]gist=(?P<gist>\w+)").unwrap()
 });
 
-#[tracing::instrument(skip_all)]
+#[tracing::instrument]
 async fn rust_playground<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>> {
     let captures = RUST_PLAYGROUND
         .captures(m)
@@ -99,7 +99,7 @@ async fn rust_playground<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>
 static GO_PLAYGROUND: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"https://go\.dev/play/p/(?P<id>[\w-]+)").unwrap());
 
-#[tracing::instrument(skip_all)]
+#[tracing::instrument]
 async fn go_playground<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>> {
     let captures = GO_PLAYGROUND
         .captures(m)

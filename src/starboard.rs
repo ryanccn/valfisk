@@ -11,7 +11,6 @@ use tracing::debug;
 
 use crate::config::CONFIG;
 
-#[tracing::instrument(skip(http))]
 async fn get_starboard_channel(
     http: impl serenity::CacheHttp,
     message_channel: &serenity::ChannelId,

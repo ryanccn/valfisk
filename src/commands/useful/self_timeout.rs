@@ -8,8 +8,8 @@ use poise::serenity_prelude as serenity;
 use crate::Context;
 
 /// Time yourself out for a specific duration
-#[poise::command(rename = "self-timeout", slash_command, guild_only)]
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[poise::command(rename = "self-timeout", slash_command, guild_only)]
 pub async fn self_timeout(
     ctx: Context<'_>,
     #[description = "The duration to time yourself out for"] duration: String,
@@ -30,7 +30,10 @@ pub async fn self_timeout(
                         .disable_communication_until(end.into())
                         .audit_log_reason(&format!(
                             "Requested self timeout{}",
-                            reason.as_ref().map_or(String::new(), |r| format!(": {r}"))
+                            reason
+                                .as_ref()
+                                .map(|r| format!(": {r}"))
+                                .unwrap_or_default()
                         )),
                 )
                 .await?;
@@ -88,6 +91,7 @@ pub async fn self_timeout(
     guild_only,
     ephemeral
 )]
+#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 pub async fn transparency(
     ctx: Context<'_>,
     #[description = "Whether transparency is on or off"] status: bool,

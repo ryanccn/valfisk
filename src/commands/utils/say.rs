@@ -8,8 +8,8 @@ use poise::serenity_prelude as serenity;
 use crate::Context;
 
 /// Send a message in the current channel
-#[poise::command(slash_command, guild_only, default_member_permissions = "MANAGE_GUILD")]
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[poise::command(slash_command, guild_only, default_member_permissions = "MANAGE_GUILD")]
 pub async fn say(
     ctx: Context<'_>,
     #[description = "Text to send in the current channel"] content: String,

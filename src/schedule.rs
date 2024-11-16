@@ -7,12 +7,14 @@ use poise::serenity_prelude::{EditRole, Http, RoleId};
 use rand::Rng as _;
 use std::{sync::Arc, time::Duration};
 use tokio::{task::JoinSet, time};
+use tracing::{error, info, info_span, trace, Instrument as _};
 
-use chrono::{NaiveTime, TimeDelta, Utc};
+use chrono::{NaiveTime, TimeDelta, Timelike, Utc};
 use eyre::{eyre, Result};
 
 use crate::{config::CONFIG, Data};
 
+#[tracing::instrument(skip(http))]
 pub async fn rotate_color_roles(
     http: &Arc<Http>,
     override_role: Option<RoleId>,
@@ -31,12 +33,14 @@ pub async fn rotate_color_roles(
             };
 
             role.edit(http, EditRole::default().colour(color)).await?;
+            info!("Rotated role {} color => {:#x}", role.id, color);
         }
     }
 
     Ok(roles)
 }
 
+#[tracing::instrument(skip_all)]
 pub async fn start(http: Arc<Http>, data: Arc<Data>) -> Result<()> {
     let mut tasks: JoinSet<Result<()>> = JoinSet::new();
 
@@ -52,33 +56,47 @@ pub async fn start(http: Arc<Http>, data: Arc<Data>) -> Result<()> {
                     .single()
                     .ok_or_else(|| eyre!("could not obtain next run time"))?;
 
+                trace!("Next run at {next}");
+
                 time::sleep((next - now).to_std()?).await;
 
                 if let Err(err) = rotate_color_roles(&http, None).await {
-                    tracing::error!("{err:?}");
+                    error!("{err:?}");
                 }
 
                 time::sleep(Duration::from_secs(1)).await;
             }
         }
+        .instrument(info_span!("rotate_color_roles"))
     });
 
     tasks.spawn({
         let data = data.clone();
 
         async move {
-            let mut invtl = time::interval(Duration::from_secs(3600));
-
             loop {
-                invtl.tick().await;
+                let now = Utc::now();
+
+                let next = (now + TimeDelta::hours(1))
+                    .with_minute(0)
+                    .and_then(|t| t.with_second(0))
+                    .and_then(|t| t.with_nanosecond(0))
+                    .ok_or_else(|| eyre!("could not obtain next run time"))?;
+
+                trace!("Next run at {next}");
+
+                time::sleep((next - now).to_std()?).await;
 
                 if let Some(safe_browsing) = &data.safe_browsing {
                     if let Err(err) = safe_browsing.update().await {
-                        tracing::error!("{err:?}");
+                        error!("{err:?}");
                     }
                 }
+
+                time::sleep(Duration::from_secs(1)).await;
             }
         }
+        .instrument(info_span!("safe_browsing"))
     });
 
     while let Some(res) = tasks.join_next().await {

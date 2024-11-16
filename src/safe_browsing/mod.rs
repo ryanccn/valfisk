@@ -6,6 +6,7 @@ use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use eyre::eyre;
 use sha2::{Digest as _, Sha256};
 
+use async_recursion::async_recursion;
 use rayon::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
@@ -49,6 +50,7 @@ impl SafeBrowsing {
     }
 
     #[tracing::instrument(skip_all)]
+    #[async_recursion]
     pub async fn update(&self) -> eyre::Result<()> {
         let current_states: HashMap<String, String> = {
             let states_lock = self.states.read().await;
@@ -125,6 +127,28 @@ impl SafeBrowsing {
 
             current_prefixes.sort_unstable();
 
+            let checksum = BASE64.encode(Sha256::digest(
+                current_prefixes
+                    .clone()
+                    .into_iter()
+                    .flatten()
+                    .collect::<Vec<_>>(),
+            ));
+
+            if checksum != list_update.checksum.sha256 {
+                tracing::error!(
+                    "list {:?} checksum has drifted, correcting (actual: {:?}, expected: {:?})",
+                    list_update.threat_type,
+                    checksum,
+                    list_update.checksum.sha256
+                );
+
+                self.states.write().await.clear();
+                self.update().await?;
+
+                return Ok(());
+            }
+
             self.states.write().await.insert(
                 list_update.threat_type,
                 SafeBrowsingListState {
@@ -149,6 +173,10 @@ impl SafeBrowsing {
 
     #[tracing::instrument(skip_all)]
     pub async fn check_urls(&self, urls: &[&str]) -> eyre::Result<Vec<(String, ThreatMatch)>> {
+        if urls.is_empty() {
+            return Ok(Vec::new());
+        }
+
         let bench_start = Instant::now();
 
         let mut url_hashes: HashMap<String, HashSet<Vec<u8>>> = HashMap::new();

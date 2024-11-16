@@ -8,13 +8,13 @@ use poise::serenity_prelude as serenity;
 use crate::{config::CONFIG, Context};
 
 /// Ban a member
+#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
     ephemeral,
     guild_only,
     default_member_permissions = "MODERATE_MEMBERS"
 )]
-#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 pub async fn ban(
     ctx: Context<'_>,
     #[description = "The member to ban"] member: serenity::Member,

@@ -80,10 +80,12 @@ pub async fn handle(
                     .send_message(
                         &ctx.http,
                         serenity::CreateMessage::default()
-                            .content(match CONFIG.moderator_role {
-                                Some(role) => role.mention().to_string(),
-                                None => String::new(),
-                            })
+                            .content(
+                                CONFIG
+                                    .moderator_role
+                                    .map(|r| r.mention().to_string())
+                                    .unwrap_or_default(),
+                            )
                             .embed(embed),
                     )
                     .await?;

@@ -10,13 +10,13 @@ use tracing::info;
 use crate::{storage::presence::PresenceChoice, Context};
 
 /// Modify the Discord presence shown by the bot
+#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
     ephemeral,
     guild_only,
     default_member_permissions = "MANAGE_GUILD"
 )]
-#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 pub async fn presence(
     ctx: Context<'_>,
     #[description = "Text to display"] content: String,

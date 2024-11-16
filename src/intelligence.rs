@@ -9,7 +9,7 @@ use crate::{config::CONFIG, reqwest_client::HTTP};
 
 static API_URL: &str = "https://intelligence.valfisk.ryanccn.dev/v2";
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct RequestMetadata {
     pub username: String,
@@ -17,17 +17,18 @@ pub struct RequestMetadata {
     pub nick: Option<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct Request {
     pub query: String,
     pub metadata: RequestMetadata,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct Response {
     pub response: String,
 }
 
+#[tracing::instrument]
 pub async fn query(request: Request) -> Result<String> {
     let resp: Response = HTTP
         .post(API_URL)

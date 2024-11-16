@@ -4,11 +4,27 @@
 
 use poise::serenity_prelude::{self as serenity, Mentionable as _};
 
-use eyre::Result;
+use eyre::{eyre, Result};
 use std::time::Duration;
 use tokio::{task, time};
 
 use crate::{config::CONFIG, intelligence};
+
+async fn is_administrator(ctx: &serenity::Context, message: &serenity::Message) -> Result<bool> {
+    let member = message.member(&ctx).await?;
+
+    let guild = message
+        .guild(&ctx.cache)
+        .ok_or_else(|| eyre!("could not obtain guild"))?;
+
+    let default_channel = guild
+        .default_channel(message.author.id)
+        .ok_or_else(|| eyre!("could not obtain default guild channel"))?;
+
+    Ok(guild
+        .user_permissions_in(default_channel, &member)
+        .administrator())
+}
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
 pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
@@ -28,9 +44,7 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
     }
 
     if let Ok(member) = message.member(&ctx).await {
-        if !member
-            .permissions(&ctx.cache)
-            .is_ok_and(|p| p.administrator())
+        if is_administrator(ctx, message).await.ok() != Some(true)
             && !member
                 .roles
                 .iter()

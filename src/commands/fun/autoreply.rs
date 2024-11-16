@@ -10,6 +10,7 @@ use poise::{
 
 use crate::Context;
 
+#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
     guild_only,
@@ -18,10 +19,11 @@ use crate::Context;
     default_member_permissions = "MANAGE_GUILD"
 )]
 #[allow(clippy::unused_async)]
-pub async fn autoreply(_ctx: Context<'_>) -> Result<()> {
+pub async fn autoreply(ctx: Context<'_>) -> Result<()> {
     Ok(())
 }
 
+#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 #[poise::command(slash_command, guild_only, default_member_permissions = "MANAGE_GUILD")]
 async fn list(ctx: Context<'_>) -> Result<()> {
     ctx.defer_ephemeral().await?;
@@ -53,10 +55,11 @@ async fn list(ctx: Context<'_>) -> Result<()> {
     Ok(())
 }
 
+#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 #[poise::command(slash_command, guild_only, default_member_permissions = "MANAGE_GUILD")]
 async fn add(
     ctx: Context<'_>,
-    #[description = "The keyword included in the message (case-insensitive)"] keyword: String,
+    #[description = "The keyword included in the message (regex)"] keyword: String,
     #[description = "The response to reply to the message"] reply: String,
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
@@ -83,10 +86,11 @@ async fn add(
     Ok(())
 }
 
+#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 #[poise::command(slash_command, guild_only, default_member_permissions = "MANAGE_GUILD")]
 async fn delete(
     ctx: Context<'_>,
-    #[description = "The keyword included in the message (case-insensitive)"] keyword: String,
+    #[description = "The keyword included in the message (regex)"] keyword: String,
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
@@ -112,6 +116,7 @@ async fn delete(
     Ok(())
 }
 
+#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 #[poise::command(
     rename = "delete-all",
     slash_command,

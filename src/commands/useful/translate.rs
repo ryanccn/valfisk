@@ -57,8 +57,8 @@ async fn translate_call(src: &str) -> Result<GoogleTranslateResult> {
 }
 
 /// Translates a message
-#[poise::command(context_menu_command = "Translate", guild_only)]
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[poise::command(context_menu_command = "Translate", guild_only)]
 pub async fn translate(ctx: Context<'_>, message: serenity::Message) -> Result<()> {
     ctx.defer().await?;
 
@@ -93,8 +93,8 @@ pub async fn translate(ctx: Context<'_>, message: serenity::Message) -> Result<(
 }
 
 /// Translates a message
-#[poise::command(context_menu_command = "Translate (private)", guild_only, ephemeral)]
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[poise::command(context_menu_command = "Translate (private)", guild_only, ephemeral)]
 pub async fn translate_private(ctx: Context<'_>, message: serenity::Message) -> Result<()> {
     ctx.defer_ephemeral().await?;
 

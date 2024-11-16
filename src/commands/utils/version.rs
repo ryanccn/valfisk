@@ -10,11 +10,12 @@ use poise::{serenity_prelude::CreateEmbed, CreateReply};
 use crate::Context;
 
 /// Get version information
-#[poise::command(slash_command, guild_only)]
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[poise::command(slash_command, guild_only)]
 pub async fn version(ctx: Context<'_>) -> Result<()> {
-    let version_suffix =
-        option_env!("CARGO_PKG_VERSION").map_or_else(String::new, |v| format!(" v{v}"));
+    let version_suffix = option_env!("CARGO_PKG_VERSION")
+        .map(|v| format!(" v{v}"))
+        .unwrap_or_default();
 
     let host = option_env!("METADATA_HOST")
         .map_or_else(|| "unknown".to_owned(), |host| format!("`{host}`"));

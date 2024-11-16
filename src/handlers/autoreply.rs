@@ -5,6 +5,7 @@
 use eyre::Result;
 use poise::serenity_prelude as serenity;
 use rand::seq::SliceRandom as _;
+use regex::RegexBuilder;
 
 use crate::{config::CONFIG, Data};
 
@@ -23,17 +24,29 @@ pub async fn handle(
     }
 
     if let Some(storage) = &data.storage {
-        let autoreply_data = storage.getall_autoreply().await?;
-        let responses: Vec<String> = autoreply_data
+        let data = storage
+            .getall_autoreply()
+            .await?
             .into_iter()
-            .filter(|(keyword, _)| {
-                message
-                    .content
-                    .to_lowercase()
-                    .contains(&keyword.to_lowercase())
+            .map(|(k, v)| {
+                RegexBuilder::new(&k)
+                    .multi_line(true)
+                    .build()
+                    .map(|r| (r, v))
+                    .map_err(|e| e.into())
             })
-            .map(|(_, response)| response)
-            .collect();
+            .collect::<Result<Vec<_>>>()?;
+
+        let responses = data
+            .iter()
+            .flat_map(|(regex, template)| {
+                regex.captures_iter(&message.content).map(|captures| {
+                    let mut expanded = String::new();
+                    captures.expand(template, &mut expanded);
+                    expanded
+                })
+            })
+            .collect::<Vec<_>>();
 
         let possible_reply = {
             let mut rng = rand::thread_rng();
@@ -41,7 +54,9 @@ pub async fn handle(
         };
 
         if let Some(reply) = possible_reply {
-            message.reply(&ctx.http, reply).await?;
+            if !reply.is_empty() {
+                message.reply(&ctx.http, reply).await?;
+            }
         }
     }
 

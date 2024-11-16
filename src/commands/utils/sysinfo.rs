@@ -12,8 +12,8 @@ use sysinfo::{CpuRefreshKind, MemoryRefreshKind, Pid, ProcessRefreshKind, Refres
 use crate::Context;
 
 /// Get system information for the bot host
-#[poise::command(slash_command, guild_only)]
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[poise::command(slash_command, guild_only)]
 #[allow(clippy::cast_precision_loss)]
 pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
     let refresh_kind = RefreshKind::new()
@@ -60,7 +60,9 @@ pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
             "**{}** {}{}",
             System::name().unwrap_or_else(|| "Unknown".into()),
             System::os_version().unwrap_or_else(|| "Unknown".into()),
-            System::cpu_arch().map_or_else(String::new, |arch| format!(" ({arch})")),
+            System::cpu_arch()
+                .map(|arch| format!(" ({arch})"))
+                .unwrap_or_default(),
         ),
         true,
     );

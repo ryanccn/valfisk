@@ -61,18 +61,22 @@ impl From<&serenity::Presence> for ValfiskPresenceData {
 pub static PRESENCE_STORE: LazyLock<RwLock<HashMap<serenity::UserId, ValfiskPresenceData>>> =
     LazyLock::new(|| RwLock::new(HashMap::new()));
 
+#[tracing::instrument(skip_all)]
 async fn route_ping() -> impl IntoResponse {
     (StatusCode::OK, Json(json!({ "ok": true })))
 }
 
+#[tracing::instrument(skip_all)]
 async fn route_ping_head() -> impl IntoResponse {
     StatusCode::OK
 }
 
+#[tracing::instrument(skip_all)]
 async fn route_not_found() -> impl IntoResponse {
     (StatusCode::NOT_FOUND, Json(json!({ "error": "Not found" })))
 }
 
+#[tracing::instrument(skip_all, fields(user_id = user_id))]
 async fn route_presence(Path(user_id): Path<u64>) -> AxumResult<Response> {
     if user_id == 0 {
         return Ok((
@@ -100,6 +104,7 @@ async fn route_presence(Path(user_id): Path<u64>) -> AxumResult<Response> {
     )
 }
 
+#[tracing::instrument(skip_all, fields(user_id = user_id))]
 async fn route_presence_head(Path(user_id): Path<u64>) -> AxumResult<StatusCode> {
     if user_id == 0 {
         return Ok(StatusCode::BAD_REQUEST);
@@ -136,6 +141,7 @@ struct KofiData {
     timestamp: serenity::Timestamp,
 }
 
+#[tracing::instrument(skip_all)]
 async fn route_kofi_webhook(
     State(state): State<Arc<AppState>>,
     form: Form<KofiFormData>,
@@ -181,6 +187,7 @@ struct AppState {
     serenity_http: Arc<serenity::Http>,
 }
 
+#[tracing::instrument(skip_all)]
 async fn security_middleware(request: Request, next: middleware::Next) -> Response {
     let mut response = next.run(request).await;
 
@@ -207,7 +214,7 @@ async fn security_middleware(request: Request, next: middleware::Next) -> Respon
     response
 }
 
-#[tracing::instrument(skip(serenity_http))]
+#[tracing::instrument(skip_all)]
 pub async fn serve(serenity_http: Arc<serenity::Http>) -> eyre::Result<()> {
     #[cfg(debug_assertions)]
     let default_host = "127.0.0.1";

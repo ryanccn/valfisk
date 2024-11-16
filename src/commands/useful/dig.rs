@@ -179,8 +179,8 @@ fn make_resolver_opts(bootstrap: bool) -> ResolverOpts {
 }
 
 /// Make a DNS lookup
-#[poise::command(slash_command, guild_only)]
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[poise::command(slash_command, guild_only)]
 pub async fn dig(
     ctx: Context<'_>,
     #[description = "The domain name to query for"] name: String,
