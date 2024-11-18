@@ -81,14 +81,14 @@ pub struct ThreatEntrySet {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RawHashes {
-    pub prefix_size: u32,
+    pub prefix_size: usize,
     pub raw_hashes: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RawIndices {
-    pub indices: Vec<u32>,
+    pub indices: Vec<usize>,
 }
 
 #[derive(Debug, Clone, Serialize)]

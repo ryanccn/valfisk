@@ -101,10 +101,8 @@ impl SafeBrowsing {
 
             for entry_set in &list_update.removals {
                 if let Some(raw_indices) = &entry_set.raw_indices {
-                    for index in &raw_indices.indices {
-                        if (*index as usize) < current_prefixes.len() {
-                            current_prefixes.remove(*index as usize);
-                        }
+                    for (idx_idx, idx) in raw_indices.indices.iter().enumerate() {
+                        current_prefixes.remove(idx - idx_idx);
                     }
                 }
             }
@@ -113,11 +111,8 @@ impl SafeBrowsing {
                 if let Some(raw_hashes) = &entry_set.raw_hashes {
                     let hashes = BASE64.decode(&raw_hashes.raw_hashes)?;
 
-                    current_prefixes.extend(
-                        hashes
-                            .chunks(raw_hashes.prefix_size as usize)
-                            .map(|c| c.to_vec()),
-                    );
+                    current_prefixes
+                        .extend(hashes.chunks(raw_hashes.prefix_size).map(|c| c.to_vec()));
                 }
             }
 
