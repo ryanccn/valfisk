@@ -60,9 +60,9 @@ pub struct ListUpdateResponse {
     pub checksum: ListUpdateChecksum,
 
     #[serde(default)]
-    pub additions: Vec<ThreatEntrySet>,
+    pub additions: Vec<ListUpdateAdditions>,
     #[serde(default)]
-    pub removals: Vec<ThreatEntrySet>,
+    pub removals: Vec<ListUpdateRemovals>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -73,9 +73,14 @@ pub struct ListUpdateChecksum {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ThreatEntrySet {
-    pub raw_hashes: Option<RawHashes>,
-    pub raw_indices: Option<RawIndices>,
+pub struct ListUpdateAdditions {
+    pub raw_hashes: RawHashes,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListUpdateRemovals {
+    pub raw_indices: RawIndices,
 }
 
 #[derive(Debug, Clone, Deserialize)]

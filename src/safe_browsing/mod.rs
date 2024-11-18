@@ -16,6 +16,7 @@ use std::{
 use tokio::sync::RwLock;
 
 use crate::reqwest_client::HTTP;
+use crate::utils::Pluralize as _;
 
 mod canonicalize;
 mod models;
@@ -87,6 +88,7 @@ impl SafeBrowsing {
             .json(&request)
             .send()
             .await?
+            .error_for_status()?
             .json()
             .await?;
 
@@ -99,21 +101,25 @@ impl SafeBrowsing {
                 .map(|s| s.prefixes.clone())
                 .unwrap_or_default();
 
-            for entry_set in &list_update.removals {
-                if let Some(raw_indices) = &entry_set.raw_indices {
-                    for (idx_idx, idx) in raw_indices.indices.iter().enumerate() {
-                        current_prefixes.remove(idx - idx_idx);
+            for removal in &list_update.removals {
+                let mut reversed_indices = removal.raw_indices.indices.clone();
+                reversed_indices.sort_unstable();
+
+                for idx in reversed_indices.into_iter().rev() {
+                    if idx < current_prefixes.len() {
+                        current_prefixes.remove(idx);
                     }
                 }
             }
 
-            for entry_set in &list_update.additions {
-                if let Some(raw_hashes) = &entry_set.raw_hashes {
-                    let hashes = BASE64.decode(&raw_hashes.raw_hashes)?;
+            for addition in &list_update.additions {
+                let hashes = BASE64.decode(&addition.raw_hashes.raw_hashes)?;
 
-                    current_prefixes
-                        .extend(hashes.chunks(raw_hashes.prefix_size).map(|c| c.to_vec()));
-                }
+                current_prefixes.extend(
+                    hashes
+                        .chunks(addition.raw_hashes.prefix_size)
+                        .map(|c| c.to_vec()),
+                );
             }
 
             current_prefixes.sort_unstable();
@@ -134,7 +140,7 @@ impl SafeBrowsing {
                     list_update.checksum.sha256
                 );
 
-                self.states.write().await.clear();
+                self.states.write().await.remove(&list_update.threat_type);
                 self.update().await?;
 
                 return Ok(());
@@ -262,18 +268,21 @@ impl SafeBrowsing {
                 .collect::<Vec<_>>();
 
             tracing::trace!(
-                "Scanned {} URLs in {:.2}ms (prefixes matched) => {} matches",
+                "Scanned {} {} in {:.2}ms (prefixes matched) => {} {}",
                 urls.len(),
+                "URL".pluralize(urls.len()),
                 bench_start.elapsed().as_millis(),
-                matches.len()
+                matches.len(),
+                "match".pluralize_alternate(matches.len(), "matches")
             );
 
             return Ok(matches);
         }
 
         tracing::trace!(
-            "Scanned {} URLs in {:.2}ms (no prefixes matched) => no matches",
+            "Scanned {} {} in {:.2}ms (no prefixes matched) => no matches",
             urls.len(),
+            "URL".pluralize(urls.len()),
             bench_start.elapsed().as_millis(),
         );
 

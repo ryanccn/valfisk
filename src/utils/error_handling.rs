@@ -23,16 +23,6 @@ pub enum ErrorOrPanic<'a> {
     Panic(&'a Option<String>),
 }
 
-impl ErrorOrPanic<'_> {
-    /// Return whether `self` is a panic or an error.
-    fn type_string(&self) -> String {
-        match self {
-            Self::Panic(_) => "panic".to_owned(),
-            Self::Error(_) => "error".to_owned(),
-        }
-    }
-}
-
 /// A wrapped type around errors or panics encapsulated in [`ErrorOrPanic`] that includes context from Poise and a randomly generated `error_id`.
 #[derive(Debug)]
 pub struct ValfiskError<'a> {
@@ -66,9 +56,18 @@ impl ValfiskError<'_> {
     }
 
     /// Log the error to the console.
-    #[tracing::instrument(skip(self), fields(id = self.error_id, r#type = self.error_or_panic.type_string(), command = self.ctx.invocation_string(), channel = self.ctx.channel_id().get(), author = self.ctx.author().id.get()))]
+    #[tracing::instrument(skip(self))]
     pub fn handle_log(&self) {
-        error!("{:?}", self.error_or_panic);
+        error!(
+            {
+                id = self.error_id,
+                command = self.ctx.invocation_string(),
+                channel = self.ctx.channel_id().get(),
+                author = self.ctx.author().id.get()
+            },
+            "{:?}",
+            self.error_or_panic,
+        );
     }
 
     /// Reply to the interaction with an embed informing the user of an error, containing the randomly generated error ID.
