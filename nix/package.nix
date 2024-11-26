@@ -15,12 +15,10 @@ let
   year = builtins.substring 0 4 self.lastModifiedDate;
   month = builtins.substring 4 2 self.lastModifiedDate;
   day = builtins.substring 6 2 self.lastModifiedDate;
-
-  formattedDate = "${year}-${month}-${day}";
 in
 rustPlatform.buildRustPackage rec {
   pname = passthru.cargoToml.package.name;
-  version = passthru.cargoToml.package.version + "-unstable-" + formattedDate;
+  version = "${passthru.cargoToml.package.version}-unstable-${year}-${month}-${day}";
 
   strictDeps = true;
 
@@ -37,8 +35,8 @@ rustPlatform.buildRustPackage rec {
   cargoLock = {
     lockFile = ../Cargo.lock;
     outputHashes = {
-      "poise-0.6.1" = "sha256-ZQ15F6yLpYsVER+/pWxFEZkD3LILynUClvOQRC1t3fo=";
-      "serenity-0.12.4" = "sha256-HfnfSocMWreulmS9q+8/6qN8Ud1wMM9l2djfTcGGvnQ=";
+      "poise-0.6.1" = "sha256-uskq9sNQJwpwAOOfsxrhSAM0cmYXeq8xlYnTtwU2g8g=";
+      "serenity-0.12.4" = "sha256-HT0WFLS5RtdsykEOifpLQvdYgT0vlWnovf8rUSEXeKY=";
     };
   };
 

@@ -49,7 +49,7 @@ enum RecordTypeChoice {
 }
 
 impl RecordTypeChoice {
-    fn as_record_type(self) -> RecordType {
+    const fn as_record_type(self) -> RecordType {
         match self {
             Self::A => RecordType::A,
             Self::AAAA => RecordType::AAAA,
@@ -141,7 +141,9 @@ impl ResolverChoice {
     }
 
     async fn doh_config(&self) -> Result<ResolverConfig> {
-        let name_servers = BOOTSTRAP_RESOLVER
+        let mut config = ResolverConfig::new();
+
+        for name_server in BOOTSTRAP_RESOLVER
             .lookup_ip(self.domain() + ".")
             .await?
             .into_iter()
@@ -153,10 +155,7 @@ impl ResolverChoice {
                 tls_config: None,
                 trust_negative_responses: true,
             })
-            .collect::<Vec<_>>();
-
-        let mut config = ResolverConfig::new();
-        for name_server in name_servers {
+        {
             config.add_name_server(name_server);
         }
 

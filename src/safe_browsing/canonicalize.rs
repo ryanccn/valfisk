@@ -2,13 +2,15 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
+use eyre::eyre;
 use url::Url;
 
 pub fn canonicalize(input: &str) -> eyre::Result<Url> {
     let input = input.trim().replace(['\t', '\r', '\n'], "");
     let mut url = Url::parse(&input)?;
 
-    let _ = url.set_port(None);
+    url.set_port(None)
+        .map_err(|()| eyre!("failed to set port on {input:?}"))?;
     url.set_fragment(None);
 
     if let Some(host) = url.host_str() {

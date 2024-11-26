@@ -19,10 +19,7 @@ pub async fn rotate_color_roles(
     http: &Arc<Http>,
     override_role: Option<RoleId>,
 ) -> Result<Vec<RoleId>> {
-    let roles = match override_role {
-        Some(role) => vec![role],
-        None => CONFIG.random_color_roles.clone(),
-    };
+    let roles = override_role.map_or_else(|| CONFIG.random_color_roles.clone(), |role| vec![role]);
 
     if let Some(guild) = CONFIG.guild_id {
         for role in &roles {

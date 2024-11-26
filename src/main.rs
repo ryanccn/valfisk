@@ -279,16 +279,18 @@ async fn main() -> Result<()> {
         safe_browsing.update().await?;
     }
 
-    let mut client =
-        serenity::Client::builder(&CONFIG.discord_token, serenity::GatewayIntents::all())
-            .framework(Framework::new(FrameworkOptions {
-                commands: commands::to_vec(),
-                event_handler: |ctx, ev| Box::pin(event_handler(ctx, ev)),
-                on_error: |err| Box::pin(handlers::handle_error(err)),
-                ..Default::default()
-            }))
-            .data(data.clone())
-            .await?;
+    let mut client = serenity::Client::builder(
+        CONFIG.discord_token.clone(),
+        serenity::GatewayIntents::all(),
+    )
+    .framework(Framework::new(FrameworkOptions {
+        commands: commands::to_vec(),
+        event_handler: |ctx, ev| Box::pin(event_handler(ctx, ev)),
+        on_error: |err| Box::pin(handlers::handle_error(err)),
+        ..Default::default()
+    }))
+    .data(data.clone())
+    .await?;
 
     tokio::select! {
         result = api::serve(client.http.clone()) => { result },
