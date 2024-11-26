@@ -188,14 +188,9 @@ async fn event_handler(
         FullEvent::ReactionRemoveAll {
             removed_from_message_id,
             channel_id,
+            guild_id,
         } => {
-            if Some(
-                channel_id
-                    .to_guild_channel(&ctx.serenity_context, None)
-                    .await?
-                    .guild_id,
-            ) == CONFIG.guild_id
-            {
+            if guild_id.as_ref() == CONFIG.guild_id.as_ref() {
                 let message = channel_id
                     .message(ctx.serenity_context, *removed_from_message_id)
                     .await?;
