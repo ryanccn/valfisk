@@ -14,21 +14,26 @@ pub trait Pluralize {
     fn pluralize_alternate<T: Integer>(&self, count: T, alternate: &str) -> String;
 }
 
-impl<S> Pluralize for S
-where
-    S: AsRef<str>,
-{
+impl Pluralize for String {
     fn pluralize<T: Integer>(&self, count: T) -> String {
-        let mut alternate = self.as_ref().to_string();
-        alternate.push('s');
-        self.pluralize_alternate(count, &alternate)
+        self.pluralize_alternate(count, &(self.clone() + "s"))
     }
-
     fn pluralize_alternate<T: Integer>(&self, count: T, alternate: &str) -> String {
         if count.is_one() {
-            self.as_ref().to_string()
+            self.clone()
         } else {
-            alternate.to_string()
+            alternate.to_owned()
         }
+    }
+}
+
+impl Pluralize for &str {
+    fn pluralize<T: Integer>(&self, count: T) -> String {
+        self.to_owned().to_owned().pluralize(count)
+    }
+    fn pluralize_alternate<T: Integer>(&self, count: T, alternate: &str) -> String {
+        self.to_owned()
+            .to_owned()
+            .pluralize_alternate(count, alternate)
     }
 }

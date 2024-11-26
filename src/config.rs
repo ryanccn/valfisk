@@ -5,11 +5,11 @@
 use serde::Deserialize;
 use std::sync::LazyLock;
 
-use poise::serenity_prelude::{ChannelId, GuildId, RoleId, Token};
+use poise::serenity_prelude::{ChannelId, GuildId, RoleId};
 
 #[derive(Deserialize, Debug)]
 pub struct EnvConfig {
-    pub discord_token: Token,
+    pub discord_token: String,
     pub redis_url: Option<String>,
 
     pub guild_id: Option<GuildId>,

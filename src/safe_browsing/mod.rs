@@ -44,7 +44,7 @@ pub struct SafeBrowsing {
 
 impl SafeBrowsing {
     pub fn new(key: &str) -> Self {
-        Self {
+        SafeBrowsing {
             key: key.to_owned(),
             states: Arc::default(),
         }
@@ -179,12 +179,14 @@ impl SafeBrowsing {
         let mut url_hashes: HashMap<String, HashSet<Vec<u8>>> = HashMap::new();
 
         for url in urls {
+            url_hashes.insert((*url).to_string(), HashSet::new());
+
             for url_prefix in Self::generate_url_prefixes(url)? {
                 let url_hash = Sha256::digest(&url_prefix).to_vec();
 
                 url_hashes
-                    .entry((*url).to_string())
-                    .or_default()
+                    .get_mut(*url)
+                    .ok_or_else(|| eyre!("could not obtain `url_hashes` {url}"))?
                     .insert(url_hash);
             }
         }

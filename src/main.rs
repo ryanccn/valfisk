@@ -188,9 +188,14 @@ async fn event_handler(
         FullEvent::ReactionRemoveAll {
             removed_from_message_id,
             channel_id,
-            guild_id,
         } => {
-            if guild_id.as_ref() == CONFIG.guild_id.as_ref() {
+            if Some(
+                channel_id
+                    .to_guild_channel(&ctx.serenity_context, None)
+                    .await?
+                    .guild_id,
+            ) == CONFIG.guild_id
+            {
                 let message = channel_id
                     .message(ctx.serenity_context, *removed_from_message_id)
                     .await?;
@@ -274,18 +279,16 @@ async fn main() -> Result<()> {
         safe_browsing.update().await?;
     }
 
-    let mut client = serenity::Client::builder(
-        CONFIG.discord_token.clone(),
-        serenity::GatewayIntents::all(),
-    )
-    .framework(Framework::new(FrameworkOptions {
-        commands: commands::to_vec(),
-        event_handler: |ctx, ev| Box::pin(event_handler(ctx, ev)),
-        on_error: |err| Box::pin(handlers::handle_error(err)),
-        ..Default::default()
-    }))
-    .data(data.clone())
-    .await?;
+    let mut client =
+        serenity::Client::builder(&CONFIG.discord_token, serenity::GatewayIntents::all())
+            .framework(Framework::new(FrameworkOptions {
+                commands: commands::to_vec(),
+                event_handler: |ctx, ev| Box::pin(event_handler(ctx, ev)),
+                on_error: |err| Box::pin(handlers::handle_error(err)),
+                ..Default::default()
+            }))
+            .data(data.clone())
+            .await?;
 
     tokio::select! {
         result = api::serve(client.http.clone()) => { result },
