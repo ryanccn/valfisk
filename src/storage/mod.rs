@@ -6,6 +6,7 @@ use redis::{AsyncCommands as _, RedisResult};
 
 pub mod log;
 pub mod presence;
+mod redis_util;
 
 #[derive(Debug)]
 pub struct Storage {

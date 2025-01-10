@@ -2,14 +2,26 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use serde::Deserialize;
 use std::sync::LazyLock;
 
-use poise::serenity_prelude::{ChannelId, GuildId, RoleId};
+use poise::serenity_prelude::{ChannelId, GuildId, RoleId, Token, TokenError};
+use serde::{Deserialize, Deserializer};
+
+fn deserialize_token_from_str<'de, D>(deserializer: D) -> Result<Token, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let token: String = Deserialize::deserialize(deserializer)?;
+
+    token
+        .parse()
+        .map_err(|e: TokenError| serde::de::Error::custom(e))
+}
 
 #[derive(Deserialize, Debug)]
 pub struct EnvConfig {
-    pub discord_token: String,
+    #[serde(deserialize_with = "deserialize_token_from_str")]
+    pub discord_token: Token,
     pub redis_url: Option<String>,
 
     pub guild_id: Option<GuildId>,

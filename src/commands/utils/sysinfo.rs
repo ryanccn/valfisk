@@ -16,10 +16,10 @@ use crate::Context;
 #[poise::command(slash_command, guild_only)]
 #[allow(clippy::cast_precision_loss)]
 pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
-    let refresh_kind = RefreshKind::new()
-        .with_cpu(CpuRefreshKind::new().with_cpu_usage())
-        .with_memory(MemoryRefreshKind::new().with_ram())
-        .with_processes(ProcessRefreshKind::new().with_cpu().with_memory());
+    let refresh_kind = RefreshKind::default()
+        .with_cpu(CpuRefreshKind::default().with_cpu_usage())
+        .with_memory(MemoryRefreshKind::default().with_ram())
+        .with_processes(ProcessRefreshKind::default().with_cpu().with_memory());
 
     let mut sys = System::new();
 
@@ -57,12 +57,10 @@ pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
     embed = embed.field(
         "Operating system",
         format!(
-            "**{}** {}{}",
+            "**{}** {} ({})",
             System::name().unwrap_or_else(|| "Unknown".into()),
             System::os_version().unwrap_or_else(|| "Unknown".into()),
-            System::cpu_arch()
-                .map(|arch| format!(" ({arch})"))
-                .unwrap_or_default(),
+            System::cpu_arch(),
         ),
         true,
     );

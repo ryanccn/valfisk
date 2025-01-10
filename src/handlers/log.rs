@@ -47,20 +47,20 @@ pub async fn edit(
     (id, channel, guild): (
         &serenity::MessageId,
         &serenity::ChannelId,
-        &Option<serenity::GuildId>,
+        Option<&serenity::GuildId>,
     ),
-    author: &Option<serenity::UserId>,
-    prev_content: &Option<String>,
+    author: Option<&serenity::UserId>,
+    prev_content: Option<&String>,
     new_content: &str,
     attachments: &[serenity::Attachment],
     timestamp: &serenity::Timestamp,
 ) -> Result<()> {
-    if author == &Some(ctx.cache.current_user().id) {
+    if author == Some(&ctx.cache.current_user().id) {
         return Ok(());
     }
 
     if let Some(logs_channel) = CONFIG.message_logs_channel {
-        let link = id.link(channel.to_owned(), guild.to_owned());
+        let link = id.link(channel.to_owned(), guild.copied());
 
         let mut embed_author = serenity::CreateEmbedAuthor::new("Message Edited");
         if let Some(author) = author {
@@ -74,13 +74,11 @@ pub async fn edit(
             .field("Channel", channel.mention().to_string(), false)
             .field(
                 "Previous content",
-                prev_content
-                    .clone()
-                    .map_or_else(|| "*Unknown*".to_owned(), |s| utils::truncate(&s, 1024)),
+                prev_content.map_or_else(|| "*Unknown*".to_owned(), |s| utils::truncate(s, 1024)),
                 false,
             )
             .field("New content", utils::truncate(new_content, 1024), false)
-            .field("Author", format_user(author.as_ref()), false)
+            .field("Author", format_user(author), false)
             .color(0xffd43b)
             .timestamp(timestamp);
 
@@ -125,9 +123,9 @@ pub async fn delete(
     (id, channel, guild): (
         &serenity::MessageId,
         &serenity::ChannelId,
-        &Option<serenity::GuildId>,
+        Option<&serenity::GuildId>,
     ),
-    log: &Option<MessageLog>,
+    log: Option<&MessageLog>,
     timestamp: &serenity::Timestamp,
 ) -> Result<()> {
     let content = log.as_ref().and_then(|l| l.content.clone());
@@ -142,7 +140,7 @@ pub async fn delete(
     }
 
     if let Some(logs_channel) = CONFIG.message_logs_channel {
-        let link = id.link(channel.to_owned(), guild.to_owned());
+        let link = id.link(channel.to_owned(), guild.copied());
 
         let mut embed_author = serenity::CreateEmbedAuthor::new("Message Deleted");
         if let Some(author) = author {
@@ -226,7 +224,7 @@ pub async fn member_join(ctx: &serenity::Context, user: &serenity::User) -> Resu
 pub async fn member_leave(
     ctx: &serenity::Context,
     user: &serenity::User,
-    member: &Option<serenity::Member>,
+    member: Option<&serenity::Member>,
 ) -> Result<()> {
     if let Some(logs_channel) = CONFIG.member_logs_channel {
         let mut embed = serenity::CreateEmbed::default()

@@ -234,7 +234,7 @@ pub async fn serve(serenity_http: Arc<serenity::Http>) -> eyre::Result<()> {
     let app = Router::new()
         .route("/", get(route_ping).head(route_ping_head))
         .route(
-            "/presence/:user",
+            "/presence/{user}",
             get(route_presence).head(route_presence_head),
         )
         .route("/ko-fi", post(route_kofi_webhook))

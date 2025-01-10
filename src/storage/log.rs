@@ -4,10 +4,10 @@
 
 use poise::serenity_prelude::{Attachment, Message, UserId};
 
-use redis_macros::{FromRedisValue, ToRedisArgs};
+use crate::impl_redis_serde;
 use serde::{Deserialize, Serialize};
 
-#[derive(FromRedisValue, ToRedisArgs, Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct MessageLog {
     pub content: Option<String>,
     pub author: Option<UserId>,
@@ -37,3 +37,5 @@ impl From<&Message> for MessageLog {
         }
     }
 }
+
+impl_redis_serde!(MessageLog);

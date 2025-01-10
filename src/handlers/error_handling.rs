@@ -46,7 +46,9 @@ pub async fn handle_error(err: FrameworkError<'_, Data, eyre::Report>) {
         }
 
         FrameworkError::CommandPanic { payload, ctx, .. } => {
-            ValfiskError::panic(&payload, &ctx).handle_all().await;
+            ValfiskError::panic(payload.as_ref(), &ctx)
+                .handle_all()
+                .await;
         }
 
         _ => {}

@@ -9,31 +9,36 @@ pub trait Pluralize {
     /// Pluralize a string by adding `"s"` to the end of it if `count` is not 1.
     #[must_use]
     fn pluralize<T: Integer>(&self, count: T) -> String;
+
+    /// Pluralize a string by adding a suffix to the end of it if `count` is not 1.
+    #[must_use]
+    fn pluralize_suffix<T: Integer, F: AsRef<str>>(&self, count: T, suffix: F) -> String;
+
     /// Pluralize a string by returning `alternate` if `count` is not 1.
     #[must_use]
-    fn pluralize_alternate<T: Integer>(&self, count: T, alternate: &str) -> String;
+    fn pluralize_alternate<T: Integer, F: AsRef<str>>(&self, count: T, alternate: F) -> String;
 }
 
-impl Pluralize for String {
+impl<S> Pluralize for S
+where
+    S: AsRef<str>,
+{
     fn pluralize<T: Integer>(&self, count: T) -> String {
-        self.pluralize_alternate(count, &(self.clone() + "s"))
+        self.pluralize_suffix(count, "s")
     }
-    fn pluralize_alternate<T: Integer>(&self, count: T, alternate: &str) -> String {
+
+    fn pluralize_suffix<T: Integer, F: AsRef<str>>(&self, count: T, suffix: F) -> String {
+        let mut alternate = self.as_ref().to_owned();
+        alternate.push_str(suffix.as_ref());
+
+        self.pluralize_alternate(count, &alternate)
+    }
+
+    fn pluralize_alternate<T: Integer, F: AsRef<str>>(&self, count: T, alternate: F) -> String {
         if count.is_one() {
-            self.clone()
+            self.as_ref().to_owned()
         } else {
-            alternate.to_owned()
+            alternate.as_ref().to_owned()
         }
-    }
-}
-
-impl Pluralize for &str {
-    fn pluralize<T: Integer>(&self, count: T) -> String {
-        self.to_owned().to_owned().pluralize(count)
-    }
-    fn pluralize_alternate<T: Integer>(&self, count: T, alternate: &str) -> String {
-        self.to_owned()
-            .to_owned()
-            .pluralize_alternate(count, alternate)
     }
 }

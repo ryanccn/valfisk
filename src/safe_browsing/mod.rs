@@ -179,14 +179,12 @@ impl SafeBrowsing {
         let mut url_hashes: HashMap<String, HashSet<Vec<u8>>> = HashMap::new();
 
         for url in urls {
-            url_hashes.insert((*url).to_string(), HashSet::new());
-
             for url_prefix in Self::generate_url_prefixes(url)? {
                 let url_hash = Sha256::digest(&url_prefix).to_vec();
 
                 url_hashes
-                    .get_mut(*url)
-                    .ok_or_else(|| eyre!("could not obtain `url_hashes` {url}"))?
+                    .entry((*url).to_string())
+                    .or_default()
                     .insert(url_hash);
             }
         }

@@ -20,7 +20,7 @@ pub enum ErrorOrPanic<'a> {
     /// A reference to an error, [`eyre::Report`]
     Error(&'a eyre::Report),
     /// A reference to a panic string, [`Option<String>`]
-    Panic(&'a Option<String>),
+    Panic(Option<&'a String>),
 }
 
 /// A wrapped type around errors or panics encapsulated in [`ErrorOrPanic`] that includes context from Poise and a randomly generated `error_id`.
@@ -47,7 +47,7 @@ impl ValfiskError<'_> {
 
     /// Create a new [`ValfiskError`] from a panic string and Poise context.
     #[must_use]
-    pub fn panic<'a>(panic: &'a Option<String>, ctx: &'a Context) -> ValfiskError<'a> {
+    pub fn panic<'a>(panic: Option<&'a String>, ctx: &'a Context) -> ValfiskError<'a> {
         ValfiskError {
             error_or_panic: ErrorOrPanic::Panic(panic),
             ctx,

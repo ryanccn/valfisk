@@ -4,7 +4,7 @@
 
 use poise::serenity_prelude::ActivityData;
 
-use redis_macros::{FromRedisValue, ToRedisArgs};
+use crate::impl_redis_serde;
 use serde::{Deserialize, Serialize};
 
 #[derive(poise::ChoiceParameter, Serialize, Deserialize, Clone, Copy, Debug)]
@@ -56,7 +56,7 @@ impl std::fmt::Display for PresenceChoice {
     }
 }
 
-#[derive(Serialize, Deserialize, FromRedisValue, ToRedisArgs, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PresenceData {
     pub r#type: PresenceChoice,
     pub content: String,
@@ -68,3 +68,5 @@ impl PresenceData {
         self.r#type.to_activity(&self.content)
     }
 }
+
+impl_redis_serde!(PresenceData);
