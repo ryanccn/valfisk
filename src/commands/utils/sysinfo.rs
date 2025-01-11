@@ -13,9 +13,21 @@ use crate::Context;
 
 /// Get system information for the bot host
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
-#[poise::command(slash_command, guild_only)]
+#[poise::command(slash_command, guild_only, default_member_permissions = "MANAGE_GUILD")]
 #[allow(clippy::cast_precision_loss)]
-pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
+pub async fn sysinfo(
+    ctx: Context<'_>,
+    #[description = "Whether the response should be ephemeral (defaults to true)"]
+    ephemeral: Option<bool>,
+) -> Result<()> {
+    let ephemeral = ephemeral.unwrap_or(true);
+
+    if ephemeral {
+        ctx.defer_ephemeral().await?;
+    } else {
+        ctx.defer().await?;
+    }
+
     let refresh_kind = RefreshKind::default()
         .with_cpu(CpuRefreshKind::default().with_cpu_usage())
         .with_memory(MemoryRefreshKind::default().with_ram())
@@ -31,58 +43,55 @@ pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
         .title("System information")
         .color(0xa78bfa);
 
-    embed = embed.field(
-        "CPU",
-        format!(
-            "**{}** ({} cores)",
-            sys.cpus().first().map_or("Unknown", |cpu| cpu.brand()),
-            sys.physical_core_count().unwrap_or_default()
-        ),
-        true,
-    );
-
-    embed = embed.field("CPU usage", format!("{:.2}%", sys.global_cpu_usage()), true);
-
-    embed = embed.field(
-        "Memory",
-        format!(
-            "{}/{} ({:.2}%)",
-            bytesize::to_string(sys.used_memory(), true),
-            bytesize::to_string(sys.total_memory(), true),
-            (sys.used_memory() as f64) / (sys.total_memory() as f64) * 100.
-        ),
-        true,
-    );
-
-    embed = embed.field(
-        "Operating system",
-        format!(
-            "**{}** {} ({})",
-            System::name().unwrap_or_else(|| "Unknown".into()),
-            System::os_version().unwrap_or_else(|| "Unknown".into()),
-            System::cpu_arch(),
-        ),
-        true,
-    );
+    embed = embed
+        .field(
+            "CPU",
+            format!(
+                "**{}** ({} cores)",
+                sys.cpus().first().map_or("Unknown", |cpu| cpu.brand()),
+                sys.physical_core_count().unwrap_or_default()
+            ),
+            true,
+        )
+        .field("CPU usage", format!("{:.2}%", sys.global_cpu_usage()), true)
+        .field(
+            "Memory",
+            format!(
+                "{}/{} ({:.2}%)",
+                bytesize::to_string(sys.used_memory(), true),
+                bytesize::to_string(sys.total_memory(), true),
+                (sys.used_memory() as f64) / (sys.total_memory() as f64) * 100.
+            ),
+            true,
+        )
+        .field(
+            "Operating system",
+            format!(
+                "**{}** {} ({})",
+                System::name().unwrap_or_else(|| "Unknown".into()),
+                System::os_version().unwrap_or_else(|| "Unknown".into()),
+                System::cpu_arch(),
+            ),
+            true,
+        );
 
     if let Some(proc) = sys.process(Pid::from_u32(std::process::id())) {
-        embed = embed.field(
-            "Process CPU usage",
-            format!("{:.2}%", proc.cpu_usage()),
-            true,
-        );
-
-        embed = embed.field(
-            "Process memory",
-            bytesize::to_string(proc.memory(), true),
-            true,
-        );
-
-        embed = embed.field(
-            "Process uptime",
-            humantime::format_duration(Duration::from_secs(proc.run_time())).to_string(),
-            true,
-        );
+        embed = embed
+            .field(
+                "Process CPU usage",
+                format!("{:.2}%", proc.cpu_usage()),
+                true,
+            )
+            .field(
+                "Process memory",
+                bytesize::to_string(proc.memory(), true),
+                true,
+            )
+            .field(
+                "Process uptime",
+                humantime::format_duration(Duration::from_secs(proc.run_time())).to_string(),
+                true,
+            );
     }
 
     if let Some(storage) = &ctx.data().storage {
