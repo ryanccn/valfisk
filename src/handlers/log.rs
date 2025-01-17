@@ -21,7 +21,7 @@ pub async fn handle_message(
         }
 
         storage
-            .set_message_log(&message.id.to_string(), &message.into())
+            .set_message_log(message.id.get(), &message.into())
             .await?;
     }
 

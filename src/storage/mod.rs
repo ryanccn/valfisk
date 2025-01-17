@@ -132,9 +132,9 @@ macro_rules! impl_storage {
 #[allow(dead_code)]
 impl Storage {
     impl_storage!(presence, "presence-v1", presence::PresenceData);
-    impl_storage!(starboard, "starboard-v1:{}", u64, ttl = 2629746, message_id: &str);
-    impl_storage!(self_timeout_transparency, "stt-v1:{}", bool, user_id: &str);
-    impl_storage!(message_log, "message-log-v1:{}", log::MessageLog, ttl = 86400, message_id: &str);
+    impl_storage!(starboard, "starboard-v1:{}", u64, ttl = 2629746, message_id: u64);
+    impl_storage!(self_timeout_transparency, "stt-v1:{}", bool, user_id: u64);
+    impl_storage!(message_log, "message-log-v1:{}", log::MessageLog, ttl = 86400, message_id: u64);
 }
 
 impl Storage {

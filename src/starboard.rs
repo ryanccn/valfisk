@@ -151,7 +151,7 @@ pub async fn handle(
             let significant_reactions = get_significant_reactions(message);
 
             if let Some(existing_starboard_message) = storage
-                .get_starboard(&message.id.to_string())
+                .get_starboard(message.id.get())
                 .await?
                 .map(|s| s.into())
             {
@@ -160,7 +160,7 @@ pub async fn handle(
                         .delete_message(&ctx.http, existing_starboard_message, None)
                         .await?;
 
-                    storage.del_starboard(&message.id.to_string()).await?;
+                    storage.del_starboard(message.id.get()).await?;
 
                     debug!(
                         "Deleted starboard message {} for {}",
@@ -203,7 +203,7 @@ pub async fn handle(
                     .await?;
 
                 storage
-                    .set_starboard(&message.id.to_string(), &starboard_message.id.get())
+                    .set_starboard(message.id.get(), &starboard_message.id.get())
                     .await?;
 
                 debug!(
@@ -226,18 +226,13 @@ pub async fn handle_deletion(
 ) -> Result<()> {
     if let Some(storage) = &data.storage {
         if let Some(starboard_channel) = get_starboard_channel(&ctx, channel_id).await? {
-            if let Some(starboard_id) = storage
-                .get_starboard(&deleted_message_id.to_string())
-                .await?
-            {
+            if let Some(starboard_id) = storage.get_starboard(deleted_message_id.get()).await? {
                 debug!(
                     "Deleted starboard message {} for {} (source deleted)",
                     starboard_id, deleted_message_id
                 );
 
-                storage
-                    .del_starboard(&deleted_message_id.to_string())
-                    .await?;
+                storage.del_starboard(deleted_message_id.get()).await?;
 
                 ctx.http
                     .delete_message(starboard_channel, starboard_id.into(), None)

@@ -6,9 +6,9 @@ use poise::serenity_prelude::{self as serenity, Mentionable as _};
 
 use eyre::{eyre, Result};
 use std::time::Duration;
-use tokio::{task, time};
+use tokio::time;
 
-use crate::{config::CONFIG, intelligence};
+use crate::{config::CONFIG, intelligence, utils::spawn_abort_on_drop};
 
 async fn is_administrator(ctx: &serenity::Context, message: &serenity::Message) -> Result<bool> {
     let member = message.member(&ctx).await?;
@@ -60,7 +60,7 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                 return Ok(());
             }
 
-            let typing_task = task::spawn({
+            let typing_task = spawn_abort_on_drop({
                 let http = ctx.http.clone();
                 let channel = message.channel_id;
 

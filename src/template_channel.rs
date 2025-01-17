@@ -12,13 +12,13 @@ const fn default_to_false() -> bool {
     false
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
 pub struct Config {
     #[serde(default)]
     pub components: Vec<Component>,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum Component {
     Embed(EmbedComponent),

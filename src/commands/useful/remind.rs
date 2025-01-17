@@ -109,7 +109,7 @@ pub async fn transparency(
         .ok_or_else(|| eyre!("storage is not available for the transparency feature"))?;
 
     storage
-        .set_self_timeout_transparency(&ctx.author().id.to_string(), &status)
+        .set_self_timeout_transparency(ctx.author().id.get(), &status)
         .await?;
 
     let desc = if status {

@@ -98,7 +98,7 @@ async fn event_handler(
                 let timestamp = event.edited_timestamp.unwrap_or_else(Timestamp::now);
 
                 if let Some(storage) = &data.storage {
-                    let prev = storage.get_message_log(&event.id.to_string()).await?;
+                    let prev = storage.get_message_log(event.id.get()).await?;
 
                     let content = event.content.clone();
                     let author = event.author.as_ref().map(|a| a.id);
@@ -110,7 +110,7 @@ async fn event_handler(
 
                     storage
                         .set_message_log(
-                            &event.id.to_string(),
+                            event.id.get(),
                             &MessageLog::new(
                                 content.as_ref().map(|s| s.to_string()),
                                 author,
@@ -152,9 +152,7 @@ async fn event_handler(
                 let timestamp = Timestamp::now();
 
                 if let Some(storage) = &data.storage {
-                    let prev = storage
-                        .get_message_log(&deleted_message_id.to_string())
-                        .await?;
+                    let prev = storage.get_message_log(deleted_message_id.get()).await?;
 
                     handlers::log::delete(
                         ctx.serenity_context,
@@ -164,9 +162,7 @@ async fn event_handler(
                     )
                     .await?;
 
-                    storage
-                        .del_message_log(&deleted_message_id.to_string())
-                        .await?;
+                    storage.del_message_log(deleted_message_id.get()).await?;
                 }
             }
         }

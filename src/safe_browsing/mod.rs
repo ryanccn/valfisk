@@ -44,14 +44,14 @@ pub struct SafeBrowsing {
 
 impl SafeBrowsing {
     pub fn new(key: &str) -> Self {
-        SafeBrowsing {
+        Self {
             key: key.to_owned(),
             states: Arc::default(),
         }
     }
 
-    #[tracing::instrument(skip_all)]
     #[async_recursion]
+    #[tracing::instrument(skip_all)]
     pub async fn update(&self) -> eyre::Result<()> {
         let current_states: HashMap<String, String> = {
             let states_lock = self.states.read().await;

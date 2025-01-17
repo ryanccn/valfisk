@@ -49,7 +49,7 @@ enum RecordTypeChoice {
 }
 
 impl RecordTypeChoice {
-    fn as_record_type(self) -> RecordType {
+    const fn as_record_type(self) -> RecordType {
         match self {
             Self::A => RecordType::A,
             Self::AAAA => RecordType::AAAA,
