@@ -1675,9 +1675,9 @@ dependencies = [
 
 [[package]]
 name = "redis"
-version = "0.28.1"
+version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f89727cba9cec05cc579942321ff6dd09fe57a8b3217f52f952301efa010da5"
+checksum = "9568894e8bdefd16512bca9e286a9d2abc27773609aa4eb7f428497d64df4373"
 dependencies = [
  "arc-swap",
  "bytes",
@@ -1689,8 +1689,6 @@ dependencies = [
  "pin-project-lite",
  "rustls 0.23.21",
  "rustls-native-certs",
- "rustls-pemfile 2.2.0",
- "rustls-pki-types",
  "ryu",
  "sha1_smol",
  "socket2",
