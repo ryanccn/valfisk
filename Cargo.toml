@@ -36,7 +36,7 @@ redis = { version = "0.28.1", features = ["tokio-rustls-comp", "tls-rustls-webpk
 regex = "1.11.1"
 reqwest = { version = "0.12.12", default-features = false, features = ["rustls-tls", "json", "brotli", "gzip", "zstd"] }
 serde = { version = "1.0.217", features = ["derive"] }
-serde_json = "1.0.135"
+serde_json = "1.0.139"
 sha2 = "0.10.8"
 sysinfo = "0.33.1"
 tokio = { version = "1.43.0", features = ["full"] }
