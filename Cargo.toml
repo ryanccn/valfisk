@@ -32,7 +32,7 @@ paste = "1.0.15"
 poise = { git = "https://github.com/serenity-rs/poise.git", branch = "serenity-next" }
 rand = "0.8.5"
 rayon = "1.10.0"
-redis = { version = "0.28.1", features = ["tokio-rustls-comp", "tls-rustls-webpki-roots"] }
+redis = { version = "0.29.1", features = ["tokio-rustls-comp", "tls-rustls-webpki-roots"] }
 regex = "1.11.1"
 reqwest = { version = "0.12.12", default-features = false, features = ["rustls-tls", "json", "brotli", "gzip", "zstd"] }
 serde = { version = "1.0.217", features = ["derive"] }
