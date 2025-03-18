@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use eyre::{eyre, Result};
+use eyre::{Result, eyre};
 use poise::serenity_prelude as serenity;
 
 use crate::Context;
@@ -52,33 +52,40 @@ pub async fn self_timeout(
                 .await?;
 
             if let Some(storage) = &ctx.data().storage {
-                if storage
-                    .get_self_timeout_transparency(ctx.author().id.get())
-                    .await?
-                    .unwrap_or(false)
+                if let Ok(guild_channel) =
+                    ctx.channel_id().to_guild_channel(ctx, ctx.guild_id()).await
                 {
-                    let mut resp_embed = resp_embed.author(
-                        serenity::CreateEmbedAuthor::new(ctx.author().tag())
-                            .icon_url(ctx.author().face()),
-                    );
+                    if storage
+                        .get_self_timeout_transparency(ctx.author().id.get())
+                        .await?
+                        .unwrap_or(false)
+                        && ctx.guild().is_some_and(|guild| {
+                            guild
+                                .user_permissions_in(&guild_channel, &member)
+                                .send_messages()
+                        })
+                    {
+                        let mut resp_embed = resp_embed.author(
+                            serenity::CreateEmbedAuthor::new(ctx.author().tag())
+                                .icon_url(ctx.author().face()),
+                        );
 
-                    if let Some(reason) = reason {
-                        resp_embed = resp_embed.field("Reason", reason, false);
-                    }
+                        if let Some(reason) = reason {
+                            resp_embed = resp_embed.field("Reason", reason, false);
+                        }
 
-                    ctx.channel_id()
-                        .send_message(
-                            ctx.http(),
-                            serenity::CreateMessage::default().embed(resp_embed),
-                        )
-                        .await?;
-                };
+                        guild_channel
+                            .send_message(
+                                ctx.http(),
+                                serenity::CreateMessage::default().embed(resp_embed),
+                            )
+                            .await?;
+                    };
+                }
             }
-        } else {
-            ctx.say("Error: Member unavailable!").await?;
-        };
+        }
     } else {
-        ctx.say("Error: Invalid duration!").await?;
+        ctx.say("Invalid duration!").await?;
     };
 
     Ok(())
@@ -96,13 +103,10 @@ pub async fn transparency(
     ctx: Context<'_>,
     #[description = "Whether transparency is on or off"] status: bool,
 ) -> Result<()> {
-    let data = ctx.data();
-    let storage = data
+    ctx.data()
         .storage
         .as_ref()
-        .ok_or_else(|| eyre!("storage is not available for the transparency feature"))?;
-
-    storage
+        .ok_or_else(|| eyre!("storage is not available for the transparency feature"))?
         .set_self_timeout_transparency(ctx.author().id.get(), &status)
         .await?;
 

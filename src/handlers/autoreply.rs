@@ -4,17 +4,13 @@
 
 use eyre::Result;
 use poise::serenity_prelude as serenity;
-use rand::seq::SliceRandom as _;
+use rand::seq::IndexedRandom as _;
 use regex::RegexBuilder;
 
-use crate::{config::CONFIG, Data};
+use crate::config::CONFIG;
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
-pub async fn handle(
-    ctx: &serenity::Context,
-    data: &Data,
-    message: &serenity::Message,
-) -> Result<()> {
+pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
     if message.guild_id != CONFIG.guild_id {
         return Ok(());
     }
@@ -23,7 +19,7 @@ pub async fn handle(
         return Ok(());
     }
 
-    if let Some(storage) = &data.storage {
+    if let Some(storage) = &ctx.data::<crate::Data>().storage {
         let data = storage
             .getall_autoreply()
             .await?
@@ -49,7 +45,7 @@ pub async fn handle(
             .collect::<Vec<_>>();
 
         let possible_reply = {
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rng();
             responses.choose(&mut rng)
         };
 

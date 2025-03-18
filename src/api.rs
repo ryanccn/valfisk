@@ -9,20 +9,18 @@ use axum::{
     http::StatusCode,
     middleware,
     response::{IntoResponse, Json, Response},
-    routing::{get, post, Router},
+    routing::{Router, get, post},
 };
 
 use serde_json::json;
 
 use std::{
     collections::HashMap,
-    env,
     sync::{Arc, LazyLock},
 };
 use tokio::{net::TcpListener, sync::RwLock};
 
 use tower_http::trace::TraceLayer;
-use tracing::info;
 
 use crate::{
     config::CONFIG,
@@ -196,7 +194,6 @@ async fn security_middleware(request: Request, next: middleware::Next) -> Respon
         "content-security-policy",
         "default-src 'none'".parse().unwrap(),
     );
-    h.insert("access-control-allow-origin", "*".parse().unwrap());
     h.insert("cross-origin-opener-policy", "same-origin".parse().unwrap());
     h.insert(
         "cross-origin-resource-policy",
@@ -205,10 +202,7 @@ async fn security_middleware(request: Request, next: middleware::Next) -> Respon
     h.insert("origin-agent-cluster", "?1".parse().unwrap());
     h.insert("referrer-policy", "no-referrer".parse().unwrap());
     h.insert("x-content-type-options", "nosniff".parse().unwrap());
-    h.insert("x-dns-prefetch-control", "off".parse().unwrap());
-    h.insert("x-download-options", "noopen".parse().unwrap());
     h.insert("x-frame-options", "DENY".parse().unwrap());
-    h.insert("x-permitted-cross-domain-policies", "none".parse().unwrap());
     h.insert("x-xss-protection", "1; mode=block".parse().unwrap());
 
     response
@@ -216,20 +210,12 @@ async fn security_middleware(request: Request, next: middleware::Next) -> Respon
 
 #[tracing::instrument(skip_all)]
 pub async fn serve(serenity_http: Arc<serenity::Http>) -> eyre::Result<()> {
-    #[cfg(debug_assertions)]
-    let default_host = "127.0.0.1";
-    #[cfg(not(debug_assertions))]
-    let default_host = "0.0.0.0";
-
-    let host = env::var("HOST").unwrap_or_else(|_| default_host.to_owned());
-    let port = env::var("PORT").map_or(Ok(8080), |v| v.parse::<u16>())?;
-
     let state = Arc::new(AppState { serenity_http });
 
-    let listener = TcpListener::bind((host, port)).await?;
+    let listener = TcpListener::bind((CONFIG.host.clone(), CONFIG.port)).await?;
     let local_addr = listener.local_addr()?;
 
-    info!("Started API server {}", format!("http://{}", local_addr));
+    tracing::info!("Started API server {}", format!("http://{}", local_addr));
 
     let app = Router::new()
         .route("/", get(route_ping).head(route_ping_head))

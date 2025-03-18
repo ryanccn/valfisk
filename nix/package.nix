@@ -5,7 +5,6 @@
 {
   lib,
   rustPlatform,
-  pkg-config,
   nix-filter,
   self,
   enableLTO ? true,
@@ -16,9 +15,9 @@ let
   month = builtins.substring 4 2 self.lastModifiedDate;
   day = builtins.substring 6 2 self.lastModifiedDate;
 in
-rustPlatform.buildRustPackage rec {
-  pname = passthru.cargoToml.package.name;
-  version = "${passthru.cargoToml.package.version}-unstable-${year}-${month}-${day}";
+rustPlatform.buildRustPackage (finalAttrs: {
+  pname = finalAttrs.passthru.cargoToml.package.name;
+  version = "${finalAttrs.passthru.cargoToml.package.version}-unstable-${year}-${month}-${day}";
 
   src = nix-filter.lib.filter {
     root = self;
@@ -33,14 +32,12 @@ rustPlatform.buildRustPackage rec {
   cargoLock = {
     lockFile = ../Cargo.lock;
     outputHashes = {
-      "poise-0.6.1" = "sha256-EYUDia9x85zNsbuvwvl3YNLDDQrsnMB7oUyMO0wK840=";
-      "serenity-0.12.4" = "sha256-vbLHU+XHAoUgXYr1fKK5QpYK0iVXPKwx7R2SAmCOakY=";
+      "poise-0.6.1" = "sha256-2MVrgJtBS2yaWlVezwsVrvDlqpfPf7fWKPfAXrqFKcA=";
+      "serenity-0.12.4" = "sha256-aZ7Wgd81LztRO0Ypte8NdOnsg2gveY9wG5v33NQco1s=";
     };
   };
 
   doCheck = false;
-
-  nativeBuildInputs = [ pkg-config ];
 
   env =
     {
@@ -68,4 +65,4 @@ rustPlatform.buildRustPackage rec {
     licenses = licenses.agpl3Only;
     mainProgram = "valfisk";
   };
-}
+})

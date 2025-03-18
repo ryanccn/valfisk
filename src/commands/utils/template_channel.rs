@@ -4,11 +4,11 @@
 
 use eyre::Result;
 use poise::{
-    serenity_prelude::{futures::StreamExt, ChannelId, CreateEmbed, Mentionable as _},
     CreateReply,
+    serenity_prelude::{ChannelId, CreateEmbed, Mentionable as _, futures::StreamExt},
 };
 
-use crate::{reqwest_client::HTTP, template_channel::Config as TemplateChannelConfig, Context};
+use crate::{Context, http::HTTP, template_channel::Template};
 
 /// Apply a channel template from a URL to a channel
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
@@ -36,7 +36,7 @@ pub async fn template_channel(
         .text()
         .await?;
 
-    let data = TemplateChannelConfig::parse(&source)?;
+    let data = Template::parse(&source)?;
     let messages = data.to_messages();
 
     if clear {

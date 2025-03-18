@@ -5,12 +5,11 @@
 use poise::serenity_prelude as serenity;
 use regex::Regex;
 
-use eyre::{eyre, Result};
+use eyre::{Result, eyre};
 use std::sync::LazyLock;
 use tokio::task::JoinSet;
-use tracing::debug;
 
-use crate::{config::CONFIG, reqwest_client, utils::serenity::suppress_embeds};
+use crate::{config::CONFIG, http, utils::serenity::suppress_embeds};
 
 static GITHUB: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"https?://github\.com/(?P<repo>[\w-]+/[\w.-]+)/blob/(?P<ref>\S+?)/(?P<file>[^\s?]+)(\?\S*)?#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
@@ -22,7 +21,7 @@ async fn github<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>> {
         .captures(m)
         .ok_or_else(|| eyre!("could not obtain captures"))?;
 
-    debug!("Handling GitHub link {}", &captures[0]);
+    tracing::debug!("Handling GitHub link {}", &captures[0]);
 
     let repo = &captures["repo"];
     let ref_ = &captures["ref"];
@@ -35,7 +34,7 @@ async fn github<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>> {
         .name("end")
         .and_then(|end| end.as_str().parse::<usize>().ok());
 
-    let lines: Vec<String> = reqwest_client::HTTP
+    let lines: Vec<String> = http::HTTP
         .get(format!(
             "https://raw.githubusercontent.com/{repo}/{ref_}/{file}"
         ))
@@ -72,11 +71,11 @@ async fn rust_playground<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>
         .captures(m)
         .ok_or_else(|| eyre!("could not obtain captures"))?;
 
-    debug!("Handling Rust playground link {}", &captures[0]);
+    tracing::debug!("Handling Rust playground link {}", &captures[0]);
 
     let gist_id = &captures["gist"];
 
-    let gist = reqwest_client::HTTP
+    let gist = http::HTTP
         .get(format!(
             "https://gist.githubusercontent.com/rust-play/{gist_id}/raw/playground.rs"
         ))
@@ -105,11 +104,11 @@ async fn go_playground<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>> 
         .captures(m)
         .ok_or_else(|| eyre!("could not obtain captures"))?;
 
-    debug!("Handling Go playground link {}", &captures[0]);
+    tracing::debug!("Handling Go playground link {}", &captures[0]);
 
     let id = &captures["id"];
 
-    let code = reqwest_client::HTTP
+    let code = http::HTTP
         .get("https://go.dev/_/share")
         .query(&[("id", &id)])
         .send()

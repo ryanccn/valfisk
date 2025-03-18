@@ -4,11 +4,11 @@
 
 use eyre::Result;
 use poise::{
-    serenity_prelude::{self as serenity, Mentionable as _},
     CreateReply,
+    serenity_prelude::{self as serenity, Mentionable as _},
 };
 
-use crate::{schedule, Context};
+use crate::{Context, schedule};
 
 /// Rotate color roles to a random color
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]

@@ -9,7 +9,7 @@ use std::sync::LazyLock;
 use eyre::Result;
 
 use super::log::format_user;
-use crate::{config::CONFIG, utils, Data};
+use crate::{config::CONFIG, utils};
 
 static URL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
@@ -19,11 +19,7 @@ static URL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
-pub async fn handle(
-    ctx: &serenity::Context,
-    data: &Data,
-    message: &serenity::Message,
-) -> Result<bool> {
+pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Result<bool> {
     if message.guild_id != CONFIG.guild_id {
         return Ok(false);
     }
@@ -32,7 +28,7 @@ pub async fn handle(
         return Ok(false);
     }
 
-    if let Some(safe_browsing) = &data.safe_browsing {
+    if let Some(safe_browsing) = &ctx.data::<crate::Data>().safe_browsing {
         let content = message.content.to_string();
 
         let matches = safe_browsing

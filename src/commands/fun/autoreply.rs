@@ -2,10 +2,10 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use eyre::{eyre, Result};
+use eyre::{Result, eyre};
 use poise::{
-    serenity_prelude::{CreateEmbed, Timestamp},
     CreateReply,
+    serenity_prelude::{CreateEmbed, Timestamp},
 };
 
 use crate::Context;
@@ -28,13 +28,13 @@ pub async fn autoreply(ctx: Context<'_>) -> Result<()> {
 async fn list(ctx: Context<'_>) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
-    let data = ctx.data();
-    let storage = data
+    let data = ctx
+        .data()
         .storage
         .as_ref()
-        .ok_or_else(|| eyre!("storage is not available"))?;
-
-    let data = storage.getall_autoreply().await?;
+        .ok_or_else(|| eyre!("storage is not available"))?
+        .getall_autoreply()
+        .await?;
 
     ctx.send(
         CreateReply::default().embed(
@@ -64,13 +64,12 @@ async fn add(
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
-    let data = ctx.data();
-    let storage = data
+    ctx.data()
         .storage
         .as_ref()
-        .ok_or_else(|| eyre!("storage is not available"))?;
-
-    storage.add_autoreply(&keyword, &reply).await?;
+        .ok_or_else(|| eyre!("storage is not available"))?
+        .add_autoreply(&keyword, &reply)
+        .await?;
 
     ctx.send(
         CreateReply::default().embed(
@@ -94,13 +93,12 @@ async fn delete(
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
-    let data = ctx.data();
-    let storage = data
+    ctx.data()
         .storage
         .as_ref()
-        .ok_or_else(|| eyre!("storage is not available"))?;
-
-    storage.del_autoreply(&keyword).await?;
+        .ok_or_else(|| eyre!("storage is not available"))?
+        .del_autoreply(&keyword)
+        .await?;
 
     ctx.send(
         CreateReply::default().embed(
@@ -126,13 +124,12 @@ async fn delete(
 async fn delete_all(ctx: Context<'_>) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
-    let data = ctx.data();
-    let storage = data
+    ctx.data()
         .storage
         .as_ref()
-        .ok_or_else(|| eyre!("storage is not available"))?;
-
-    storage.delall_autoreply().await?;
+        .ok_or_else(|| eyre!("storage is not available"))?
+        .delall_autoreply()
+        .await?;
 
     ctx.send(
         CreateReply::default().embed(

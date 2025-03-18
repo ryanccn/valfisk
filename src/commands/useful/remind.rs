@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use eyre::{eyre, Result};
+use eyre::Result;
 use poise::serenity_prelude::{self as serenity, Mentionable as _};
 use tokio::{task, time};
 
@@ -21,112 +21,74 @@ pub async fn remind(
     if let Ok(duration) = humantime::parse_duration(&duration) {
         if let Some(member) = ctx.author_member().await {
             if let Some(channel) = ctx.guild_channel().await {
-                let end = chrono::Utc::now() + duration;
+                if ctx.guild().is_some_and(|guild| {
+                    guild.user_permissions_in(&channel, &member).send_messages()
+                }) {
+                    let end = chrono::Utc::now() + duration;
 
-                task::spawn({
-                    let http = ctx.serenity_context().http.clone();
-                    let author = ctx.author().id;
-                    let content = content.clone();
-                    let embed_author =
-                        serenity::CreateEmbedAuthor::new(member.user.tag()).icon_url(member.face());
+                    task::spawn({
+                        let http = ctx.serenity_context().http.clone();
+                        let author = ctx.author().id;
+                        let content = content.clone();
+                        let embed_author = serenity::CreateEmbedAuthor::new(member.user.tag())
+                            .icon_url(member.face());
 
-                    async move {
-                        time::sleep(duration).await;
+                        async move {
+                            time::sleep(duration).await;
 
-                        if let Err(err) = channel
-                            .send_message(
-                                &http,
-                                serenity::CreateMessage::default()
-                                    .content(author.mention().to_string())
-                                    .embed(
-                                        serenity::CreateEmbed::default()
-                                            .title("Reminder")
-                                            .description(
-                                                content
-                                                    .unwrap_or_else(|| "*No content*".to_owned()),
-                                            )
-                                            .author(embed_author)
-                                            .color(0x3bc9db),
-                                    ),
-                            )
-                            .await
-                        {
-                            tracing::error!("{err:?}");
-                        };
-                    }
-                });
+                            if let Err(err) =
+                                channel
+                                    .send_message(
+                                        &http,
+                                        serenity::CreateMessage::default()
+                                            .content(author.mention().to_string())
+                                            .embed(
+                                                serenity::CreateEmbed::default()
+                                                    .title("Reminder")
+                                                    .description(content.unwrap_or_else(|| {
+                                                        "*No content*".to_owned()
+                                                    }))
+                                                    .author(embed_author)
+                                                    .color(0x3bc9db),
+                                            ),
+                                    )
+                                    .await
+                            {
+                                tracing::error!("{err:?}");
+                            };
+                        }
+                    });
 
-                ctx.send(
-                    poise::CreateReply::default().embed(
-                        serenity::CreateEmbed::default()
-                            .title("Reminder set!")
-                            .field(
-                                "Time",
-                                format!("<t:{0}:F> (<t:{0}:R>)", end.timestamp()),
-                                false,
-                            )
-                            .field(
-                                "Content",
-                                content.clone().unwrap_or_else(|| "*No content*".to_owned()),
-                                false,
-                            )
-                            .author(
-                                serenity::CreateEmbedAuthor::new(member.user.tag())
-                                    .icon_url(member.face()),
-                            )
-                            .color(0x3bc9db),
-                    ),
-                )
-                .await?;
-            } else {
-                ctx.say("Error: Guild channel unavailable!").await?;
+                    ctx.send(
+                        poise::CreateReply::default().embed(
+                            serenity::CreateEmbed::default()
+                                .title("Reminder set!")
+                                .field(
+                                    "Time",
+                                    format!("<t:{0}:F> (<t:{0}:R>)", end.timestamp()),
+                                    false,
+                                )
+                                .field(
+                                    "Content",
+                                    content.clone().unwrap_or_else(|| "*No content*".to_owned()),
+                                    false,
+                                )
+                                .author(
+                                    serenity::CreateEmbedAuthor::new(member.user.tag())
+                                        .icon_url(member.face()),
+                                )
+                                .color(0x3bc9db),
+                        ),
+                    )
+                    .await?;
+
+                    return Ok(());
+                }
             }
-        } else {
-            ctx.say("Error: Member unavailable!").await?;
-        };
-    } else {
-        ctx.say("Error: Invalid duration!").await?;
-    };
+        }
+    }
 
-    Ok(())
-}
-
-/// Configure self-timeout transparency
-#[poise::command(
-    rename = "self-timeout-transparency",
-    slash_command,
-    guild_only,
-    ephemeral
-)]
-pub async fn transparency(
-    ctx: Context<'_>,
-    #[description = "Whether transparency is on or off"] status: bool,
-) -> Result<()> {
-    let data = ctx.data();
-    let storage = data
-        .storage
-        .as_ref()
-        .ok_or_else(|| eyre!("storage is not available for the transparency feature"))?;
-
-    storage
-        .set_self_timeout_transparency(ctx.author().id.get(), &status)
-        .await?;
-
-    let desc = if status {
-        "Your self-timeouts will now be publicly logged to the channel that you ran the self-timeout in."
-    } else {
-        "Your self-timeouts will no longer be publicly logged."
-    };
-
-    ctx.send(
-        poise::CreateReply::default().embed(
-            serenity::CreateEmbed::default()
-                .title("Self-timeout transparency updated!")
-                .description(desc)
-                .color(0x4ade80),
-        ),
-    )
-    .await?;
+    ctx.say("Failed to set reminder!").await?;
 
     Ok(())
 }

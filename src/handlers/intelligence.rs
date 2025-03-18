@@ -4,47 +4,25 @@
 
 use poise::serenity_prelude::{self as serenity, Mentionable as _};
 
-use eyre::{eyre, Result};
+use eyre::Result;
 use std::time::Duration;
 use tokio::time;
 
-use crate::{config::CONFIG, intelligence, utils::spawn_abort_on_drop};
-
-async fn is_administrator(ctx: &serenity::Context, message: &serenity::Message) -> Result<bool> {
-    let member = message.member(&ctx).await?;
-
-    let guild = message
-        .guild(&ctx.cache)
-        .ok_or_else(|| eyre!("could not obtain guild"))?;
-
-    let default_channel = guild
-        .default_channel(message.author.id)
-        .ok_or_else(|| eyre!("could not obtain default guild channel"))?;
-
-    Ok(guild
-        .user_permissions_in(default_channel, &member)
-        .administrator())
-}
+use crate::{config::CONFIG, intelligence, utils};
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
 pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
-    if CONFIG.intelligence_secret.is_none() {
-        return Ok(());
-    }
-
-    if message.guild_id != CONFIG.guild_id {
-        return Ok(());
-    }
-
-    if message
-        .flags
-        .is_some_and(|flags| flags.contains(serenity::MessageFlags::SUPPRESS_NOTIFICATIONS))
+    if CONFIG.intelligence_secret.is_none()
+        || message.guild_id != CONFIG.guild_id
+        || message
+            .flags
+            .is_some_and(|flags| flags.contains(serenity::MessageFlags::SUPPRESS_NOTIFICATIONS))
     {
         return Ok(());
     }
 
     if let Ok(member) = message.member(&ctx).await {
-        if is_administrator(ctx, message).await.ok() != Some(true)
+        if utils::serenity::is_administrator(ctx, &member).ok() != Some(true)
             && !member
                 .roles
                 .iter()
@@ -60,9 +38,9 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                 return Ok(());
             }
 
-            let typing_task = spawn_abort_on_drop({
+            let typing_task = utils::spawn_abort_on_drop({
                 let http = ctx.http.clone();
-                let channel = message.channel_id;
+                let channel_id = message.channel_id;
 
                 async move {
                     let _ = time::timeout(Duration::from_secs(60), async move {
@@ -70,24 +48,19 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
 
                         loop {
                             interval.tick().await;
-                            let _ = http.broadcast_typing(channel).await;
+                            let _ = http.broadcast_typing(channel_id).await;
                         }
                     })
                     .await;
                 }
             });
 
-            let username = message.author.tag();
-            let display_name = message.author.global_name.clone().map(|s| s.into_string());
-
-            let nick = member.nick.as_ref().map(|s| s.to_owned().into_string());
-
             let resp = intelligence::query(intelligence::Request {
                 query: query.to_owned(),
                 metadata: intelligence::RequestMetadata {
-                    username,
-                    display_name,
-                    nick,
+                    username: message.author.tag(),
+                    display_name: message.author.global_name.clone().map(|s| s.into_string()),
+                    nick: member.nick.clone().map(|s| s.into_string()),
                 },
             })
             .await?;

@@ -89,7 +89,6 @@
 
           command = ''
             reuse lint
-            reuse spdx > "$out"
           '';
         };
       };

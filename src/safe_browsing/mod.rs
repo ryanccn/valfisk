@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use eyre::eyre;
 use sha2::{Digest as _, Sha256};
 
@@ -15,7 +15,7 @@ use std::{
 };
 use tokio::sync::RwLock;
 
-use crate::reqwest_client::HTTP;
+use crate::http::HTTP;
 use crate::utils::Pluralize as _;
 
 mod canonicalize;
@@ -102,10 +102,10 @@ impl SafeBrowsing {
                 .unwrap_or_default();
 
             for removal in &list_update.removals {
-                let mut reversed_indices = removal.raw_indices.indices.clone();
-                reversed_indices.sort_unstable();
+                let mut indices = removal.raw_indices.indices.clone();
+                indices.sort_unstable();
 
-                for idx in reversed_indices.into_iter().rev() {
+                for idx in indices.into_iter().rev() {
                     if idx < current_prefixes.len() {
                         current_prefixes.remove(idx);
                     }

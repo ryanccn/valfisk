@@ -2,12 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use std::env;
-
-use poise::serenity_prelude::{self as serenity, Mentionable as _};
-
 use eyre::Result;
-use tracing::debug;
+use poise::serenity_prelude::{self as serenity, Mentionable as _};
 
 use crate::config::CONFIG;
 
@@ -27,41 +23,68 @@ async fn get_starboard_channel(
     Ok(CONFIG.starboard_channel)
 }
 
-#[allow(clippy::redundant_closure_for_method_calls)]
-fn is_significant_reaction(reaction: &serenity::MessageReaction) -> Result<bool> {
-    let threshold = env::var("STARBOARD_THRESHOLD").map_or(Ok(3), |s| s.parse::<u64>())?;
+#[derive(Default, Debug)]
+pub enum StarboardEmojis {
+    Any,
+    Allowlist(Vec<String>),
+    #[default]
+    None,
+}
 
-    if reaction.count < threshold {
-        return Ok(false);
-    }
-
-    Ok(match env::var("STARBOARD_EMOJIS") {
-        Ok(starboard_emojis) if starboard_emojis == "ANY" => true,
-
-        Ok(starboard_emojis) => {
-            let emojis = starboard_emojis
-                .split(',')
-                .map(|c| c.trim().to_owned())
-                .collect::<Vec<_>>();
-
-            match &reaction.reaction_type {
-                serenity::ReactionType::Custom { id, .. } => emojis.contains(&id.to_string()),
+impl StarboardEmojis {
+    pub fn allow(&self, reaction: &serenity::MessageReaction) -> bool {
+        match self {
+            Self::Any => true,
+            Self::Allowlist(list) => match &reaction.reaction_type {
+                serenity::ReactionType::Custom { id, .. } => list.contains(&id.to_string()),
                 serenity::ReactionType::Unicode(fixed_string) => {
-                    emojis.contains(&fixed_string.to_string())
+                    list.contains(&fixed_string.to_string())
                 }
                 _ => false,
-            }
+            },
+            Self::None => false,
         }
+    }
+}
 
-        Err(_) => false,
-    })
+impl std::str::FromStr for StarboardEmojis {
+    type Err = eyre::Report;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s = s.trim();
+
+        if s == "*" {
+            Ok(Self::Any)
+        } else if s.is_empty() {
+            Ok(Self::None)
+        } else {
+            Ok(Self::Allowlist(
+                s.split(',')
+                    .map(|c| c.trim().to_owned())
+                    .collect::<Vec<_>>(),
+            ))
+        }
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for StarboardEmojis {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s: String = serde::Deserialize::deserialize(deserializer)?;
+        s.parse().map_err(serde::de::Error::custom)
+    }
+}
+
+fn is_significant_reaction(reaction: &serenity::MessageReaction) -> bool {
+    CONFIG.starboard_emojis.allow(reaction) && reaction.count >= CONFIG.starboard_threshold
 }
 
 fn get_significant_reactions(message: &serenity::Message) -> Vec<(serenity::ReactionType, u64)> {
     let mut collected_reactions: Vec<(serenity::ReactionType, u64)> = message
         .reactions
         .iter()
-        .filter(|r| is_significant_reaction(r).is_ok_and(|b| b))
+        .filter(|r| is_significant_reaction(r))
         .map(|r| (r.reaction_type.clone(), r.count))
         .collect();
 
@@ -123,16 +146,12 @@ async fn make_message_embed<'a>(
 
     builder = builder.color(0xffd43b);
 
-    if let Some(guild_id) = message
-        .channel_id
-        .to_guild_channel(&ctx, None)
-        .await
-        .ok()
-        .map(|c| c.guild_id)
-    {
+    if let Some(guild_id) = message.guild_id {
         if let Ok(member) = guild_id.member(&ctx, message.author.id).await {
-            if let Some(top_role) = member.roles(&ctx.cache).unwrap_or_default().first() {
-                builder = builder.color(top_role.colour);
+            if let Some(top_role_id) = member.roles.first() {
+                if let Ok(role) = guild_id.role(&ctx.http, *top_role_id).await {
+                    builder = builder.color(role.colour);
+                }
             }
         }
     }
@@ -141,12 +160,8 @@ async fn make_message_embed<'a>(
 }
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
-pub async fn handle(
-    ctx: &serenity::Context,
-    data: &crate::Data,
-    message: &serenity::Message,
-) -> Result<()> {
-    if let Some(storage) = &data.storage {
+pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
+    if let Some(storage) = &ctx.data::<crate::Data>().storage {
         if let Some(starboard) = get_starboard_channel(&ctx, &message.channel_id).await? {
             let significant_reactions = get_significant_reactions(message);
 
@@ -162,9 +177,10 @@ pub async fn handle(
 
                     storage.del_starboard(message.id.get()).await?;
 
-                    debug!(
+                    tracing::debug!(
                         "Deleted starboard message {} for {}",
-                        existing_starboard_message, message.id
+                        existing_starboard_message,
+                        message.id
                     );
                 } else {
                     starboard
@@ -178,9 +194,10 @@ pub async fn handle(
                         )
                         .await?;
 
-                    debug!(
+                    tracing::debug!(
                         "Edited starboard message {} for {}",
-                        existing_starboard_message, message.id
+                        existing_starboard_message,
+                        message.id
                     );
                 }
             } else if !significant_reactions.is_empty() {
@@ -206,9 +223,10 @@ pub async fn handle(
                     .set_starboard(message.id.get(), &starboard_message.id.get())
                     .await?;
 
-                debug!(
+                tracing::debug!(
                     "Created starboard message {} for {}",
-                    starboard_message.id, message.id
+                    starboard_message.id,
+                    message.id
                 );
             }
         }
@@ -217,19 +235,19 @@ pub async fn handle(
     Ok(())
 }
 
-#[tracing::instrument(skip(ctx, data))]
+#[tracing::instrument(skip(ctx))]
 pub async fn handle_deletion(
     ctx: &serenity::Context,
-    data: &crate::Data,
     deleted_message_id: &serenity::MessageId,
     channel_id: &serenity::ChannelId,
 ) -> Result<()> {
-    if let Some(storage) = &data.storage {
+    if let Some(storage) = &ctx.data::<crate::Data>().storage {
         if let Some(starboard_channel) = get_starboard_channel(&ctx, channel_id).await? {
             if let Some(starboard_id) = storage.get_starboard(deleted_message_id.get()).await? {
-                debug!(
+                tracing::debug!(
                     "Deleted starboard message {} for {} (source deleted)",
-                    starboard_id, deleted_message_id
+                    starboard_id,
+                    deleted_message_id
                 );
 
                 storage.del_starboard(deleted_message_id.get()).await?;

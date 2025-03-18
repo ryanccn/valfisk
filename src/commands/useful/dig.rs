@@ -3,15 +3,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 use poise::{
-    serenity_prelude::{CreateEmbed, CreateEmbedFooter, Timestamp},
     ChoiceParameter, CreateReply,
+    serenity_prelude::{CreateEmbed, CreateEmbedFooter, Timestamp},
 };
 
 use hickory_resolver::{
+    TokioAsyncResolver,
     config::{NameServerConfig, Protocol, ResolverConfig, ResolverOpts},
     error::ResolveErrorKind,
     proto::rr::RecordType,
-    TokioAsyncResolver,
 };
 
 use eyre::Result;

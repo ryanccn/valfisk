@@ -6,7 +6,7 @@ use eyre::Result;
 use std::time::Duration;
 use tokio::time::sleep;
 
-use poise::{serenity_prelude::CreateEmbed, CreateReply};
+use poise::{CreateReply, serenity_prelude::CreateEmbed};
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, Pid, ProcessRefreshKind, RefreshKind, System};
 
 use crate::Context;
@@ -58,8 +58,8 @@ pub async fn sysinfo(
             "Memory",
             format!(
                 "{}/{} ({:.2}%)",
-                bytesize::to_string(sys.used_memory(), true),
-                bytesize::to_string(sys.total_memory(), true),
+                bytesize::ByteSize::b(sys.used_memory()).display().iec(),
+                bytesize::ByteSize::b(sys.total_memory()).display().iec(),
                 (sys.used_memory() as f64) / (sys.total_memory() as f64) * 100.
             ),
             true,
@@ -84,7 +84,10 @@ pub async fn sysinfo(
             )
             .field(
                 "Process memory",
-                bytesize::to_string(proc.memory(), true),
+                bytesize::ByteSize::b(proc.memory())
+                    .display()
+                    .iec()
+                    .to_string(),
                 true,
             )
             .field(

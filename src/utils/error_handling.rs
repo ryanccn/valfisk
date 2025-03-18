@@ -6,14 +6,13 @@ use std::fmt::Debug;
 
 use nanoid::nanoid;
 use poise::{
+    CreateReply,
     serenity_prelude::{
         CreateEmbed, CreateEmbedFooter, CreateMessage, Mentionable as _, Timestamp,
     },
-    CreateReply,
 };
 
-use crate::{config::CONFIG, Context};
-use tracing::error;
+use crate::{Context, config::CONFIG};
 
 /// A wrapper type that encapsulates errors ([`eyre::Report`]) or panic strings ([`Option<String>`]).
 pub enum ErrorOrPanic<'a> {
@@ -58,7 +57,7 @@ impl ValfiskError<'_> {
     /// Log the error to the console.
     #[tracing::instrument(skip(self))]
     pub fn handle_log(&self) {
-        error!(
+        tracing::error!(
             {
                 id = self.error_id,
                 command = self.ctx.invocation_string(),

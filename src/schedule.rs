@@ -7,12 +7,12 @@ use poise::serenity_prelude::{EditRole, Http, RoleId};
 use rand::Rng as _;
 use std::{sync::Arc, time::Duration};
 use tokio::{task::JoinSet, time};
-use tracing::{error, info, info_span, trace, Instrument as _};
+use tracing::Instrument as _;
 
 use chrono::{NaiveTime, TimeDelta, Timelike, Utc};
-use eyre::{eyre, Result};
+use eyre::{Result, eyre};
 
-use crate::{config::CONFIG, Data};
+use crate::{Data, config::CONFIG};
 
 #[tracing::instrument(skip(http))]
 pub async fn rotate_color_roles(
@@ -24,13 +24,13 @@ pub async fn rotate_color_roles(
     if let Some(guild) = CONFIG.guild_id {
         for role in &roles {
             let mut role = guild.role(http, *role).await?;
-            let color = {
-                let mut rand = rand::thread_rng();
-                rand.gen_range(0x000000..=0xffffff)
+            let color: u32 = {
+                let mut rand = rand::rng();
+                rand.random_range(0x000000..=0xffffff)
             };
 
             role.edit(http, EditRole::default().colour(color)).await?;
-            info!("Rotated role {} color => {:#x}", role.id, color);
+            tracing::info!("Rotated role {} color => {:#x}", role.id, color);
         }
     }
 
@@ -53,18 +53,18 @@ pub async fn start(http: Arc<Http>, data: Arc<Data>) -> Result<()> {
                     .single()
                     .ok_or_else(|| eyre!("could not obtain next run time"))?;
 
-                trace!("Next run at {next}");
+                tracing::trace!("Next run at {next}");
 
                 time::sleep((next - now).to_std()?).await;
 
                 if let Err(err) = rotate_color_roles(&http, None).await {
-                    error!("{err:?}");
+                    tracing::error!("{err:?}");
                 }
 
                 time::sleep(Duration::from_secs(1)).await;
             }
         }
-        .instrument(info_span!("rotate_color_roles"))
+        .instrument(tracing::info_span!("rotate_color_roles"))
     });
 
     tasks.spawn({
@@ -80,20 +80,20 @@ pub async fn start(http: Arc<Http>, data: Arc<Data>) -> Result<()> {
                     .and_then(|t| t.with_nanosecond(0))
                     .ok_or_else(|| eyre!("could not obtain next run time"))?;
 
-                trace!("Next run at {next}");
+                tracing::trace!("Next run at {next}");
 
                 time::sleep((next - now).to_std()?).await;
 
                 if let Some(safe_browsing) = &data.safe_browsing {
                     if let Err(err) = safe_browsing.update().await {
-                        error!("{err:?}");
+                        tracing::error!("{err:?}");
                     }
                 }
 
                 time::sleep(Duration::from_secs(1)).await;
             }
         }
-        .instrument(info_span!("safe_browsing"))
+        .instrument(tracing::info_span!("safe_browsing"))
     });
 
     while let Some(res) = tasks.join_next().await {

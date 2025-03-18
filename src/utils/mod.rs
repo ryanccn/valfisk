@@ -2,7 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use tokio::task::JoinHandle;
+use std::ops::{Deref, DerefMut};
+use tokio::task;
 
 pub mod axum;
 pub mod error_handling;
@@ -15,16 +16,16 @@ pub fn truncate(s: &str, new_len: usize) -> String {
     s.chars().take(new_len).collect()
 }
 
-pub struct JoinHandleAbortOnDrop<T>(JoinHandle<T>);
+pub struct JoinHandleAbortOnDrop<T>(task::JoinHandle<T>);
 
-impl<T> std::ops::Deref for JoinHandleAbortOnDrop<T> {
-    type Target = JoinHandle<T>;
+impl<T> Deref for JoinHandleAbortOnDrop<T> {
+    type Target = task::JoinHandle<T>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl<T> std::ops::DerefMut for JoinHandleAbortOnDrop<T> {
+impl<T> DerefMut for JoinHandleAbortOnDrop<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
@@ -38,8 +39,8 @@ impl<T> Drop for JoinHandleAbortOnDrop<T> {
 
 pub fn spawn_abort_on_drop<F>(future: F) -> JoinHandleAbortOnDrop<F::Output>
 where
-    F: std::future::Future + Send + 'static,
+    F: Future + Send + 'static,
     F::Output: Send + 'static,
 {
-    JoinHandleAbortOnDrop(tokio::task::spawn(future))
+    JoinHandleAbortOnDrop(task::spawn(future))
 }

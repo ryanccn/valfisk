@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 use eyre::Result;
-use poise::{serenity_prelude as serenity, CreateReply};
+use poise::{CreateReply, serenity_prelude as serenity};
 
-use crate::{reqwest_client::HTTP, Context};
+use crate::{Context, http::HTTP};
 
 #[derive(serde::Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -38,6 +38,7 @@ async fn translate_call(src: &str) -> Result<GoogleTranslateResult> {
             ("source", "input"),
             ("q", src),
         ])
+        .header("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36")
         .send()
         .await?
         .error_for_status()?

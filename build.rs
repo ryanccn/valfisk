@@ -6,12 +6,12 @@ use std::{env, time::SystemTime};
 
 fn main() {
     println!(
-        "cargo:rustc-env=METADATA_HOST={}",
-        env::var("HOST").unwrap()
-    );
-    println!(
         "cargo:rustc-env=METADATA_TARGET={}",
         env::var("TARGET").unwrap()
+    );
+    println!(
+        "cargo:rustc-env=METADATA_HOST={}",
+        env::var("HOST").unwrap()
     );
 
     println!("cargo:rerun-if-changed-env=TARGET");

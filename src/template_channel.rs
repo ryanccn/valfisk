@@ -13,7 +13,7 @@ const fn default_to_false() -> bool {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
-pub struct Config {
+pub struct Template {
     #[serde(default)]
     pub components: Vec<Component>,
 }
@@ -69,13 +69,13 @@ pub struct TextComponent {
     text: String,
 }
 
-impl Config {
+impl Template {
     pub fn parse(source: &str) -> Result<Self> {
         Ok(toml::from_str(source)?)
     }
 }
 
-impl Config {
+impl Template {
     pub fn to_messages(&self) -> Vec<CreateMessage> {
         self.components
             .iter()

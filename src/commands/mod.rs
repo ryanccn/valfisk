@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use crate::Context;
+use crate::Data;
 
 mod fun;
 mod moderation;
@@ -21,12 +21,7 @@ macro_rules! command {
     };
 }
 
-pub fn to_vec() -> Vec<
-    poise::Command<
-        <Context<'static> as poise::_GetGenerics>::U,
-        <Context<'static> as poise::_GetGenerics>::E,
-    >,
-> {
+pub fn to_vec() -> Vec<poise::Command<Data, eyre::Report>> {
     vec![
         command!(useful, dig),
         command!(useful, lighthouse),

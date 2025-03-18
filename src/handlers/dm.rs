@@ -5,7 +5,7 @@
 use poise::serenity_prelude as serenity;
 
 use eyre::Result;
-use humansize::{format_size, FormatSizeOptions};
+use humansize::{FormatSizeOptions, format_size};
 
 use crate::config::CONFIG;
 

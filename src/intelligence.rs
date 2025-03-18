@@ -2,10 +2,10 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use eyre::{eyre, Result};
+use eyre::{Result, eyre};
 use serde::{Deserialize, Serialize};
 
-use crate::{config::CONFIG, reqwest_client::HTTP};
+use crate::{config::CONFIG, http::HTTP};
 
 static API_URL: &str = "https://intelligence.valfisk.ryanccn.dev/v2";
 

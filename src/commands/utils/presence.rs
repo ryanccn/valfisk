@@ -2,12 +2,11 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use poise::{serenity_prelude as serenity, CreateReply};
+use poise::{CreateReply, serenity_prelude as serenity};
 
 use eyre::Result;
-use tracing::info;
 
-use crate::{storage::presence::PresenceChoice, Context};
+use crate::{Context, storage::presence::PresenceChoice};
 
 /// Modify the Discord presence shown by the bot
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
@@ -46,12 +45,12 @@ pub async fn presence(
 }
 
 #[tracing::instrument(skip_all)]
-pub async fn restore(ctx: &serenity::Context, data: &crate::Data) -> Result<()> {
-    if let Some(storage) = &data.storage {
+pub async fn restore(ctx: &serenity::Context) -> Result<()> {
+    if let Some(storage) = &ctx.data::<crate::Data>().storage {
         if let Some(presence) = storage.get_presence().await? {
             ctx.set_presence(Some(presence.to_activity()), serenity::OnlineStatus::Online);
 
-            info!("Restored presence from Redis");
+            tracing::info!("Restored presence from Redis");
         }
     }
 

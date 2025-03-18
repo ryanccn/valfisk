@@ -2,26 +2,16 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
+use serde::Deserialize;
 use std::sync::LazyLock;
 
-use poise::serenity_prelude::{ChannelId, GuildId, RoleId, Token, TokenError};
-use serde::{Deserialize, Deserializer};
+use poise::serenity_prelude::{ChannelId, GuildId, RoleId};
 
-fn deserialize_token_from_str<'de, D>(deserializer: D) -> Result<Token, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let token: String = Deserialize::deserialize(deserializer)?;
-
-    token
-        .parse()
-        .map_err(|e: TokenError| serde::de::Error::custom(e))
-}
+use crate::handlers::starboard::StarboardEmojis;
 
 #[derive(Deserialize, Debug)]
 pub struct EnvConfig {
-    #[serde(deserialize_with = "deserialize_token_from_str")]
-    pub discord_token: Token,
+    pub discord_token: String,
     pub redis_url: Option<String>,
 
     pub guild_id: Option<GuildId>,
@@ -30,13 +20,20 @@ pub struct EnvConfig {
     pub fren_starboard_channel: Option<ChannelId>,
     pub starboard_channel: Option<ChannelId>,
 
+    #[serde(default)]
+    pub starboard_emojis: StarboardEmojis,
+    #[serde(default = "defaults::starboard_threshold")]
+    pub starboard_threshold: u64,
+
     pub moderation_logs_channel: Option<ChannelId>,
-    pub dm_logs_channel: Option<ChannelId>,
     pub message_logs_channel: Option<ChannelId>,
     pub member_logs_channel: Option<ChannelId>,
+    pub dm_logs_channel: Option<ChannelId>,
     pub error_logs_channel: Option<ChannelId>,
 
     pub moderator_role: Option<RoleId>,
+    #[serde(default)]
+    pub logs_excluded_channels: Vec<ChannelId>,
 
     #[serde(default)]
     pub random_color_roles: Vec<RoleId>,
@@ -49,7 +46,30 @@ pub struct EnvConfig {
 
     pub kofi_verification_token: Option<String>,
     pub kofi_notify_channel: Option<ChannelId>,
+
+    #[serde(default = "defaults::host")]
+    pub host: String,
+    #[serde(default = "defaults::port")]
+    pub port: u16,
 }
 
 pub static CONFIG: LazyLock<EnvConfig> =
     LazyLock::new(|| envy::from_env().expect("could not parse config from environment"));
+
+mod defaults {
+    pub fn host() -> String {
+        #[cfg(debug_assertions)]
+        return "127.0.0.1".into();
+
+        #[cfg(not(debug_assertions))]
+        return "0.0.0.0".into();
+    }
+
+    pub fn port() -> u16 {
+        8080
+    }
+
+    pub fn starboard_threshold() -> u64 {
+        3
+    }
+}

@@ -5,7 +5,7 @@
 use eyre::Result;
 use poise::serenity_prelude as serenity;
 
-use crate::{config::CONFIG, Context};
+use crate::{Context, config::CONFIG};
 
 /// Timeout a member
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]

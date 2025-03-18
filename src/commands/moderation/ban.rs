@@ -5,7 +5,7 @@
 use eyre::Result;
 use poise::serenity_prelude as serenity;
 
-use crate::{config::CONFIG, Context};
+use crate::{Context, config::CONFIG};
 
 /// Ban a member
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
@@ -23,7 +23,7 @@ pub async fn ban(
     #[description = "Days of messages to delete (default: 0)"]
     #[min = 0]
     #[max = 7]
-    delete_message_days: Option<u8>,
+    delete_message_days: Option<u32>,
 
     #[description = "Notify with a direct message (default: true)"] dm: Option<bool>,
 ) -> Result<()> {

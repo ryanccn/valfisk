@@ -5,7 +5,7 @@
 use std::env::consts::{ARCH, OS};
 
 use eyre::Result;
-use poise::{serenity_prelude::CreateEmbed, CreateReply};
+use poise::{CreateReply, serenity_prelude::CreateEmbed};
 
 use crate::Context;
 

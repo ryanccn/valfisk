@@ -5,10 +5,10 @@
 use eyre::Result;
 use std::{collections::HashMap, time::Duration};
 
-use poise::{serenity_prelude as serenity, CreateReply};
+use poise::{CreateReply, serenity_prelude as serenity};
 use serde::{Deserialize, Serialize};
 
-use crate::{config::CONFIG, reqwest_client::HTTP, Context};
+use crate::{Context, config::CONFIG, http::HTTP};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]

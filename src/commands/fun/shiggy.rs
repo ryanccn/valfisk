@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 use eyre::{Report, Result};
-use poise::{serenity_prelude as serenity, CreateReply};
+use poise::{CreateReply, serenity_prelude as serenity};
 
-use crate::{utils::error_handling::ValfiskError, Context};
+use crate::{Context, utils::error_handling::ValfiskError};
 
 #[derive(serde::Deserialize)]
 struct SafebooruResponse {
@@ -27,7 +27,7 @@ pub async fn shiggy(
 ) -> Result<()> {
     ctx.defer().await?;
 
-    match crate::reqwest_client::HTTP
+    match crate::http::HTTP
         .get("https://safebooru.donmai.us/posts/random.json")
         .query(&[
             ("tags", "kemomimi-chan_(naga_u) naga_u"),
