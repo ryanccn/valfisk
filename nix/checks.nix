@@ -7,24 +7,15 @@
   perSystem =
     { pkgs, config, ... }:
     let
-      inherit (pkgs) lib;
-
       mkFlakeCheck =
-        {
-          name,
-          nativeBuildInputs ? [ ],
-          command,
-          includeCargoDeps ? false,
-          extraConfig ? { },
-        }:
+        args:
         pkgs.stdenv.mkDerivation (
           {
-            name = "check-${name}";
-            inherit nativeBuildInputs;
-            inherit (config.packages.valfisk) src;
+            name = "check-${args.name}";
+            src = config.packages.valfisk.src;
 
             buildPhase = ''
-              ${command}
+              ${args.command}
               touch "$out"
             '';
 
@@ -32,35 +23,41 @@
             dontInstall = true;
             dontFixup = true;
           }
-          // lib.optionalAttrs includeCargoDeps {
-            inherit (config.packages.valfisk) cargoDeps buildInputs;
-          }
-          // extraConfig
+          // (removeAttrs args [
+            "name"
+            "command"
+          ])
         );
     in
     {
       checks = {
         nixfmt = mkFlakeCheck {
           name = "nixfmt";
-          nativeBuildInputs = with pkgs; [ nixfmt-rfc-style ];
           command = "nixfmt --check **/*.nix";
+
+          src = self;
+          nativeBuildInputs = with pkgs; [ nixfmt-rfc-style ];
         };
 
         rustfmt = mkFlakeCheck {
           name = "rustfmt";
+          command = "cargo fmt --check";
 
           nativeBuildInputs = with pkgs; [
             cargo
             rustfmt
           ];
-
-          command = "cargo fmt --check";
         };
 
         clippy = mkFlakeCheck {
           name = "clippy";
-          includeCargoDeps = true;
+          command = ''
+            cargo clippy --all-features --all-targets --tests \
+              --offline --message-format=json \
+              | clippy-sarif | tee $out | sarif-fmt
+          '';
 
+          inherit (config.packages.valfisk) cargoDeps;
           nativeBuildInputs = with pkgs; [
             rustPlatform.cargoSetupHook
             cargo
@@ -69,27 +66,16 @@
             clippy-sarif
             sarif-fmt
           ];
-
-          command = ''
-            cargo clippy --all-features --all-targets --tests \
-              --offline --message-format=json \
-              | clippy-sarif | tee $out | sarif-fmt
-          '';
         };
 
         reuse = mkFlakeCheck {
           name = "reuse";
-          extraConfig = {
-            src = self;
-          };
+          command = "reuse lint";
 
+          src = self;
           nativeBuildInputs = with pkgs; [
             reuse
           ];
-
-          command = ''
-            reuse lint
-          '';
         };
       };
     };
