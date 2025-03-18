@@ -157,18 +157,12 @@ pub async fn edit(
 pub async fn delete(
     ctx: &serenity::Context,
     ids: LogMessageIds,
-    log: Option<&MessageLog>,
+    log: &MessageLog,
     timestamp: &serenity::Timestamp,
 ) -> Result<()> {
     if is_excluded_message(ctx, ids).await {
         return Ok(());
     }
-
-    let content = log.as_ref().and_then(|l| l.content.clone());
-    let attachments = log
-        .as_ref()
-        .map(|l| l.attachments.clone())
-        .unwrap_or_default();
 
     if let Some(logs_channel) = CONFIG.message_logs_channel {
         let mut embed_author = serenity::CreateEmbedAuthor::new("Message Deleted");
@@ -181,17 +175,13 @@ pub async fn delete(
         let mut embed = serenity::CreateEmbed::default()
             .author(embed_author)
             .field("Channel", ids.channel.mention().to_string(), false)
-            .field(
-                "Content",
-                content.map_or_else(|| "*Unknown*".to_owned(), |s| utils::truncate(&s, 1024)),
-                false,
-            )
+            .field("Content", &log.content, false)
             .field("Author", format_user(ids.author.as_ref()), false)
             .color(0xff6b6b)
             .timestamp(timestamp);
 
-        if !attachments.is_empty() {
-            embed = embed.field("Attachments", format_attachments(&attachments), false);
+        if !log.attachments.is_empty() {
+            embed = embed.field("Attachments", format_attachments(&log.attachments), false);
         }
 
         logs_channel

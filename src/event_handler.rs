@@ -73,11 +73,7 @@ impl serenity::EventHandler for EventHandler {
                     storage
                         .set_message_log(
                             event.message.id.get(),
-                            &MessageLog::new(
-                                Some(content.to_string()),
-                                Some(author),
-                                attachments.clone(),
-                            ),
+                            &MessageLog::new(content.as_str(), author, attachments.clone()),
                         )
                         .await?;
 
@@ -89,7 +85,7 @@ impl serenity::EventHandler for EventHandler {
                             guild: event.message.guild_id,
                             author: Some(author),
                         },
-                        logged_data.and_then(|l| l.content).as_deref(),
+                        logged_data.map(|l| l.content).as_deref(),
                         content.as_ref(),
                         &attachments,
                         &timestamp,
@@ -117,22 +113,24 @@ impl serenity::EventHandler for EventHandler {
                 let timestamp = serenity::Timestamp::now();
 
                 if let Some(storage) = &ctx.data::<crate::Data>().storage {
-                    let logged_data = storage.get_message_log(deleted_message_id.get()).await?;
+                    if let Some(logged_data) =
+                        storage.get_message_log(deleted_message_id.get()).await?
+                    {
+                        handlers::log::delete(
+                            &ctx,
+                            handlers::log::LogMessageIds {
+                                message: deleted_message_id,
+                                channel: channel_id,
+                                guild: guild_id,
+                                author: Some(logged_data.author),
+                            },
+                            &logged_data,
+                            &timestamp,
+                        )
+                        .await?;
 
-                    handlers::log::delete(
-                        &ctx,
-                        handlers::log::LogMessageIds {
-                            message: deleted_message_id,
-                            channel: channel_id,
-                            guild: guild_id,
-                            author: logged_data.as_ref().and_then(|data| data.author),
-                        },
-                        logged_data.as_ref(),
-                        &timestamp,
-                    )
-                    .await?;
-
-                    storage.del_message_log(deleted_message_id.get()).await?;
+                        storage.del_message_log(deleted_message_id.get()).await?;
+                    }
                 }
             }
 
