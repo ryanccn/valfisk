@@ -43,7 +43,7 @@
         nixfmt = mkFlakeCheck {
           name = "nixfmt";
           nativeBuildInputs = with pkgs; [ nixfmt-rfc-style ];
-          command = "nixfmt --check .";
+          command = "nixfmt --check **/*.nix";
         };
 
         rustfmt = mkFlakeCheck {
