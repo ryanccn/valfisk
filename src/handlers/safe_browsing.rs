@@ -20,10 +20,6 @@ static URL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
 pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Result<bool> {
-    if message.guild_id != CONFIG.guild_id {
-        return Ok(false);
-    }
-
     if message.author.id == ctx.cache.current_user().id {
         return Ok(false);
     }

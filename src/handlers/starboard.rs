@@ -9,15 +9,15 @@ use crate::config::CONFIG;
 
 async fn get_starboard_channel(
     http: impl serenity::CacheHttp,
-    message_channel: &serenity::ChannelId,
+    channel: serenity::ChannelId,
+    guild: Option<serenity::GuildId>,
 ) -> Result<Option<serenity::ChannelId>> {
-    let Some(message_channel) = message_channel.to_channel(&http, None).await?.guild() else {
+    let Some(guild_channel) = channel.to_guild_channel(&http, guild).await.ok() else {
         return Ok(None);
     };
 
-    if CONFIG.fren_category == message_channel.parent_id && CONFIG.fren_starboard_channel.is_some()
-    {
-        return Ok(CONFIG.fren_starboard_channel);
+    if CONFIG.private_category.is_some() && CONFIG.private_category == guild_channel.parent_id {
+        return Ok(CONFIG.private_starboard_channel);
     }
 
     Ok(CONFIG.starboard_channel)
@@ -146,11 +146,14 @@ async fn make_message_embed<'a>(
 
     builder = builder.color(0xffd43b);
 
-    if let Some(guild_id) = message.guild_id {
+    if let Some(guild_id) = message.guild_channel(&ctx).await.ok().map(|ch| ch.guild_id) {
         if let Ok(member) = guild_id.member(&ctx, message.author.id).await {
-            if let Some(top_role_id) = member.roles.first() {
-                if let Ok(role) = guild_id.role(&ctx.http, *top_role_id).await {
-                    builder = builder.color(role.colour);
+            for role_id in &member.roles {
+                if let Ok(role) = guild_id.role(&ctx.http, *role_id).await {
+                    if role.colour.0 != 0x99aab5 {
+                        builder = builder.color(role.colour);
+                        break;
+                    }
                 }
             }
         }
@@ -162,7 +165,9 @@ async fn make_message_embed<'a>(
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
 pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
     if let Some(storage) = &ctx.data::<crate::Data>().storage {
-        if let Some(starboard) = get_starboard_channel(&ctx, &message.channel_id).await? {
+        if let Some(starboard) =
+            get_starboard_channel(&ctx, message.channel_id, message.guild_id).await?
+        {
             let significant_reactions = get_significant_reactions(message);
 
             if let Some(existing_starboard_message) = storage
@@ -238,11 +243,12 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
 #[tracing::instrument(skip(ctx))]
 pub async fn handle_deletion(
     ctx: &serenity::Context,
-    deleted_message_id: &serenity::MessageId,
-    channel_id: &serenity::ChannelId,
+    deleted_message_id: serenity::MessageId,
+    channel_id: serenity::ChannelId,
+    guild_id: Option<serenity::GuildId>,
 ) -> Result<()> {
     if let Some(storage) = &ctx.data::<crate::Data>().storage {
-        if let Some(starboard_channel) = get_starboard_channel(&ctx, channel_id).await? {
+        if let Some(starboard_channel) = get_starboard_channel(&ctx, channel_id, guild_id).await? {
             if let Some(starboard_id) = storage.get_starboard(deleted_message_id.get()).await? {
                 tracing::debug!(
                     "Deleted starboard message {} for {} (source deleted)",

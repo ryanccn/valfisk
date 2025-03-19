@@ -2,10 +2,10 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use eyre::{Report, Result};
+use eyre::Result;
 use poise::{CreateReply, serenity_prelude as serenity};
 
-use crate::{Context, utils::error_handling::ValfiskError};
+use crate::{Context, http::HTTP};
 
 #[derive(serde::Deserialize)]
 struct SafebooruResponse {
@@ -27,7 +27,7 @@ pub async fn shiggy(
 ) -> Result<()> {
     ctx.defer().await?;
 
-    match crate::http::HTTP
+    let data: SafebooruResponse = HTTP
         .get("https://safebooru.donmai.us/posts/random.json")
         .query(&[
             ("tags", "kemomimi-chan_(naga_u) naga_u"),
@@ -35,44 +35,25 @@ pub async fn shiggy(
         ])
         .send()
         .await?
-        .error_for_status()
-    {
-        Ok(resp) => {
-            let data: SafebooruResponse = resp.json().await?;
+        .error_for_status()?
+        .json()
+        .await?;
 
-            if raw {
-                ctx.say(data.file_url).await?;
-            } else {
-                ctx.send(
-                    CreateReply::default().embed(
-                        serenity::CreateEmbed::default()
-                            .title(data.id.to_string())
-                            .field("Tags", data.tag_string.replace('_', "\\_"), false)
-                            .field("Source", &data.source, false)
-                            .url(format!("https://safebooru.donmai.us/posts/{}", data.id))
-                            .image(&data.file_url)
-                            .color(0xfef9c3),
-                    ),
-                )
-                .await?;
-            }
-        }
-
-        Err(err) => {
-            let err = Report::from(err);
-
-            let valfisk_err = ValfiskError::error(&err, &ctx);
-            valfisk_err.handle_log();
-            valfisk_err.handle_report().await;
-
-            let embed = serenity::CreateEmbed::default()
-                .title("Could not fetch shiggy!")
-                .description("An error occurred while fetching from the API.")
-                .color(0xff6b6b)
-                .footer(serenity::CreateEmbedFooter::new(valfisk_err.error_id));
-
-            ctx.send(CreateReply::default().embed(embed)).await?;
-        }
+    if raw {
+        ctx.say(data.file_url).await?;
+    } else {
+        ctx.send(
+            CreateReply::default().embed(
+                serenity::CreateEmbed::default()
+                    .title(data.id.to_string())
+                    .field("Tags", data.tag_string.replace('_', "\\_"), false)
+                    .field("Source", &data.source, false)
+                    .url(format!("https://safebooru.donmai.us/posts/{}", data.id))
+                    .image(&data.file_url)
+                    .color(0xfef9c3),
+            ),
+        )
+        .await?;
     }
 
     Ok(())

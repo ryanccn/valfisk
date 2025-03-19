@@ -38,7 +38,7 @@ pub async fn rotate_color_roles(
 }
 
 #[tracing::instrument(skip_all)]
-pub async fn start(http: Arc<Http>, data: Arc<Data>) -> Result<()> {
+pub async fn run(http: Arc<Http>, data: Arc<Data>) -> Result<()> {
     let mut tasks: JoinSet<Result<()>> = JoinSet::new();
 
     tasks.spawn({
@@ -96,9 +96,7 @@ pub async fn start(http: Arc<Http>, data: Arc<Data>) -> Result<()> {
         .instrument(tracing::info_span!("safe_browsing"))
     });
 
-    while let Some(res) = tasks.join_next().await {
-        res??;
-    }
+    tasks.join_all().await.into_iter().collect::<Result<()>>()?;
 
     Ok(())
 }

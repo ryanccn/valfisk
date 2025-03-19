@@ -16,8 +16,8 @@ pub struct EnvConfig {
 
     pub guild_id: Option<GuildId>,
 
-    pub fren_category: Option<ChannelId>,
-    pub fren_starboard_channel: Option<ChannelId>,
+    pub private_category: Option<ChannelId>,
+    pub private_starboard_channel: Option<ChannelId>,
     pub starboard_channel: Option<ChannelId>,
 
     #[serde(default)]

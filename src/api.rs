@@ -5,7 +5,7 @@
 use poise::serenity_prelude as serenity;
 
 use axum::{
-    extract::{Form, Path, Request, State},
+    extract::{Form, Request, State},
     http::StatusCode,
     middleware,
     response::{IntoResponse, Json, Response},
@@ -14,50 +14,15 @@ use axum::{
 
 use serde_json::json;
 
-use std::{
-    collections::HashMap,
-    sync::{Arc, LazyLock},
-};
-use tokio::{net::TcpListener, sync::RwLock};
+use std::sync::Arc;
+use tokio::net::TcpListener;
 
 use tower_http::trace::TraceLayer;
 
 use crate::{
     config::CONFIG,
-    utils::{self, axum::AxumResult},
+    utils::{AxumResult, truncate},
 };
-
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-pub struct ValfiskPresenceData {
-    #[serde(default)]
-    pub status: serenity::OnlineStatus,
-    pub client_status: Option<serenity::ClientStatus>,
-    #[serde(default)]
-    pub activities: Vec<serenity::Activity>,
-}
-
-impl From<serenity::Presence> for ValfiskPresenceData {
-    fn from(value: serenity::Presence) -> Self {
-        Self {
-            status: value.status,
-            client_status: value.client_status.clone(),
-            activities: value.activities.to_vec(),
-        }
-    }
-}
-
-impl From<&serenity::Presence> for ValfiskPresenceData {
-    fn from(value: &serenity::Presence) -> Self {
-        Self {
-            status: value.status,
-            client_status: value.client_status.clone(),
-            activities: value.activities.to_vec(),
-        }
-    }
-}
-
-pub static PRESENCE_STORE: LazyLock<RwLock<HashMap<serenity::UserId, ValfiskPresenceData>>> =
-    LazyLock::new(|| RwLock::new(HashMap::new()));
 
 #[tracing::instrument(skip_all)]
 async fn route_ping() -> impl IntoResponse {
@@ -72,53 +37,6 @@ async fn route_ping_head() -> impl IntoResponse {
 #[tracing::instrument(skip_all)]
 async fn route_not_found() -> impl IntoResponse {
     (StatusCode::NOT_FOUND, Json(json!({ "error": "Not found" })))
-}
-
-#[tracing::instrument(skip_all, fields(user_id = user_id))]
-async fn route_presence(Path(user_id): Path<u64>) -> AxumResult<Response> {
-    if user_id == 0 {
-        return Ok((
-            StatusCode::BAD_REQUEST,
-            Json(json!({ "error": "User ID cannot be 0" })),
-        )
-            .into_response());
-    }
-
-    let user_id = serenity::UserId::from(user_id);
-
-    let store = PRESENCE_STORE.read().await;
-    let presence_data = store.get(&user_id).cloned();
-    drop(store);
-
-    presence_data.map_or_else(
-        || {
-            Ok((
-                StatusCode::NOT_FOUND,
-                Json(json!({ "error": "User not found" })),
-            )
-                .into_response())
-        },
-        |presence_data| Ok((StatusCode::OK, Json(presence_data)).into_response()),
-    )
-}
-
-#[tracing::instrument(skip_all, fields(user_id = user_id))]
-async fn route_presence_head(Path(user_id): Path<u64>) -> AxumResult<StatusCode> {
-    if user_id == 0 {
-        return Ok(StatusCode::BAD_REQUEST);
-    }
-
-    let user_id = serenity::UserId::from(user_id);
-
-    let store = PRESENCE_STORE.read().await;
-    let presence_exists = store.contains_key(&user_id);
-    drop(store);
-
-    if presence_exists {
-        Ok(StatusCode::OK)
-    } else {
-        Ok(StatusCode::NOT_FOUND)
-    }
 }
 
 #[derive(serde::Deserialize, Debug)]
@@ -165,7 +83,7 @@ async fn route_kofi_webhook(
                 .color(0xffd43b);
 
             if let Some(message) = data.message {
-                embed = embed.field("Message", utils::truncate(&message, 1024), false);
+                embed = embed.field("Message", truncate(&message, 1024), false);
             }
 
             channel
@@ -219,10 +137,6 @@ pub async fn serve(serenity_http: Arc<serenity::Http>) -> eyre::Result<()> {
 
     let app = Router::new()
         .route("/", get(route_ping).head(route_ping_head))
-        .route(
-            "/presence/{user}",
-            get(route_presence).head(route_presence_head),
-        )
         .route("/ko-fi", post(route_kofi_webhook))
         .fallback(route_not_found)
         .layer(middleware::from_fn(security_middleware))

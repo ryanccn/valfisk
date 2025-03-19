@@ -9,7 +9,10 @@ use eyre::{Result, eyre};
 use std::sync::LazyLock;
 use tokio::task::JoinSet;
 
-use crate::{config::CONFIG, http, utils::serenity::suppress_embeds};
+use crate::{
+    http,
+    utils::{serenity::suppress_embeds, truncate},
+};
 
 static GITHUB: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"https?://github\.com/(?P<repo>[\w-]+/[\w.-]+)/blob/(?P<ref>\S+?)/(?P<file>[^\s?]+)(\?\S*)?#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
@@ -47,14 +50,16 @@ async fn github<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>> {
         .map(|s| s.to_owned())
         .collect();
 
-    let selected_lines = &lines[(start - 1)..(end.unwrap_or(start))];
+    let selected_lines = lines[(start - 1)..(end.unwrap_or(start))].join("\n");
 
     let embed = serenity::CreateEmbed::default()
         .title(format!(
             "{repo} {file} L{start}{}",
             end.map(|end| format!("-{end}")).unwrap_or_default()
         ))
-        .description("```".to_owned() + language + "\n" + &selected_lines.join("\n") + "\n```")
+        .description(
+            "```".to_owned() + language + "\n" + &truncate(&selected_lines, 2048) + "\n```",
+        )
         .footer(serenity::CreateEmbedFooter::new(ref_.to_owned()))
         .timestamp(serenity::Timestamp::now());
 
@@ -87,7 +92,7 @@ async fn rust_playground<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>
 
     let embed = serenity::CreateEmbed::default()
         .title("Rust Playground")
-        .description("```rust\n".to_owned() + &gist + "\n```")
+        .description("```rust\n".to_owned() + &truncate(&gist, 2048) + "\n```")
         .footer(serenity::CreateEmbedFooter::new(gist_id.to_owned()))
         .timestamp(serenity::Timestamp::now())
         .color(0xdea584);
@@ -119,7 +124,7 @@ async fn go_playground<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>> 
 
     let embed = serenity::CreateEmbed::default()
         .title("Go Playground")
-        .description("```go\n".to_owned() + &code + "\n```")
+        .description("```go\n".to_owned() + &truncate(&code, 2048) + "\n```")
         .footer(serenity::CreateEmbedFooter::new(id.to_owned()))
         .timestamp(serenity::Timestamp::now())
         .color(0x00b7e7);
@@ -129,7 +134,7 @@ async fn go_playground<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>> 
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
 pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
-    if message.guild_id != CONFIG.guild_id {
+    if message.author.id == ctx.cache.current_user().id {
         return Ok(());
     }
 

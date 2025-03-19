@@ -6,7 +6,6 @@ use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use eyre::eyre;
 use sha2::{Digest as _, Sha256};
 
-use async_recursion::async_recursion;
 use rayon::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
@@ -32,8 +31,8 @@ static THREAT_TYPES: [&str; 3] = ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOF
 
 #[derive(Debug, Clone)]
 struct SafeBrowsingListState {
-    pub state: String,
-    pub prefixes: Vec<Vec<u8>>,
+    state: String,
+    prefixes: Vec<Vec<u8>>,
 }
 
 #[derive(Debug, Clone)]
@@ -50,120 +49,125 @@ impl SafeBrowsing {
         }
     }
 
-    #[async_recursion]
     #[tracing::instrument(skip_all)]
     pub async fn update(&self) -> eyre::Result<()> {
-        let current_states: HashMap<String, String> = {
-            let states_lock = self.states.read().await;
+        loop {
+            let mut failed = false;
 
-            states_lock
-                .iter()
-                .map(|(k, v)| (k.clone(), v.state.clone()))
-                .collect()
-        };
+            let current_states: HashMap<String, String> = {
+                let states_lock = self.states.read().await;
 
-        let request = ThreatListUpdateRequest {
-            client: ClientInfo::default(),
-            list_update_requests: THREAT_TYPES
-                .into_iter()
-                .map(|threat_type| ListUpdateRequest {
-                    threat_type: threat_type.to_string(),
-                    platform_type: "ANY_PLATFORM".to_string(),
-                    threat_entry_type: "URL".to_string(),
-                    state: current_states.get(threat_type).cloned().unwrap_or_default(),
+                states_lock
+                    .iter()
+                    .map(|(k, v)| (k.clone(), v.state.clone()))
+                    .collect()
+            };
 
-                    constraints: ThreatListConstraints {
-                        max_update_entries: 50000,
-                        max_database_entries: 100000,
-                        region: "US".to_string(),
-                        supported_compressions: vec!["RAW".to_string()],
-                    },
-                })
-                .collect(),
-        };
+            let request = ThreatListUpdateRequest {
+                client: ClientInfo::default(),
+                list_update_requests: THREAT_TYPES
+                    .into_iter()
+                    .map(|threat_type| ListUpdateRequest {
+                        threat_type: threat_type.to_string(),
+                        platform_type: "ANY_PLATFORM".to_string(),
+                        threat_entry_type: "URL".to_string(),
+                        state: current_states.get(threat_type).cloned().unwrap_or_default(),
 
-        let response: ThreatListUpdateResponse = HTTP
-            .post("https://safebrowsing.googleapis.com/v4/threatListUpdates:fetch")
-            .query(&[("key", &self.key)])
-            .json(&request)
-            .send()
-            .await?
-            .error_for_status()?
-            .json()
-            .await?;
+                        constraints: ThreatListConstraints {
+                            max_update_entries: 50000,
+                            max_database_entries: 100000,
+                            region: "US".to_string(),
+                            supported_compressions: vec!["RAW".to_string()],
+                        },
+                    })
+                    .collect(),
+            };
 
-        for list_update in response.list_update_responses {
-            let mut current_prefixes = self
-                .states
-                .read()
-                .await
-                .get(&list_update.threat_type)
-                .map(|s| s.prefixes.clone())
-                .unwrap_or_default();
+            let response: ThreatListUpdateResponse = HTTP
+                .post("https://safebrowsing.googleapis.com/v4/threatListUpdates:fetch")
+                .query(&[("key", &self.key)])
+                .json(&request)
+                .send()
+                .await?
+                .error_for_status()?
+                .json()
+                .await?;
 
-            for removal in &list_update.removals {
-                let mut indices = removal.raw_indices.indices.clone();
-                indices.sort_unstable();
+            for list_update in response.list_update_responses {
+                let mut current_prefixes = self
+                    .states
+                    .read()
+                    .await
+                    .get(&list_update.threat_type)
+                    .map(|s| s.prefixes.clone())
+                    .unwrap_or_default();
 
-                for idx in indices.into_iter().rev() {
-                    if idx < current_prefixes.len() {
-                        current_prefixes.remove(idx);
+                for removal in &list_update.removals {
+                    let mut indices = removal.raw_indices.indices.clone();
+                    indices.sort_unstable();
+
+                    for idx in indices.into_iter().rev() {
+                        if idx < current_prefixes.len() {
+                            current_prefixes.remove(idx);
+                        }
                     }
+                }
+
+                for addition in &list_update.additions {
+                    let hashes = BASE64.decode(&addition.raw_hashes.raw_hashes)?;
+
+                    current_prefixes.extend(
+                        hashes
+                            .chunks(addition.raw_hashes.prefix_size)
+                            .map(|c| c.to_vec()),
+                    );
+                }
+
+                current_prefixes.sort_unstable();
+
+                let checksum = BASE64.encode(Sha256::digest(
+                    current_prefixes
+                        .clone()
+                        .into_iter()
+                        .flatten()
+                        .collect::<Vec<_>>(),
+                ));
+
+                if checksum == list_update.checksum.sha256 {
+                    self.states.write().await.insert(
+                        list_update.threat_type,
+                        SafeBrowsingListState {
+                            state: list_update.new_client_state,
+                            prefixes: current_prefixes,
+                        },
+                    );
+                } else {
+                    tracing::error!(
+                        "List {:?} checksum has drifted, resetting (actual: {:?}, expected: {:?})",
+                        list_update.threat_type,
+                        checksum,
+                        list_update.checksum.sha256
+                    );
+
+                    self.states.write().await.remove(&list_update.threat_type);
+                    failed = true;
                 }
             }
 
-            for addition in &list_update.additions {
-                let hashes = BASE64.decode(&addition.raw_hashes.raw_hashes)?;
-
-                current_prefixes.extend(
-                    hashes
-                        .chunks(addition.raw_hashes.prefix_size)
-                        .map(|c| c.to_vec()),
-                );
-            }
-
-            current_prefixes.sort_unstable();
-
-            let checksum = BASE64.encode(Sha256::digest(
-                current_prefixes
-                    .clone()
-                    .into_iter()
-                    .flatten()
-                    .collect::<Vec<_>>(),
-            ));
-
-            if checksum != list_update.checksum.sha256 {
-                tracing::error!(
-                    "List {:?} checksum has drifted, resetting (actual: {:?}, expected: {:?})",
-                    list_update.threat_type,
-                    checksum,
-                    list_update.checksum.sha256
-                );
-
-                self.states.write().await.remove(&list_update.threat_type);
-                self.update().await?;
-
-                return Ok(());
-            }
-
-            self.states.write().await.insert(
-                list_update.threat_type,
-                SafeBrowsingListState {
-                    state: list_update.new_client_state,
-                    prefixes: current_prefixes,
-                },
+            tracing::info!(
+                "Updated Safe Browsing database => {} hash prefixes",
+                self.states
+                    .read()
+                    .await
+                    .values()
+                    .map(|v| v.prefixes.len())
+                    .sum::<usize>(),
             );
-        }
 
-        tracing::info!(
-            "Updated Safe Browsing database => {} hash prefixes",
-            self.states
-                .read()
-                .await
-                .values()
-                .map(|v| v.prefixes.len())
-                .sum::<usize>(),
-        );
+            if !failed {
+                break;
+            }
+        }
 
         Ok(())
     }
@@ -189,9 +193,10 @@ impl SafeBrowsing {
             }
         }
 
-        let states = self.states.read().await;
-
-        let matched_hash_prefixes = states
+        let matched_hash_prefixes = self
+            .states
+            .read()
+            .await
             .values()
             .par_bridge()
             .map(|list_state| {
@@ -210,8 +215,6 @@ impl SafeBrowsing {
             })
             .flatten()
             .collect::<HashSet<_>>();
-
-        drop(states);
 
         if !matched_hash_prefixes.is_empty() {
             let request = FindFullHashesRequest {
@@ -309,8 +312,9 @@ impl SafeBrowsing {
         let prefixes = prefixes
             .into_iter()
             .map(|v| {
-                v.trim_start_matches("http://")
-                    .trim_start_matches("https://")
+                v.strip_prefix("https://")
+                    .or_else(|| v.strip_prefix("http://"))
+                    .unwrap_or(&v)
                     .to_owned()
             })
             .collect();

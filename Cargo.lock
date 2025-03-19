@@ -2819,7 +2819,6 @@ dependencies = [
 name = "valfisk"
 version = "0.1.0"
 dependencies = [
- "async-recursion",
  "axum",
  "base64",
  "bytesize",

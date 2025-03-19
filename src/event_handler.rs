@@ -4,9 +4,7 @@
 
 use poise::serenity_prelude as serenity;
 
-use crate::config::CONFIG;
-use crate::utils::Pluralize as _;
-use crate::{api, handlers, storage};
+use crate::{config::CONFIG, handlers, storage::log::MessageLog, utils::Pluralize as _};
 
 pub struct EventHandler;
 
@@ -15,7 +13,7 @@ macro_rules! wrap_event_handler {
         let outcome: ::eyre::Result<()> = ($fn)().await;
 
         if let Err(err) = outcome {
-            tracing::error!("{err:?}");
+            ::tracing::error!("{err:?}");
         }
     }};
 }
@@ -41,9 +39,14 @@ impl serenity::EventHandler for EventHandler {
         });
     }
 
-    async fn message(&self, ctx: serenity::Context, new_message: serenity::Message) {
+    async fn message(&self, ctx: serenity::Context, message: serenity::Message) {
         wrap_event_handler!(async || {
-            Box::pin(handlers::handle_message(&new_message, &ctx)).await?;
+            if message.guild_id.is_some() {
+                Box::pin(handlers::message_guild(&ctx, &message)).await?;
+            } else {
+                handlers::message_dm(&ctx, &message).await?;
+            }
+
             Ok(())
         });
     }
@@ -55,43 +58,43 @@ impl serenity::EventHandler for EventHandler {
         event: serenity::MessageUpdateEvent,
     ) {
         wrap_event_handler!(async || {
-            if event.message.guild_id == CONFIG.guild_id {
-                use storage::log::MessageLog;
+            if event.message.guild_id.is_none() {
+                return Ok(());
+            }
 
-                let timestamp = event
-                    .message
-                    .edited_timestamp
-                    .unwrap_or_else(serenity::Timestamp::now);
+            let timestamp = event
+                .message
+                .edited_timestamp
+                .unwrap_or_else(serenity::Timestamp::now);
 
-                if let Some(storage) = &ctx.data::<crate::Data>().storage {
-                    let logged_data = storage.get_message_log(event.message.id.get()).await?;
+            if let Some(storage) = &ctx.data::<crate::Data>().storage {
+                let logged_data = storage.get_message_log(event.message.id.get()).await?;
 
-                    let content = event.message.content.clone();
-                    let author = event.message.author.id;
-                    let attachments = event.message.attachments.to_vec();
+                let content = event.message.content.clone();
+                let author = event.message.author.id;
+                let attachments = event.message.attachments.to_vec();
 
-                    storage
-                        .set_message_log(
-                            event.message.id.get(),
-                            &MessageLog::new(content.as_str(), author, attachments.clone()),
-                        )
-                        .await?;
-
-                    handlers::log::edit(
-                        &ctx,
-                        handlers::log::LogMessageIds {
-                            message: event.message.id,
-                            channel: event.message.channel_id,
-                            guild: event.message.guild_id,
-                            author: Some(author),
-                        },
-                        logged_data.map(|l| l.content).as_deref(),
-                        content.as_ref(),
-                        &attachments,
-                        &timestamp,
+                storage
+                    .set_message_log(
+                        event.message.id.get(),
+                        &MessageLog::new(content.as_str(), author, attachments.clone()),
                     )
                     .await?;
-                }
+
+                handlers::log::edit(
+                    &ctx,
+                    handlers::log::LogMessageIds {
+                        message: event.message.id,
+                        channel: event.message.channel_id,
+                        guild: event.message.guild_id,
+                        author: Some(author),
+                    },
+                    logged_data.map(|l| l.content).as_deref(),
+                    content.as_ref(),
+                    &attachments,
+                    &timestamp,
+                )
+                .await?;
             }
 
             Ok(())
@@ -106,31 +109,32 @@ impl serenity::EventHandler for EventHandler {
         guild_id: Option<serenity::GuildId>,
     ) {
         wrap_event_handler!(async || {
-            if guild_id == CONFIG.guild_id {
-                handlers::starboard::handle_deletion(&ctx, &deleted_message_id, &channel_id)
+            if guild_id.is_none() {
+                return Ok(());
+            }
+
+            handlers::starboard::handle_deletion(&ctx, deleted_message_id, channel_id, guild_id)
+                .await?;
+
+            let timestamp = serenity::Timestamp::now();
+
+            if let Some(storage) = &ctx.data::<crate::Data>().storage {
+                if let Some(logged_data) = storage.get_message_log(deleted_message_id.get()).await?
+                {
+                    handlers::log::delete(
+                        &ctx,
+                        handlers::log::LogMessageIds {
+                            message: deleted_message_id,
+                            channel: channel_id,
+                            guild: guild_id,
+                            author: Some(logged_data.author),
+                        },
+                        &logged_data,
+                        &timestamp,
+                    )
                     .await?;
 
-                let timestamp = serenity::Timestamp::now();
-
-                if let Some(storage) = &ctx.data::<crate::Data>().storage {
-                    if let Some(logged_data) =
-                        storage.get_message_log(deleted_message_id.get()).await?
-                    {
-                        handlers::log::delete(
-                            &ctx,
-                            handlers::log::LogMessageIds {
-                                message: deleted_message_id,
-                                channel: channel_id,
-                                guild: guild_id,
-                                author: Some(logged_data.author),
-                            },
-                            &logged_data,
-                            &timestamp,
-                        )
-                        .await?;
-
-                        storage.del_message_log(deleted_message_id.get()).await?;
-                    }
+                    storage.del_message_log(deleted_message_id.get()).await?;
                 }
             }
 
@@ -140,10 +144,12 @@ impl serenity::EventHandler for EventHandler {
 
     async fn reaction_add(&self, ctx: serenity::Context, add_reaction: serenity::Reaction) {
         wrap_event_handler!(async || {
-            if add_reaction.guild_id == CONFIG.guild_id {
-                let message = add_reaction.message(&ctx).await?;
-                handlers::starboard::handle(&ctx, &message).await?;
+            if add_reaction.guild_id.is_none() {
+                return Ok(());
             }
+
+            let message = add_reaction.message(&ctx).await?;
+            handlers::starboard::handle(&ctx, &message).await?;
 
             Ok(())
         });
@@ -151,10 +157,12 @@ impl serenity::EventHandler for EventHandler {
 
     async fn reaction_remove(&self, ctx: serenity::Context, removed_reaction: serenity::Reaction) {
         wrap_event_handler!(async || {
-            if removed_reaction.guild_id == CONFIG.guild_id {
-                let message = removed_reaction.message(&ctx).await?;
-                handlers::starboard::handle(&ctx, &message).await?;
+            if removed_reaction.guild_id.is_none() {
+                return Ok(());
             }
+
+            let message = removed_reaction.message(&ctx).await?;
+            handlers::starboard::handle(&ctx, &message).await?;
 
             Ok(())
         });
@@ -168,10 +176,12 @@ impl serenity::EventHandler for EventHandler {
         message_id: serenity::MessageId,
     ) {
         wrap_event_handler!(async || {
-            if guild_id.as_ref() == CONFIG.guild_id.as_ref() {
-                let message = channel_id.message(&ctx, message_id).await?;
-                handlers::starboard::handle(&ctx, &message).await?;
+            if guild_id.is_none() {
+                return Ok(());
             }
+
+            let message = channel_id.message(&ctx, message_id).await?;
+            handlers::starboard::handle(&ctx, &message).await?;
 
             Ok(())
         });
@@ -183,10 +193,12 @@ impl serenity::EventHandler for EventHandler {
         removed_reactions: serenity::Reaction,
     ) {
         wrap_event_handler!(async || {
-            if removed_reactions.guild_id == CONFIG.guild_id {
-                let message = removed_reactions.message(&ctx).await?;
-                handlers::starboard::handle(&ctx, &message).await?;
+            if removed_reactions.guild_id.is_none() {
+                return Ok(());
             }
+
+            let message = removed_reactions.message(&ctx).await?;
+            handlers::starboard::handle(&ctx, &message).await?;
 
             Ok(())
         });
@@ -212,23 +224,6 @@ impl serenity::EventHandler for EventHandler {
         });
     }
 
-    async fn presence_update(
-        &self,
-        _ctx: serenity::Context,
-        _old_data: Option<serenity::Presence>,
-        new_data: serenity::Presence,
-    ) {
-        wrap_event_handler!(async || {
-            if new_data.guild_id == CONFIG.guild_id {
-                let mut store = api::PRESENCE_STORE.write().await;
-                store.insert(new_data.user.id, new_data.into());
-                drop(store);
-            }
-
-            Ok(())
-        });
-    }
-
     async fn guild_create(
         &self,
         ctx: serenity::Context,
@@ -236,7 +231,7 @@ impl serenity::EventHandler for EventHandler {
         _is_new: Option<bool>,
     ) {
         wrap_event_handler!(async || {
-            if Some(guild.id) != CONFIG.guild_id {
+            if CONFIG.guild_id.is_some_and(|id| id != guild.id) {
                 guild.id.leave(&ctx.http).await?;
             }
 

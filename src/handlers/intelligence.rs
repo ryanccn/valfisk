@@ -13,7 +13,6 @@ use crate::{config::CONFIG, intelligence, utils};
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
 pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
     if CONFIG.intelligence_secret.is_none()
-        || message.guild_id != CONFIG.guild_id
         || message
             .flags
             .is_some_and(|flags| flags.contains(serenity::MessageFlags::SUPPRESS_NOTIFICATIONS))

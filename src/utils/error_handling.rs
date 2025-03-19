@@ -14,19 +14,19 @@ use poise::{
 
 use crate::{Context, config::CONFIG};
 
-/// A wrapper type that encapsulates errors ([`eyre::Report`]) or panic strings ([`Option<String>`]).
-pub enum ErrorOrPanic<'a> {
-    /// A reference to an error, [`eyre::Report`]
-    Error(&'a eyre::Report),
+/// A wrapper type that encapsulates reports ([`eyre::Report`]) or panic strings ([`Option<String>`]).
+pub enum ReportOrPanic<'a> {
+    /// A reference to a report, [`eyre::Report`]
+    Report(&'a eyre::Report),
     /// A reference to a panic string, [`Option<String>`]
-    Panic(Option<&'a String>),
+    Panic(Option<&'a str>),
 }
 
-/// A wrapped type around errors or panics encapsulated in [`ErrorOrPanic`] that includes context from Poise and a randomly generated `error_id`.
+/// A wrapped type around reports or panics that includes context from Poise and a randomly generated `error_id`.
 #[derive(Debug)]
 pub struct ValfiskError<'a> {
-    /// The error or panic.
-    pub error_or_panic: ErrorOrPanic<'a>,
+    /// The report or panic.
+    pub report_or_panic: ReportOrPanic<'a>,
     /// The Poise context.
     pub ctx: &'a Context<'a>,
     /// A randomly generated error ID.
@@ -34,11 +34,11 @@ pub struct ValfiskError<'a> {
 }
 
 impl ValfiskError<'_> {
-    /// Create a new [`ValfiskError`] from an error and Poise context.
+    /// Create a new [`ValfiskError`] from a report and Poise context.
     #[must_use]
     pub fn error<'a>(error: &'a eyre::Report, ctx: &'a Context) -> ValfiskError<'a> {
         ValfiskError {
-            error_or_panic: ErrorOrPanic::Error(error),
+            report_or_panic: ReportOrPanic::Report(error),
             ctx,
             error_id: nanoid!(8),
         }
@@ -46,9 +46,9 @@ impl ValfiskError<'_> {
 
     /// Create a new [`ValfiskError`] from a panic string and Poise context.
     #[must_use]
-    pub fn panic<'a>(panic: Option<&'a String>, ctx: &'a Context) -> ValfiskError<'a> {
+    pub fn panic<'a>(panic: Option<&'a str>, ctx: &'a Context) -> ValfiskError<'a> {
         ValfiskError {
-            error_or_panic: ErrorOrPanic::Panic(panic),
+            report_or_panic: ReportOrPanic::Panic(panic),
             ctx,
             error_id: nanoid!(8),
         }
@@ -65,7 +65,7 @@ impl ValfiskError<'_> {
                 author = self.ctx.author().id.get()
             },
             "{:?}",
-            self.error_or_panic,
+            self.report_or_panic,
         );
     }
 
@@ -93,7 +93,7 @@ impl ValfiskError<'_> {
         if let Some(channel) = CONFIG.error_logs_channel {
             let embed = CreateEmbed::default()
                 .title("An error occurred!")
-                .description(format!("```\n{:#?}\n```", self.error_or_panic))
+                .description(format!("```\n{:#?}\n```", self.report_or_panic))
                 .footer(CreateEmbedFooter::new(&self.error_id))
                 .timestamp(Timestamp::now())
                 .color(0xff6b6b)
@@ -125,10 +125,10 @@ impl ValfiskError<'_> {
     }
 }
 
-impl Debug for ErrorOrPanic<'_> {
+impl Debug for ReportOrPanic<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Error(e) => Debug::fmt(e, f),
+            Self::Report(e) => Debug::fmt(e, f),
             Self::Panic(p) => Debug::fmt(p, f),
         }
     }

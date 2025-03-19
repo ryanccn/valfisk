@@ -5,9 +5,16 @@
 use std::ops::{Deref, DerefMut};
 use tokio::task;
 
-pub mod axum;
-pub mod error_handling;
 pub mod serenity;
+
+mod axum;
+pub use axum::AxumResult;
+
+mod error_handling;
+pub use error_handling::ValfiskError;
+
+mod exit_code_error;
+pub use exit_code_error::ExitCodeError;
 
 mod pluralize;
 pub use pluralize::Pluralize;
