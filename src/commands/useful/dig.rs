@@ -8,19 +8,36 @@ use poise::{
 };
 
 use hickory_resolver::{
-    TokioAsyncResolver,
-    config::{NameServerConfig, Protocol, ResolverConfig, ResolverOpts},
-    error::ResolveErrorKind,
+    TokioResolver,
+    config::{NameServerConfigGroup, ResolveHosts, ResolverConfig, ResolverOpts},
+    name_server::TokioConnectionProvider,
     proto::rr::RecordType,
 };
 
 use eyre::Result;
-use std::{net::SocketAddr, sync::LazyLock};
+use std::sync::LazyLock;
 
 use crate::Context;
 
-pub static BOOTSTRAP_RESOLVER: LazyLock<TokioAsyncResolver> = LazyLock::new(|| {
-    TokioAsyncResolver::tokio(ResolverConfig::cloudflare_https(), make_resolver_opts(true))
+fn set_resolver_opts(options: &mut ResolverOpts, bootstrap: bool) {
+    options.attempts = 5;
+    options.use_hosts_file = ResolveHosts::Never;
+    options.validate = true;
+
+    if !bootstrap {
+        options.cache_size = 0;
+    }
+}
+
+pub static BOOTSTRAP_RESOLVER: LazyLock<TokioResolver> = LazyLock::new(|| {
+    let mut builder = TokioResolver::builder_with_config(
+        ResolverConfig::cloudflare_https(),
+        TokioConnectionProvider::default(),
+    );
+
+    set_resolver_opts(builder.options_mut(), true);
+
+    builder.build()
 });
 
 #[allow(clippy::upper_case_acronyms)]
@@ -116,7 +133,7 @@ enum ResolverChoice {
 }
 
 impl ResolverChoice {
-    fn domain(self) -> String {
+    fn domain(self) -> &'static str {
         match self {
             Self::Cloudflare => "cloudflare-dns.com",
             Self::CloudflareSecurity => "security.cloudflare-dns.com",
@@ -137,45 +154,22 @@ impl ResolverChoice {
             Self::OpenDNSFamilyShield => "doh.familyshield.opendns.com",
             Self::Wikimedia => "wikimedia-dns.org",
         }
-        .into()
     }
 
-    async fn doh_config(&self) -> Result<ResolverConfig> {
-        let name_servers = BOOTSTRAP_RESOLVER
-            .lookup_ip(self.domain() + ".")
+    async fn resolver_config(&self) -> Result<ResolverConfig> {
+        let domain = self.domain();
+
+        let ips = BOOTSTRAP_RESOLVER
+            .lookup_ip(domain.to_owned() + ".")
             .await?
             .into_iter()
-            .map(|ip| NameServerConfig {
-                socket_addr: SocketAddr::new(ip, 443),
-                tls_dns_name: Some(self.domain()),
-                protocol: Protocol::Https,
-                bind_addr: None,
-                tls_config: None,
-                trust_negative_responses: true,
-            })
             .collect::<Vec<_>>();
 
-        let mut config = ResolverConfig::new();
-        for name_server in name_servers {
-            config.add_name_server(name_server);
-        }
+        let name_servers =
+            NameServerConfigGroup::from_ips_https(&ips, 443, domain.to_owned(), true);
 
-        Ok(config)
+        Ok(ResolverConfig::from_parts(None, Vec::new(), name_servers))
     }
-}
-
-fn make_resolver_opts(bootstrap: bool) -> ResolverOpts {
-    let mut opts = ResolverOpts::default();
-
-    opts.attempts = 5;
-    opts.use_hosts_file = false;
-    opts.validate = true;
-
-    if !bootstrap {
-        opts.cache_size = 0;
-    }
-
-    opts
 }
 
 /// Make a DNS lookup
@@ -191,8 +185,16 @@ pub async fn dig(
 
     ctx.defer().await?;
 
-    let hickory =
-        TokioAsyncResolver::tokio(resolver.doh_config().await?, make_resolver_opts(false));
+    let hickory = {
+        let mut builder = TokioResolver::builder_with_config(
+            resolver.resolver_config().await?,
+            TokioConnectionProvider::default(),
+        );
+
+        set_resolver_opts(builder.options_mut(), false);
+
+        builder.build()
+    };
 
     match hickory.lookup(&name, r#type.as_record_type()).await {
         Ok(response) => {
@@ -203,15 +205,7 @@ pub async fn dig(
                         .description(
                             response
                                 .record_iter()
-                                .map(|r| {
-                                    format!(
-                                        "`{} {} {}`",
-                                        r.name(),
-                                        r.record_type(),
-                                        r.data()
-                                            .map_or_else(|| "<none>".to_owned(), |d| d.to_string())
-                                    )
-                                })
+                                .map(|r| format!("`{} {} {}`", r.name(), r.record_type(), r.data()))
                                 .collect::<Vec<_>>()
                                 .join("\n"),
                         )
@@ -224,8 +218,10 @@ pub async fn dig(
         }
 
         Err(err) => {
-            if matches!(err.kind(), ResolveErrorKind::NoRecordsFound { .. }) {
-                ctx.say("No records found!").await?;
+            if err.is_nx_domain() {
+                ctx.say("The domain does not exist.").await?;
+            } else if err.is_no_records_found() {
+                ctx.say("No records were returned.").await?;
             } else {
                 return Err(err.into());
             }
