@@ -46,7 +46,7 @@ async fn is_excluded_message(ctx: &serenity::Context, ids: LogMessageIds) -> boo
     if let Some(guild) = ids.guild {
         if let Some(author) = ids.author {
             if let Ok(author_member) = guild.member(&ctx.http, author).await {
-                if utils::serenity::is_administrator(ctx, &author_member).is_ok_and(|x| x) {
+                if utils::serenity::is_administrator(ctx, &author_member) {
                     return true;
                 }
             }

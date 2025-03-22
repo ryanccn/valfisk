@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use eyre::{Result, eyre};
+use eyre::Result;
 use poise::serenity_prelude as serenity;
 
 #[tracing::instrument(skip(ctx))]
@@ -34,17 +34,14 @@ pub async fn suppress_embeds(ctx: &serenity::Context, message: &serenity::Messag
     Ok(())
 }
 
-pub fn is_administrator(ctx: &serenity::Context, member: &serenity::Member) -> Result<bool> {
-    let guild = member
+pub fn is_administrator(ctx: &serenity::Context, member: &serenity::Member) -> bool {
+    member
         .guild_id
         .to_guild_cached(&ctx.cache)
-        .ok_or_else(|| eyre!("could not obtain guild"))?;
-
-    let default_channel = guild
-        .default_channel(member.user.id)
-        .ok_or_else(|| eyre!("could not obtain default channel"))?;
-
-    Ok(guild
-        .user_permissions_in(default_channel, member)
-        .administrator())
+        .is_some_and(|guild| {
+            guild
+                .channels
+                .iter()
+                .any(|channel| guild.user_permissions_in(channel, member).administrator())
+        })
 }
