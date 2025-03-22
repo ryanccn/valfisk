@@ -35,13 +35,9 @@ pub async fn suppress_embeds(ctx: &serenity::Context, message: &serenity::Messag
 }
 
 pub fn is_administrator(ctx: &serenity::Context, member: &serenity::Member) -> bool {
-    member
-        .guild_id
-        .to_guild_cached(&ctx.cache)
-        .is_some_and(|guild| {
-            guild
-                .channels
-                .iter()
-                .any(|channel| guild.user_permissions_in(channel, member).administrator())
-        })
+    member.roles(&ctx.cache).is_some_and(|roles| {
+        roles
+            .iter()
+            .any(|role| role.has_permission(serenity::Permissions::ADMINISTRATOR))
+    })
 }

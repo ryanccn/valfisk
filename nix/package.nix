@@ -42,7 +42,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
   env =
     {
       METADATA_LAST_MODIFIED = self.lastModified;
-      METADATA_GIT_REV = self.dirtyRev or self.rev;
+      METADATA_REVISION = self.rev or self.dirtyRev or null;
     }
     // lib.optionalAttrs enableLTO {
       CARGO_PROFILE_RELEASE_LTO = "fat";

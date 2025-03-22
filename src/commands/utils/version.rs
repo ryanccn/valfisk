@@ -17,30 +17,31 @@ pub async fn version(ctx: Context<'_>) -> Result<()> {
         .map(|v| format!(" v{v}"))
         .unwrap_or_default();
 
-    let host = option_env!("METADATA_HOST")
-        .map_or_else(|| "unknown".to_owned(), |host| format!("`{host}`"));
-
     let target = option_env!("METADATA_TARGET")
-        .map_or_else(|| "unknown".to_owned(), |target| format!("`{target}`"));
+        .map_or_else(|| "*Unknown*".to_owned(), |target| format!("`{target}`"));
+
+    let host = option_env!("METADATA_HOST")
+        .map_or_else(|| "*Unknown*".to_owned(), |host| format!("`{host}`"));
 
     let last_modified = option_env!("METADATA_LAST_MODIFIED").map_or_else(
-        || "unknown".to_owned(),
+        || "*Unknown*".to_owned(),
         |timestamp| format!("<t:{timestamp}:f>"),
     );
 
-    let git_rev = option_env!("METADATA_GIT_REV")
-        .map_or_else(|| "unknown".to_owned(), |git_rev| format!("`{git_rev}`"));
+    let revision = option_env!("METADATA_REVISION").map_or_else(
+        || "*Unknown*".to_owned(),
+        |rev| format!("[`{rev}`](https://github.com/ryanccn/valfisk/tree/{rev})",),
+    );
 
     ctx.send(
         CreateReply::default().embed(
             CreateEmbed::default()
                 .title(format!("Valfisk{version_suffix}"))
-                .field("Runtime OS", OS, true)
-                .field("Runtime architecture", ARCH, true)
+                .field("Runtime OS", format!("{ARCH}-{OS}"), true)
                 .field("Target", &target, false)
                 .field("Build host", &host, false)
                 .field("Last modified", &last_modified, false)
-                .field("Git revision", &git_rev, false)
+                .field("Revision", &revision, false)
                 .color(0xf472b6),
         ),
     )
