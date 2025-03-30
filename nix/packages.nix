@@ -2,17 +2,13 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
-{ self, inputs, ... }:
+{ self, ... }:
 {
   perSystem =
     { pkgs, config, ... }:
     {
       packages = {
-        valfisk = pkgs.callPackage ./package.nix {
-          inherit self;
-          inherit (inputs) nix-filter;
-        };
-
+        valfisk = pkgs.callPackage ./package.nix { inherit self; };
         default = config.packages.valfisk;
       };
     };

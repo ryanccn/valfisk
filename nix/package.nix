@@ -5,7 +5,6 @@
 {
   lib,
   rustPlatform,
-  nix-filter,
   self,
   enableLTO ? true,
   enableOptimizeSize ? false,
@@ -19,13 +18,13 @@ rustPlatform.buildRustPackage (finalAttrs: {
   pname = finalAttrs.passthru.cargoToml.package.name;
   version = "${finalAttrs.passthru.cargoToml.package.version}-unstable-${year}-${month}-${day}";
 
-  src = nix-filter.lib.filter {
-    root = self;
-    include = [
-      "src"
-      "build.rs"
-      "Cargo.lock"
-      "Cargo.toml"
+  src = lib.fileset.toSource {
+    root = ../.;
+    fileset = lib.fileset.unions [
+      ../src
+      ../build.rs
+      ../Cargo.lock
+      ../Cargo.toml
     ];
   };
 
@@ -33,7 +32,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
     lockFile = ../Cargo.lock;
     outputHashes = {
       "poise-0.6.1" = "sha256-xYopkn50+UcbIQA6YjfJYnHR6bH+W2ZoDfk2Aep+7Po=";
-      "serenity-0.12.4" = "sha256-jtlbgZNOr7oG3IP7gz0XJ4TlHAYq1PBrtPdNdwaBsSY=";
+      "serenity-0.12.4" = "sha256-Vc17V2VPCUtWufSpI+ZO+KNpFcqn49Jgqh/CUAUyCpk=";
     };
   };
 

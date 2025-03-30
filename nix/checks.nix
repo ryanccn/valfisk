@@ -33,7 +33,7 @@
       checks = {
         nixfmt = mkFlakeCheck {
           name = "nixfmt";
-          command = "nixfmt --check **/*.nix";
+          command = "find . -name '*.nix' -exec nixfmt --check {} +";
 
           src = self;
           nativeBuildInputs = with pkgs; [ nixfmt-rfc-style ];
@@ -73,9 +73,7 @@
           command = "reuse lint";
 
           src = self;
-          nativeBuildInputs = with pkgs; [
-            reuse
-          ];
+          nativeBuildInputs = with pkgs; [ reuse ];
         };
       };
     };

@@ -7,7 +7,6 @@
     nixpkgs.url = "nixpkgs/nixpkgs-unstable";
     parts.url = "github:hercules-ci/flake-parts";
     parts.inputs.nixpkgs-lib.follows = "nixpkgs";
-    nix-filter.url = "github:numtide/nix-filter";
   };
 
   outputs =

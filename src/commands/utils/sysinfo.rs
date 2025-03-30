@@ -49,7 +49,7 @@ pub async fn sysinfo(
             format!(
                 "**{}** ({} cores)",
                 sys.cpus().first().map_or("Unknown", |cpu| cpu.brand()),
-                sys.physical_core_count().unwrap_or_default()
+                System::physical_core_count().unwrap_or_default()
             ),
             true,
         )
