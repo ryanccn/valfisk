@@ -12,12 +12,7 @@
         aarch64 = pkgs.pkgsCross.aarch64-multiplatform.pkgsStatic;
       };
 
-      pkgFor =
-        arch:
-        crossPkgs.${arch}.callPackage ./package.nix {
-          inherit self;
-          inherit (inputs) nix-filter;
-        };
+      pkgFor = arch: crossPkgs.${arch}.callPackage ./package.nix { inherit self; };
 
       osReleaseFor =
         arch:
