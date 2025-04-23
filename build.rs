@@ -14,9 +14,6 @@ fn main() {
         env::var("HOST").unwrap()
     );
 
-    println!("cargo:rerun-if-changed-env=TARGET");
-    println!("cargo:rerun-if-changed-env=HOST");
-
     let last_modified = env::var("METADATA_LAST_MODIFIED").unwrap_or_else(|_| {
         SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
@@ -26,5 +23,5 @@ fn main() {
     });
 
     println!("cargo:rustc-env=METADATA_LAST_MODIFIED={last_modified}");
-    println!("cargo:rerun-if-changed-env=METADATA_LAST_MODIFIED");
+    println!("cargo:rerun-if-env-changed=METADATA_LAST_MODIFIED");
 }

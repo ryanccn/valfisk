@@ -5,7 +5,7 @@
 use eyre::Result;
 use poise::{
     CreateReply,
-    serenity_prelude::{ChannelId, CreateEmbed, Mentionable as _, futures::StreamExt},
+    serenity_prelude::{CreateEmbed, GenericChannelId, Mentionable as _, futures::StreamExt},
 };
 
 use crate::{Context, http::HTTP, template_channel::Template};
@@ -22,7 +22,7 @@ use crate::{Context, http::HTTP, template_channel::Template};
 pub async fn template_channel(
     ctx: Context<'_>,
     #[description = "The URL to fetch the template from"] url: String,
-    #[description = "The channel to apply the template to"] channel: ChannelId,
+    #[description = "The channel to apply the template to"] channel: GenericChannelId,
     #[description = "Whether or not to clear the channel (default true)"] clear: Option<bool>,
 ) -> Result<()> {
     let clear = clear.unwrap_or(true);

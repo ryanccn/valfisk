@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
+use std::str::FromStr;
+
 use eyre::Result;
 use poise::serenity_prelude::{self as serenity, Mentionable as _};
 
@@ -9,14 +11,17 @@ use crate::config::CONFIG;
 
 async fn get_starboard_channel(
     http: impl serenity::CacheHttp,
-    channel: serenity::ChannelId,
+    channel: serenity::GenericChannelId,
     guild: Option<serenity::GuildId>,
-) -> Result<Option<serenity::ChannelId>> {
-    let Some(guild_channel) = channel.to_guild_channel(&http, guild).await.ok() else {
+) -> Result<Option<serenity::GenericChannelId>> {
+    let Some(serenity::Channel::Guild(guild_channel)) = channel.to_channel(&http, guild).await.ok()
+    else {
         return Ok(None);
     };
 
-    if CONFIG.private_category.is_some() && CONFIG.private_category == guild_channel.parent_id {
+    if CONFIG.private_category.is_some()
+        && CONFIG.private_category == guild_channel.parent_id.map(|id| id.widen())
+    {
         return Ok(CONFIG.private_starboard_channel);
     }
 
@@ -47,9 +52,9 @@ impl StarboardEmojis {
     }
 }
 
-impl std::str::FromStr for StarboardEmojis {
+impl FromStr for StarboardEmojis {
     type Err = eyre::Report;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Self> {
         let s = s.trim();
 
         if s == "*" {
@@ -98,7 +103,7 @@ fn get_significant_reactions(message: &serenity::Message) -> Vec<(serenity::Reac
 }
 
 fn serialize_reactions(
-    channel: serenity::ChannelId,
+    channel: serenity::GenericChannelId,
     reactions: &[(serenity::ReactionType, u64)],
 ) -> String {
     let reaction_string = reactions
@@ -146,7 +151,12 @@ async fn make_message_embed<'a>(
 
     builder = builder.color(0xffd43b);
 
-    if let Some(guild_id) = message.guild_channel(&ctx).await.ok().map(|ch| ch.guild_id) {
+    if let Some(guild_id) = message
+        .guild_channel(&ctx)
+        .await
+        .ok()
+        .map(|ch| ch.base.guild_id)
+    {
         if let Ok(member) = guild_id.member(&ctx, message.author.id).await {
             for role_id in &member.roles {
                 if let Ok(role) = guild_id.role(&ctx.http, *role_id).await {
@@ -244,7 +254,7 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
 pub async fn handle_deletion(
     ctx: &serenity::Context,
     deleted_message_id: serenity::MessageId,
-    channel_id: serenity::ChannelId,
+    channel_id: serenity::GenericChannelId,
     guild_id: Option<serenity::GuildId>,
 ) -> Result<()> {
     if let Some(storage) = &ctx.data::<crate::Data>().storage {

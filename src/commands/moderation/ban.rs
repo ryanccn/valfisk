@@ -57,6 +57,7 @@ pub async fn ban(
         if let Ok(dm) = member.user.create_dm_channel(ctx.http()).await {
             if dm
                 .id
+                .widen()
                 .send_message(
                     ctx.http(),
                     serenity::CreateMessage::default().embed(dm_embed.clone()),

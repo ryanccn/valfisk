@@ -10,24 +10,21 @@ on:
   pull_request:
     branches: ["main"]
 
+permissions:
+  contents: read
+
 jobs:
   build:
-    runs-on: ${{ matrix.runner }}
-
-    strategy:
-      matrix:
-        runner:
-          - ubuntu-latest
-          - macos-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-        with:
-          diagnostic-endpoint: ""
+        uses: cachix/install-nix-action@v31
 
       - name: Build
         run: nix build --fallback --print-build-logs '.#valfisk'

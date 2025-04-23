@@ -10,6 +10,9 @@ on:
   pull_request:
     branches: ["main"]
 
+permissions:
+  contents: read
+
 jobs:
   build:
     strategy:
@@ -26,11 +29,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-        with:
-          diagnostic-endpoint: ""
+        uses: cachix/install-nix-action@v31
 
       - name: Build Docker image
         id: image
@@ -74,19 +77,19 @@ jobs:
 
       - name: Push to registry
         env:
-          TAG: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          DOCKER_TAG: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
         run: |
           set -eux
 
           architectures=("x86_64" "aarch64")
           for arch in "${architectures[@]}"; do
             docker load < images/container-"$arch"/*.tar.gz
-            docker tag valfisk:latest-"$arch" ${{ env.TAG }}-"$arch"
-            docker push ${{ env.TAG }}-"$arch"
+            docker tag "valfisk:latest-$arch" "$DOCKER_TAG-$arch"
+            docker push "$DOCKER_TAG-$arch"
           done
 
-          docker manifest create ${{ env.TAG }} \
-            --amend ${{ env.TAG }}-x86_64 \
-            --amend ${{ env.TAG }}-aarch64
+          docker manifest create "$DOCKER_TAG" \
+            --amend "$DOCKER_TAG-x86_64" \
+            --amend "$DOCKER_TAG-aarch64"
 
-          docker manifest push ${{ env.TAG }}
+          docker manifest push "$DOCKER_TAG"

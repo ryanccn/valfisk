@@ -62,7 +62,7 @@ impl Data {
 pub type Context<'a> = poise::Context<'a, Data, Report>;
 
 async fn shutdown() {
-    let (shutdown_tx, mut shutdown_rx) = mpsc::channel::<()>(10);
+    let (shutdown_tx, mut shutdown_rx) = mpsc::channel::<()>(1);
 
     task::spawn({
         let shutdown_tx = shutdown_tx.clone();
@@ -125,8 +125,8 @@ async fn valfisk() -> Result<()> {
     let mut client = serenity::Client::builder(
         CONFIG.discord_token.parse()?,
         serenity::GatewayIntents::non_privileged()
-            .union(serenity::GatewayIntents::GUILD_MEMBERS)
-            .union(serenity::GatewayIntents::MESSAGE_CONTENT),
+            | serenity::GatewayIntents::GUILD_MEMBERS
+            | serenity::GatewayIntents::MESSAGE_CONTENT,
     )
     .event_handler(EventHandler)
     .framework(Framework::new(FrameworkOptions {

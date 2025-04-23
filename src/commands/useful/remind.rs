@@ -20,7 +20,9 @@ pub async fn remind(
 
     if let Ok(duration) = humantime::parse_duration(&duration) {
         if let Some(member) = ctx.author_member().await {
-            if let Some(channel) = ctx.guild_channel().await {
+            if let Ok(serenity::Channel::Guild(channel)) =
+                ctx.channel_id().to_channel(&ctx, ctx.guild_id()).await
+            {
                 if ctx.guild().is_some_and(|guild| {
                     guild.user_permissions_in(&channel, &member).send_messages()
                 }) {
@@ -55,7 +57,7 @@ pub async fn remind(
                                     .await
                             {
                                 tracing::error!("{err:?}");
-                            };
+                            }
                         }
                     });
 

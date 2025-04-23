@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
-{ inputs, self, ... }:
+{ self, ... }:
 {
   perSystem =
     { pkgs, lib, ... }:
@@ -20,7 +20,7 @@
           name = "valfisk-etc-os-release";
           text =
             let
-              version = (pkgFor arch).version;
+              inherit (pkgFor arch) version;
             in
             ''
               NAME="Valfisk Linux"

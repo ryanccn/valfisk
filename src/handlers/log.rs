@@ -12,7 +12,7 @@ use crate::{config::CONFIG, storage::log::MessageLog, utils};
 #[derive(Debug, Clone, Copy)]
 pub struct LogMessageIds {
     pub message: serenity::MessageId,
-    pub channel: serenity::ChannelId,
+    pub channel: serenity::GenericChannelId,
     pub guild: Option<serenity::GuildId>,
     pub author: Option<serenity::UserId>,
 }

@@ -14,7 +14,7 @@ use crate::Context;
 /// Get system information for the bot host
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 #[poise::command(slash_command, guild_only, default_member_permissions = "MANAGE_GUILD")]
-#[allow(clippy::cast_precision_loss)]
+#[expect(clippy::cast_precision_loss)]
 pub async fn sysinfo(
     ctx: Context<'_>,
     #[description = "Whether the response should be ephemeral (defaults to true)"]

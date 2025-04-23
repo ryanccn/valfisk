@@ -12,7 +12,7 @@
         pkgs.stdenv.mkDerivation (
           {
             name = "check-${args.name}";
-            src = config.packages.valfisk.src;
+            inherit (config.packages.valfisk) src;
 
             buildPhase = ''
               ${args.command}

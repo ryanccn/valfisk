@@ -52,8 +52,8 @@ pub async fn self_timeout(
                 .await?;
 
             if let Some(storage) = &ctx.data().storage {
-                if let Ok(guild_channel) =
-                    ctx.channel_id().to_guild_channel(ctx, ctx.guild_id()).await
+                if let Ok(serenity::Channel::Guild(guild_channel)) =
+                    ctx.channel_id().to_channel(&ctx, ctx.guild_id()).await
                 {
                     if storage
                         .get_self_timeout_transparency(ctx.author().id.get())
@@ -80,13 +80,13 @@ pub async fn self_timeout(
                                 serenity::CreateMessage::default().embed(resp_embed),
                             )
                             .await?;
-                    };
+                    }
                 }
             }
         }
     } else {
         ctx.say("Invalid duration!").await?;
-    };
+    }
 
     Ok(())
 }

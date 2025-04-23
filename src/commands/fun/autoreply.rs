@@ -18,7 +18,6 @@ use crate::Context;
     subcommand_required,
     default_member_permissions = "MANAGE_GUILD"
 )]
-#[allow(clippy::unused_async)]
 pub async fn autoreply(ctx: Context<'_>) -> Result<()> {
     Ok(())
 }

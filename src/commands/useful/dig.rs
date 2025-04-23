@@ -40,7 +40,7 @@ pub static BOOTSTRAP_RESOLVER: LazyLock<TokioResolver> = LazyLock::new(|| {
     builder.build()
 });
 
-#[allow(clippy::upper_case_acronyms)]
+#[expect(clippy::upper_case_acronyms)]
 #[derive(ChoiceParameter, Debug, Copy, Clone)]
 enum RecordTypeChoice {
     A,

@@ -10,7 +10,7 @@ use std::sync::LazyLock;
 use tokio::task::JoinSet;
 
 use crate::{
-    http,
+    http::HTTP,
     utils::{serenity::suppress_embeds, truncate},
 };
 
@@ -30,14 +30,14 @@ async fn github<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>> {
     let ref_ = &captures["ref"];
     let file = &captures["file"];
 
-    let language = file.split('.').last().unwrap_or_default();
+    let language = file.split('.').next_back().unwrap_or_default();
 
     let start = captures["start"].parse::<usize>()?;
     let end = captures
         .name("end")
         .and_then(|end| end.as_str().parse::<usize>().ok());
 
-    let lines: Vec<String> = http::HTTP
+    let lines: Vec<String> = HTTP
         .get(format!(
             "https://raw.githubusercontent.com/{repo}/{ref_}/{file}"
         ))
@@ -80,7 +80,7 @@ async fn rust_playground<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>
 
     let gist_id = &captures["gist"];
 
-    let gist = http::HTTP
+    let gist = HTTP
         .get(format!(
             "https://gist.githubusercontent.com/rust-play/{gist_id}/raw/playground.rs"
         ))
@@ -113,7 +113,7 @@ async fn go_playground<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>> 
 
     let id = &captures["id"];
 
-    let code = http::HTTP
+    let code = HTTP
         .get("https://go.dev/_/share")
         .query(&[("id", &id)])
         .send()
@@ -176,7 +176,7 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                     .reference_message(message),
             )
             .await?;
-    };
+    }
 
     Ok(())
 }

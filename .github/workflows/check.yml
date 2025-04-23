@@ -10,20 +10,24 @@ on:
   pull_request:
     branches: ["main"]
 
+permissions:
+  contents: read
+
 jobs:
   clippy:
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       security-events: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-        with:
-          diagnostic-endpoint: ""
+        uses: cachix/install-nix-action@v31
 
       - name: Check
         run: nix build --fallback --print-build-logs '.#checks.x86_64-linux.clippy'
@@ -40,11 +44,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-        with:
-          diagnostic-endpoint: ""
+        uses: cachix/install-nix-action@v31
 
       - name: Check
         run: nix build --fallback --print-build-logs '.#checks.x86_64-linux.rustfmt'
@@ -55,11 +59,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-        with:
-          diagnostic-endpoint: ""
+        uses: cachix/install-nix-action@v31
 
       - name: Check
         run: nix build --fallback --print-build-logs '.#checks.x86_64-linux.nixfmt'
@@ -70,11 +74,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-        with:
-          diagnostic-endpoint: ""
+        uses: cachix/install-nix-action@v31
 
       - name: Check
         run: nix build --fallback --print-build-logs '.#checks.x86_64-linux.reuse'

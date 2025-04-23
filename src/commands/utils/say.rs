@@ -18,7 +18,7 @@ pub async fn say(
     ctx.defer_ephemeral().await?;
 
     if let Some(user) = dm {
-        user.create_dm_channel(&ctx).await?.id
+        user.create_dm_channel(&ctx).await?.id.widen()
     } else {
         ctx.channel_id()
     }

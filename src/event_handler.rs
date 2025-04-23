@@ -10,7 +10,7 @@ pub struct EventHandler;
 
 #[serenity::async_trait]
 impl serenity::EventHandler for EventHandler {
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines)]
     async fn dispatch(&self, ctx: &serenity::Context, event: &serenity::FullEvent) {
         use serenity::FullEvent;
 
