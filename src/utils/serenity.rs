@@ -12,7 +12,7 @@ pub async fn suppress_embeds(ctx: &serenity::Context, message: &serenity::Messag
     use std::time::Duration;
     use tokio::time::timeout;
 
-    let mut message_updates = serenity::collector::collect(ctx, {
+    let mut message_updates = serenity::collect(ctx, {
         let id = message.id;
         move |ev| match ev {
             Event::MessageUpdate(x) if x.message.id == id => Some(()),

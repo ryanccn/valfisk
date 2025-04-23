@@ -37,12 +37,9 @@ pub struct EnvConfig {
 
     #[serde(default)]
     pub random_color_roles: Vec<RoleId>,
-    #[serde(default)]
-    pub intelligence_allowed_roles: Vec<RoleId>,
 
     pub pagespeed_api_key: Option<String>,
     pub safe_browsing_api_key: Option<String>,
-    pub intelligence_secret: Option<String>,
 
     pub kofi_verification_token: Option<String>,
     pub kofi_notify_channel: Option<GenericChannelId>,

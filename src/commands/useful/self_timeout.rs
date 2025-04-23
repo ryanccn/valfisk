@@ -3,7 +3,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 use eyre::{Result, eyre};
-use poise::serenity_prelude as serenity;
+use std::time::Duration;
+use tokio::time::timeout;
+
+use nanoid::nanoid;
+use poise::{futures_util::StreamExt as _, serenity_prelude as serenity};
 
 use crate::Context;
 
@@ -18,70 +22,154 @@ pub async fn self_timeout(
     ctx.defer_ephemeral().await?;
 
     if let Ok(duration) = humantime::parse_duration(&duration) {
-        if let Some(mut member) = ctx.author_member().await {
-            let start = chrono::Utc::now();
-            let end = start + duration;
+        let mut member = ctx
+            .author_member()
+            .await
+            .ok_or_else(|| eyre!("could not find member for author"))?;
 
-            member
-                .to_mut()
-                .edit(
-                    ctx.http(),
-                    serenity::EditMember::default()
-                        .disable_communication_until(end.into())
-                        .audit_log_reason(&format!(
-                            "Requested self timeout{}",
-                            reason
-                                .as_ref()
-                                .map(|r| format!(": {r}"))
-                                .unwrap_or_default()
-                        )),
-                )
-                .await?;
+        let start = chrono::Utc::now();
+        let end = start + duration;
 
-            let resp_embed = serenity::CreateEmbed::default()
-                .title("Self-timeout in effect")
-                .field("Start", format!("<t:{0}:F>", start.timestamp()), false)
-                .field(
-                    "End",
-                    format!("<t:{0}:F> (<t:{0}:R>)", end.timestamp()),
-                    false,
-                )
-                .color(0x4ade80);
+        let confirm_button_id = nanoid!(12);
+        let cancel_button_id = nanoid!(12);
 
-            ctx.send(poise::CreateReply::default().embed(resp_embed.clone()))
-                .await?;
-
-            if let Some(storage) = &ctx.data().storage {
-                if let Ok(serenity::Channel::Guild(guild_channel)) =
-                    ctx.channel_id().to_channel(&ctx, ctx.guild_id()).await
-                {
-                    if storage
-                        .get_self_timeout_transparency(ctx.author().id.get())
-                        .await?
-                        .unwrap_or(false)
-                        && ctx.guild().is_some_and(|guild| {
-                            guild
-                                .user_permissions_in(&guild_channel, &member)
-                                .send_messages()
-                        })
-                    {
-                        let mut resp_embed = resp_embed.author(
-                            serenity::CreateEmbedAuthor::new(ctx.author().tag())
-                                .icon_url(ctx.author().face()),
-                        );
-
-                        if let Some(reason) = reason {
-                            resp_embed = resp_embed.field("Reason", reason, false);
-                        }
-
-                        guild_channel
-                            .send_message(
-                                ctx.http(),
-                                serenity::CreateMessage::default().embed(resp_embed),
+        let confirm_reply = ctx
+            .send(
+                poise::CreateReply::default()
+                    .embed(
+                        serenity::CreateEmbed::default()
+                            .title("Requesting self-timeout")
+                            .field("Start", format!("<t:{0}:F>", start.timestamp()), false)
+                            .field(
+                                "End",
+                                format!("<t:{0}:F> (<t:{0}:R>)", end.timestamp()),
+                                false,
                             )
-                            .await?;
+                            .color(0xffd43b),
+                    )
+                    .components(vec![serenity::CreateActionRow::Buttons(
+                        vec![
+                            serenity::CreateButton::new(&confirm_button_id)
+                                .label("Confirm")
+                                .style(serenity::ButtonStyle::Danger),
+                            serenity::CreateButton::new(&cancel_button_id)
+                                .label("Cancel")
+                                .style(serenity::ButtonStyle::Secondary),
+                        ]
+                        .into(),
+                    )]),
+            )
+            .await?;
+
+        let interaction = timeout(
+            Duration::from_secs(24 * 60 * 60),
+            serenity::collect(ctx.serenity_context(), {
+                let confirm_message_id = confirm_reply.message().await?.id;
+
+                move |event| match event {
+                    serenity::Event::InteractionCreate(event) => event
+                        .interaction
+                        .as_message_component()
+                        .take_if(|i| i.message.id == confirm_message_id)
+                        .cloned(),
+                    _ => None,
+                }
+            })
+            .next(),
+        )
+        .await?;
+
+        if let Some(interaction) = interaction {
+            if interaction.data.custom_id == confirm_button_id {
+                member
+                    .to_mut()
+                    .edit(
+                        ctx.http(),
+                        serenity::EditMember::default()
+                            .disable_communication_until(end.into())
+                            .audit_log_reason(&format!(
+                                "Requested self timeout{}",
+                                reason
+                                    .as_ref()
+                                    .map(|r| format!(": {r}"))
+                                    .unwrap_or_default()
+                            )),
+                    )
+                    .await?;
+
+                let info_embed = serenity::CreateEmbed::default()
+                    .title("Self-timeout in effect")
+                    .field("Start", format!("<t:{0}:F>", start.timestamp()), false)
+                    .field(
+                        "End",
+                        format!("<t:{0}:F> (<t:{0}:R>)", end.timestamp()),
+                        false,
+                    )
+                    .color(0x4ade80);
+
+                confirm_reply
+                    .edit(
+                        ctx,
+                        poise::CreateReply::new()
+                            .embed(info_embed.clone())
+                            .components(vec![]),
+                    )
+                    .await?;
+
+                if let Some(storage) = &ctx.data().storage {
+                    if let Ok(serenity::Channel::Guild(guild_channel)) =
+                        ctx.channel_id().to_channel(&ctx, ctx.guild_id()).await
+                    {
+                        if storage
+                            .get_self_timeout_transparency(ctx.author().id.get())
+                            .await?
+                            .unwrap_or(false)
+                            && ctx.guild().is_some_and(|guild| {
+                                guild
+                                    .user_permissions_in(&guild_channel, &member)
+                                    .send_messages()
+                            })
+                        {
+                            let mut info_embed_extended = info_embed.author(
+                                serenity::CreateEmbedAuthor::new(ctx.author().tag())
+                                    .icon_url(ctx.author().face()),
+                            );
+
+                            if let Some(reason) = reason {
+                                info_embed_extended =
+                                    info_embed_extended.field("Reason", reason, false);
+                            }
+
+                            guild_channel
+                                .send_message(
+                                    ctx.http(),
+                                    serenity::CreateMessage::default().embed(info_embed_extended),
+                                )
+                                .await?;
+                        }
                     }
                 }
+            } else if interaction.data.custom_id == cancel_button_id {
+                confirm_reply
+                    .edit(
+                        ctx,
+                        poise::CreateReply::new()
+                            .embed(
+                                serenity::CreateEmbed::default()
+                                    .title("Self-timeout cancelled")
+                                    .field("Start", format!("<t:{0}:F>", start.timestamp()), false)
+                                    .field(
+                                        "End",
+                                        format!("<t:{0}:F> (<t:{0}:R>)", end.timestamp()),
+                                        false,
+                                    )
+                                    .color(0xff6b6b),
+                            )
+                            .components(vec![]),
+                    )
+                    .await?;
+            } else {
+                tracing::error!("Received unknown interaction: {:?}", interaction);
             }
         }
     } else {

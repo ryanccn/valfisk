@@ -20,7 +20,6 @@ mod config;
 mod event_handler;
 mod handlers;
 mod http;
-mod intelligence;
 mod safe_browsing;
 mod schedule;
 mod storage;

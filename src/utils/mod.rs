@@ -44,6 +44,7 @@ impl<T> Drop for JoinHandleAbortOnDrop<T> {
     }
 }
 
+#[expect(dead_code)]
 pub fn spawn_abort_on_drop<F>(future: F) -> JoinHandleAbortOnDrop<F::Output>
 where
     F: Future + Send + 'static,
