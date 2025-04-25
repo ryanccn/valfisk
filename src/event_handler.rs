@@ -4,32 +4,32 @@
 
 use poise::serenity_prelude as serenity;
 
-use crate::{config::CONFIG, handlers, storage::log::MessageLog, utils::Pluralize as _};
+use crate::{commands, config::CONFIG, handlers, storage::log::MessageLog};
 
 pub struct EventHandler;
 
 #[serenity::async_trait]
 impl serenity::EventHandler for EventHandler {
-    #[expect(clippy::too_many_lines)]
+    #[tracing::instrument(skip_all)]
     async fn dispatch(&self, ctx: &serenity::Context, event: &serenity::FullEvent) {
         use serenity::FullEvent;
 
         let outcome: eyre::Result<()> = async {
             match event {
                 FullEvent::Ready { data_about_bot, .. } => {
-                    tracing::info!("Connected to Discord as {}", data_about_bot.user.tag());
+                    tracing::info!(user = data_about_bot.user.tag(), "connected to Discord");
 
-                    let commands = crate::commands::to_vec();
-                    poise::builtins::register_globally(&ctx.http, &commands).await?;
+                    let commands_vec = commands::to_vec();
+                    poise::builtins::register_globally(&ctx.http, &commands_vec).await?;
 
                     tracing::info!(
-                        "Registered {} {} ({} guild-only)",
-                        commands.len(),
-                        "command".pluralize(commands.len()),
-                        commands.iter().filter(|c| c.guild_only).count(),
+                        all = commands_vec.len(),
+                        guild_only = commands_vec.iter().filter(|c| c.guild_only).count(),
+                        "registered application commands",
                     );
 
-                    crate::commands::restore_presence(ctx).await?;
+                    commands::restore::presence(ctx).await?;
+                    commands::restore::reminders(ctx).await?;
                 }
 
                 FullEvent::Message { new_message, .. } => {

@@ -2,11 +2,37 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use eyre::Result;
+use eyre::{Result, eyre};
 use poise::serenity_prelude::{self as serenity, Mentionable as _};
 use tokio::{task, time};
 
-use crate::Context;
+use crate::{Context, storage::reminder::ReminderData};
+
+#[tracing::instrument(skip(http))]
+async fn dispatch(http: &serenity::Http, data: &ReminderData) -> Result<()> {
+    let user = data.user.to_user(&http).await?;
+
+    data.channel
+        .send_message(
+            http,
+            serenity::CreateMessage::default()
+                .content(data.user.mention().to_string())
+                .embed(
+                    serenity::CreateEmbed::default()
+                        .title("Reminder")
+                        .description(
+                            data.content
+                                .clone()
+                                .unwrap_or_else(|| "*No content*".into()),
+                        )
+                        .author(serenity::CreateEmbedAuthor::new(user.tag()).icon_url(user.face()))
+                        .color(0x3bc9db),
+                ),
+        )
+        .await?;
+
+    Ok(())
+}
 
 /// Create a reminder for yourself
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
@@ -26,36 +52,25 @@ pub async fn remind(
                 if ctx.guild().is_some_and(|guild| {
                     guild.user_permissions_in(&channel, &member).send_messages()
                 }) {
-                    let end = chrono::Utc::now() + duration;
+                    let timestamp = chrono::Utc::now() + duration;
+
+                    let data = ReminderData {
+                        guild: ctx
+                            .guild_id()
+                            .ok_or_else(|| eyre!("could not obtain guild ID"))?,
+                        channel: ctx.channel_id(),
+                        user: member.user.id,
+                        content: content.clone(),
+                        timestamp,
+                    };
 
                     task::spawn({
                         let http = ctx.serenity_context().http.clone();
-                        let author = ctx.author().id;
-                        let content = content.clone();
-                        let embed_author = serenity::CreateEmbedAuthor::new(member.user.tag())
-                            .icon_url(member.face());
+                        let data = data.clone();
 
                         async move {
                             time::sleep(duration).await;
-
-                            if let Err(err) =
-                                channel
-                                    .send_message(
-                                        &http,
-                                        serenity::CreateMessage::default()
-                                            .content(author.mention().to_string())
-                                            .embed(
-                                                serenity::CreateEmbed::default()
-                                                    .title("Reminder")
-                                                    .description(content.unwrap_or_else(|| {
-                                                        "*No content*".to_owned()
-                                                    }))
-                                                    .author(embed_author)
-                                                    .color(0x3bc9db),
-                                            ),
-                                    )
-                                    .await
-                            {
+                            if let Err(err) = dispatch(&http, &data).await {
                                 tracing::error!("{err:?}");
                             }
                         }
@@ -67,7 +82,7 @@ pub async fn remind(
                                 .title("Reminder set!")
                                 .field(
                                     "Time",
-                                    format!("<t:{0}:F> (<t:{0}:R>)", end.timestamp()),
+                                    format!("<t:{0}:F> (<t:{0}:R>)", timestamp.timestamp()),
                                     false,
                                 )
                                 .field(
@@ -84,6 +99,11 @@ pub async fn remind(
                     )
                     .await?;
 
+                    if let Some(storage) = &ctx.data().storage {
+                        storage.add_reminders(&data).await?;
+                        storage.clean_reminders().await?;
+                    }
+
                     return Ok(());
                 }
             }
@@ -91,6 +111,38 @@ pub async fn remind(
     }
 
     ctx.say("Failed to set reminder!").await?;
+
+    Ok(())
+}
+
+#[tracing::instrument(skip(ctx))]
+pub async fn restore(ctx: &serenity::Context) -> Result<()> {
+    if let Some(storage) = &ctx.data::<crate::Data>().storage {
+        let reminders = storage.scan_reminders().await?;
+
+        for data in &reminders {
+            task::spawn({
+                let http = ctx.http.clone();
+                let data = data.clone();
+                let duration = (data.timestamp - chrono::Utc::now())
+                    .to_std()
+                    .unwrap_or_default();
+
+                async move {
+                    time::sleep(duration).await;
+                    if let Err(err) = dispatch(&http, &data).await {
+                        tracing::error!("{err:?}");
+                    }
+                }
+            });
+        }
+
+        if !reminders.is_empty() {
+            tracing::info!(len = reminders.len(), "restored reminders from storage");
+        }
+
+        storage.clean_reminders().await?;
+    }
 
     Ok(())
 }

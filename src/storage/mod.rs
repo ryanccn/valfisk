@@ -2,167 +2,234 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use redis::{AsyncCommands as _, RedisResult};
+use redis::{
+    AsyncCommands as _, RedisResult,
+    aio::{ConnectionManager, ConnectionManagerConfig},
+};
+use std::{fmt, time::Duration};
+
+use log::MessageLog;
+use reminder::ReminderData;
 
 pub mod log;
 pub mod presence;
 mod redis_util;
+pub mod reminder;
 
-#[derive(Debug)]
+#[non_exhaustive]
 pub struct Storage {
-    redis: redis::Client,
+    conn: ConnectionManager,
 }
 
-impl From<redis::Client> for Storage {
-    fn from(value: redis::Client) -> Self {
-        Self { redis: value }
+impl fmt::Debug for Storage {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Storage").finish_non_exhaustive()
+    }
+}
+
+impl Storage {
+    pub async fn redis(redis: redis::Client) -> RedisResult<Self> {
+        let conn = ConnectionManager::new_with_config(
+            redis,
+            ConnectionManagerConfig::new()
+                .set_connection_timeout(Duration::from_secs(10))
+                .set_response_timeout(Duration::from_secs(60))
+                .set_number_of_retries(3),
+        )
+        .await?;
+
+        Ok(Self { conn })
     }
 }
 
 impl Storage {
     pub async fn size(&self) -> RedisResult<u64> {
-        let mut conn = self.redis.get_multiplexed_async_connection().await?;
+        let mut conn = self.conn.clone();
         let keys: u64 = redis::cmd("DBSIZE").query_async(&mut conn).await?;
         Ok(keys)
     }
 }
 
-macro_rules! impl_storage {
-    ($n: ident, $k: literal, $t: ty) => {
-        paste::paste! {
-            #[::tracing::instrument(skip(self))]
-            pub async fn [<get_ $n>](&self) -> RedisResult<Option<$t>> {
-                let mut conn = self.redis.get_multiplexed_async_connection().await?;
-                let ret: Option<$t> = conn.get($k).await?;
-                Ok(ret)
-            }
-
-            #[::tracing::instrument(skip(self))]
-            pub async fn [<set_ $n>](&self, value: &$t) -> RedisResult<()> {
-                let mut conn = self.redis.get_multiplexed_async_connection().await?;
-                let _: () = conn.set($k, value).await?;
-                Ok(())
-            }
-
-            #[::tracing::instrument(skip(self))]
-            pub async fn [<del_ $n>](&self) -> RedisResult<()> {
-                let mut conn = self.redis.get_multiplexed_async_connection().await?;
-                let _: () = conn.del($k).await?;
-                Ok(())
-            }
-        }
-    };
-
-    ($n: ident, $k: literal, $t: ty, $($mn: ident: $mt: ty),+) => {
-        paste::paste! {
-            #[::tracing::instrument(skip(self))]
-            pub async fn [<get_ $n>](&self, $($mn: $mt),+) -> RedisResult<Option<$t>> {
-                let mut conn = self.redis.get_multiplexed_async_connection().await?;
-                let ret: Option<$t> = conn.get(format!($k, $($mn),*)).await?;
-                Ok(ret)
-            }
-
-            #[::tracing::instrument(skip(self))]
-            pub async fn [<set_ $n>](&self, $($mn: $mt),+, value: &$t) -> RedisResult<()> {
-                let mut conn = self.redis.get_multiplexed_async_connection().await?;
-                let _: () = conn.set(format!($k, $($mn),*), value).await?;
-                Ok(())
-            }
-
-            #[::tracing::instrument(skip(self))]
-            pub async fn [<del_ $n>](&self, $($mn: $mt),+) -> RedisResult<()> {
-                let mut conn = self.redis.get_multiplexed_async_connection().await?;
-                let _: () = conn.del(format!($k, $($mn),*)).await?;
-                Ok(())
-            }
-        }
-    };
-
-    ($n: ident, $k: literal, $t: ty, ttl = $ttl: literal) => {
-        paste::paste! {
-            #[::tracing::instrument(skip(self))]
-            pub async fn [<get_ $n>](&self) -> RedisResult<Option<$t>> {
-                let mut conn = self.redis.get_multiplexed_async_connection().await?;
-                let ret: Option<$t> = conn.get($k).await?;
-                Ok(ret)
-            }
-
-            #[::tracing::instrument(skip(self))]
-            pub async fn [<set_ $n>](&self, value: &$t) -> RedisResult<()> {
-                let mut conn = self.redis.get_multiplexed_async_connection().await?;
-                conn.set_options($k, value, redis::SetOptions::default().with_expiration(redis::SetExpiry::EX($ttl))).await?;
-                Ok(())
-            }
-
-            #[::tracing::instrument(skip(self))]
-            pub async fn [<del_ $n>](&self) -> RedisResult<()> {
-                let mut conn = self.redis.get_multiplexed_async_connection().await?;
-                conn.del($k).await?;
-                Ok(())
-            }
-        }
-    };
-
-    ($n: ident, $k: literal, $t: ty, ttl = $ttl: literal, $($mn: ident: $mt: ty),+) => {
-        paste::item! {
-            #[::tracing::instrument(skip(self))]
-            pub async fn [<get_ $n>](&self, $($mn: $mt),+) -> RedisResult<Option<$t>> {
-                let mut conn = self.redis.get_multiplexed_async_connection().await?;
-                let ret: Option<$t> = conn.get(format!($k, $($mn),*)).await?;
-                Ok(ret)
-            }
-
-            #[::tracing::instrument(skip(self))]
-            pub async fn [<set_ $n>](&self, $($mn: $mt),+, value: &$t) -> RedisResult<()> {
-                let mut conn = self.redis.get_multiplexed_async_connection().await?;
-                let _: () = conn.set_options(format!($k, $($mn),*), value, redis::SetOptions::default().with_expiration(redis::SetExpiry::EX($ttl))).await?;
-                Ok(())
-            }
-
-            #[::tracing::instrument(skip(self))]
-            pub async fn [<del_ $n>](&self, $($mn: $mt),+) -> RedisResult<()> {
-                let mut conn = self.redis.get_multiplexed_async_connection().await?;
-                let _: () = conn.del(format!($k, $($mn),*)).await?;
-                Ok(())
-            }
-        }
-    };
-}
-
-#[allow(dead_code)]
-impl Storage {
-    impl_storage!(presence, "presence-v1", presence::PresenceData);
-    impl_storage!(starboard, "starboard-v1:{}", u64, ttl = 2629746, message_id: u64);
-    impl_storage!(self_timeout_transparency, "stt-v1:{}", bool, user_id: u64);
-    impl_storage!(message_log, "message-log-v1:{}", log::MessageLog, ttl = 86400, message_id: u64);
+mod consts {
+    pub const PRESENCE: &str = "presence-v1";
+    pub const STARBOARD: &str = "starboard-v1";
+    pub const SELF_TIMEOUT_TRANSPARENCY: &str = "stt-v1";
+    pub const MESSAGE_LOG: &str = "message-log-v1";
+    pub const REMINDERS: &str = "reminders-v1";
+    pub const AUTOREPLY: &str = "autoreply-v1";
 }
 
 impl Storage {
-    #[tracing::instrument(skip(self))]
-    pub async fn getall_autoreply(&self) -> RedisResult<Vec<(String, String)>> {
-        let mut conn = self.redis.get_multiplexed_async_connection().await?;
-        let values: Vec<(String, String)> = conn.hgetall("autoreply-v1").await?;
+    pub async fn get_presence(&self) -> RedisResult<Option<presence::PresenceData>> {
+        let mut conn = self.conn.clone();
+        let ret: Option<presence::PresenceData> = conn.get(consts::PRESENCE).await?;
+        Ok(ret)
+    }
+
+    pub async fn set_presence(&self, value: &presence::PresenceData) -> RedisResult<()> {
+        let mut conn = self.conn.clone();
+        let _: () = conn.set(consts::PRESENCE, value).await?;
+        Ok(())
+    }
+
+    pub async fn del_presence(&self) -> RedisResult<()> {
+        let mut conn = self.conn.clone();
+        let _: () = conn.del(consts::PRESENCE).await?;
+        Ok(())
+    }
+}
+
+impl Storage {
+    pub async fn get_starboard(&self, message_id: u64) -> RedisResult<Option<u64>> {
+        let mut conn = self.conn.clone();
+        let ret: Option<u64> = conn
+            .get(format!("{}:{message_id}", consts::STARBOARD))
+            .await?;
+        Ok(ret)
+    }
+
+    pub async fn set_starboard(&self, message_id: u64, value: &u64) -> RedisResult<()> {
+        let mut conn = self.conn.clone();
+        let _: () = conn
+            .set_options(
+                format!("{}:{message_id}", consts::STARBOARD),
+                value,
+                redis::SetOptions::default().with_expiration(redis::SetExpiry::EX(2592000)),
+            )
+            .await?;
+        Ok(())
+    }
+
+    pub async fn del_starboard(&self, message_id: u64) -> RedisResult<()> {
+        let mut conn = self.conn.clone();
+        let _: () = conn
+            .del(format!("{}:{message_id}", consts::STARBOARD))
+            .await?;
+        Ok(())
+    }
+}
+
+impl Storage {
+    pub async fn get_self_timeout_transparency(&self, user_id: u64) -> RedisResult<Option<bool>> {
+        let mut conn = self.conn.clone();
+        let ret: Option<bool> = conn
+            .get(format!("{}:{user_id}", consts::SELF_TIMEOUT_TRANSPARENCY))
+            .await?;
+        Ok(ret)
+    }
+
+    pub async fn set_self_timeout_transparency(
+        &self,
+        user_id: u64,
+        value: &bool,
+    ) -> RedisResult<()> {
+        let mut conn = self.conn.clone();
+        let _: () = conn
+            .set(
+                format!("{}:{user_id}", consts::SELF_TIMEOUT_TRANSPARENCY),
+                value,
+            )
+            .await?;
+        Ok(())
+    }
+}
+
+impl Storage {
+    pub async fn get_message_log(&self, message_id: u64) -> RedisResult<Option<MessageLog>> {
+        let mut conn = self.conn.clone();
+        let ret: Option<MessageLog> = conn
+            .get(format!("{}:{message_id}", consts::MESSAGE_LOG))
+            .await?;
+        Ok(ret)
+    }
+
+    pub async fn set_message_log(&self, message_id: u64, value: &MessageLog) -> RedisResult<()> {
+        let mut conn = self.conn.clone();
+        let _: () = conn
+            .set_options(
+                format!("{}:{message_id}", consts::MESSAGE_LOG),
+                value,
+                redis::SetOptions::default().with_expiration(redis::SetExpiry::EX(86400)),
+            )
+            .await?;
+        Ok(())
+    }
+
+    pub async fn del_message_log(&self, message_id: u64) -> RedisResult<()> {
+        let mut conn = self.conn.clone();
+        let _: () = conn
+            .del(format!("{}:{message_id}", consts::MESSAGE_LOG))
+            .await?;
+        Ok(())
+    }
+}
+
+impl Storage {
+    pub async fn scan_reminders(&self) -> RedisResult<Vec<ReminderData>> {
+        use futures_util::StreamExt as _;
+
+        let mut conn = self.conn.clone();
+        let values: Vec<ReminderData> = redis::cmd("ZSCAN")
+            .arg(consts::REMINDERS)
+            .cursor_arg(0)
+            .arg("NOSCORES")
+            .clone()
+            .iter_async::<ReminderData>(&mut conn)
+            .await?
+            .collect::<Vec<_>>()
+            .await;
+
         Ok(values)
     }
 
-    #[tracing::instrument(skip(self))]
+    pub async fn add_reminders(&self, value: &ReminderData) -> RedisResult<()> {
+        let mut conn = self.conn.clone();
+        let _: () = conn
+            .zadd(consts::REMINDERS, value, value.timestamp.timestamp())
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn clean_reminders(&self) -> RedisResult<()> {
+        let mut conn = self.conn.clone();
+        let _: () = conn
+            .zrembyscore(consts::REMINDERS, 0, chrono::Utc::now().timestamp() - 1)
+            .await?;
+
+        Ok(())
+    }
+}
+
+impl Storage {
+    pub async fn scan_autoreply(&self) -> RedisResult<Vec<(String, String)>> {
+        use futures_util::StreamExt as _;
+
+        let mut conn = self.conn.clone();
+        let values: Vec<(String, String)> = conn
+            .hscan(consts::AUTOREPLY)
+            .await?
+            .collect::<Vec<_>>()
+            .await;
+
+        Ok(values)
+    }
+
     pub async fn add_autoreply(&self, f: &str, v: &str) -> RedisResult<()> {
-        let mut conn = self.redis.get_multiplexed_async_connection().await?;
-        let _: () = conn.hset("autoreply-v1", f, v).await?;
+        let mut conn = self.conn.clone();
+        let _: () = conn.hset(consts::AUTOREPLY, f, v).await?;
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     pub async fn del_autoreply(&self, f: &str) -> RedisResult<()> {
-        let mut conn = self.redis.get_multiplexed_async_connection().await?;
-        let _: () = conn.hdel("autoreply-v1", f).await?;
+        let mut conn = self.conn.clone();
+        let _: () = conn.hdel(consts::AUTOREPLY, f).await?;
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     pub async fn delall_autoreply(&self) -> RedisResult<()> {
-        let mut conn = self.redis.get_multiplexed_async_connection().await?;
-        let _: () = conn.del("autoreply-v1").await?;
+        let mut conn = self.conn.clone();
+        let _: () = conn.del(consts::AUTOREPLY).await?;
         Ok(())
     }
 }

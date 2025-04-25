@@ -58,12 +58,10 @@ impl ValfiskError<'_> {
     #[tracing::instrument(skip(self))]
     pub fn handle_log(&self) {
         tracing::error!(
-            {
-                id = self.error_id,
-                command = self.ctx.invocation_string(),
-                channel = self.ctx.channel_id().get(),
-                author = self.ctx.author().id.get()
-            },
+            id = self.error_id,
+            command = self.ctx.invocation_string(),
+            channel = self.ctx.channel_id().get(),
+            author = self.ctx.author().id.get(),
             "{:?}",
             self.report_or_panic,
         );

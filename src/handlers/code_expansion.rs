@@ -24,7 +24,7 @@ async fn github<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>> {
         .captures(m)
         .ok_or_else(|| eyre!("could not obtain captures"))?;
 
-    tracing::debug!("Handling GitHub link {}", &captures[0]);
+    tracing::debug!(link = &captures[0], "handling GitHub link");
 
     let repo = &captures["repo"];
     let ref_ = &captures["ref"];
@@ -76,7 +76,7 @@ async fn rust_playground<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>
         .captures(m)
         .ok_or_else(|| eyre!("could not obtain captures"))?;
 
-    tracing::debug!("Handling Rust playground link {}", &captures[0]);
+    tracing::debug!(link = &captures[0], "handling Rust playground link");
 
     let gist_id = &captures["gist"];
 
@@ -109,7 +109,7 @@ async fn go_playground<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>> 
         .captures(m)
         .ok_or_else(|| eyre!("could not obtain captures"))?;
 
-    tracing::debug!("Handling Go playground link {}", &captures[0]);
+    tracing::debug!(link = &captures[0], "handling Go playground link");
 
     let id = &captures["id"];
 

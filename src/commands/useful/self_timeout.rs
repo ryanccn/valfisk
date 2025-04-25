@@ -6,8 +6,9 @@ use eyre::{Result, eyre};
 use std::time::Duration;
 use tokio::time::timeout;
 
+use futures_util::StreamExt as _;
 use nanoid::nanoid;
-use poise::{futures_util::StreamExt as _, serenity_prelude as serenity};
+use poise::serenity_prelude as serenity;
 
 use crate::Context;
 
@@ -30,8 +31,8 @@ pub async fn self_timeout(
         let start = chrono::Utc::now();
         let end = start + duration;
 
-        let confirm_button_id = nanoid!(12);
-        let cancel_button_id = nanoid!(12);
+        let confirm_button_id = nanoid!(16);
+        let cancel_button_id = nanoid!(16);
 
         let confirm_reply = ctx
             .send(
@@ -169,7 +170,7 @@ pub async fn self_timeout(
                     )
                     .await?;
             } else {
-                tracing::error!("Received unknown interaction: {:?}", interaction);
+                tracing::error!(?interaction, "received unknown interaction");
             }
         }
     } else {

@@ -5,17 +5,15 @@
 use eyre::Result;
 use poise::serenity_prelude as serenity;
 
-#[tracing::instrument(skip(ctx))]
 pub async fn suppress_embeds(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
-    use poise::futures_util::StreamExt as _;
-    use serenity::{EditMessage, Event};
+    use futures_util::StreamExt as _;
     use std::time::Duration;
     use tokio::time::timeout;
 
     let mut message_updates = serenity::collect(ctx, {
         let id = message.id;
         move |ev| match ev {
-            Event::MessageUpdate(x) if x.message.id == id => Some(()),
+            serenity::Event::MessageUpdate(x) if x.message.id == id => Some(()),
             _ => None,
         }
     });
@@ -26,7 +24,7 @@ pub async fn suppress_embeds(ctx: &serenity::Context, message: &serenity::Messag
         .edit_message(
             message.channel_id,
             message.id,
-            &EditMessage::new().suppress_embeds(true),
+            &serenity::EditMessage::new().suppress_embeds(true),
             Vec::new(),
         )
         .await?;

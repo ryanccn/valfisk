@@ -9,7 +9,10 @@ mod moderation;
 mod useful;
 mod utils;
 
-pub use utils::presence::restore as restore_presence;
+pub mod restore {
+    pub use super::useful::remind::restore as reminders;
+    pub use super::utils::presence::restore as presence;
+}
 
 macro_rules! command {
     ($category: ident, $name: ident) => {

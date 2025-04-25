@@ -6,7 +6,7 @@ use poise::{CreateReply, serenity_prelude as serenity};
 
 use eyre::Result;
 
-use crate::{Context, storage::presence::PresenceChoice};
+use crate::{Context, storage::presence::PresenceKind};
 
 /// Modify the Discord presence shown by the bot
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
@@ -19,12 +19,12 @@ use crate::{Context, storage::presence::PresenceChoice};
 pub async fn presence(
     ctx: Context<'_>,
     #[description = "Text to display"] content: String,
-    #[description = "Type of presence"] r#type: Option<PresenceChoice>,
+    #[description = "Type of presence"] r#type: Option<PresenceKind>,
 ) -> Result<()> {
-    let data = r#type.unwrap_or_default().to_data(&content);
+    let data = r#type.unwrap_or_default().with_content(&content);
 
     ctx.serenity_context()
-        .set_presence(Some(data.to_activity()), serenity::OnlineStatus::Online);
+        .set_presence(data.to_activity(), serenity::OnlineStatus::Online);
 
     ctx.send(
         CreateReply::default().embed(
@@ -38,7 +38,11 @@ pub async fn presence(
     .await?;
 
     if let Some(storage) = &ctx.data().storage {
-        storage.set_presence(&data).await?;
+        if data.r#type == PresenceKind::Clear {
+            storage.del_presence().await?;
+        } else {
+            storage.set_presence(&data).await?;
+        }
     }
 
     Ok(())
@@ -48,9 +52,8 @@ pub async fn presence(
 pub async fn restore(ctx: &serenity::Context) -> Result<()> {
     if let Some(storage) = &ctx.data::<crate::Data>().storage {
         if let Some(presence) = storage.get_presence().await? {
-            ctx.set_presence(Some(presence.to_activity()), serenity::OnlineStatus::Online);
-
-            tracing::info!("Restored presence from Redis");
+            ctx.set_presence(presence.to_activity(), serenity::OnlineStatus::Online);
+            tracing::info!(?presence, "restored presence from storage");
         }
     }
 

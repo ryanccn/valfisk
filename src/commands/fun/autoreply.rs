@@ -22,6 +22,7 @@ pub async fn autoreply(ctx: Context<'_>) -> Result<()> {
     Ok(())
 }
 
+/// List autoreply keywords
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 #[poise::command(slash_command, guild_only, default_member_permissions = "MANAGE_GUILD")]
 async fn list(ctx: Context<'_>) -> Result<()> {
@@ -32,7 +33,7 @@ async fn list(ctx: Context<'_>) -> Result<()> {
         .storage
         .as_ref()
         .ok_or_else(|| eyre!("storage is not available"))?
-        .getall_autoreply()
+        .scan_autoreply()
         .await?;
 
     ctx.send(
@@ -54,6 +55,7 @@ async fn list(ctx: Context<'_>) -> Result<()> {
     Ok(())
 }
 
+/// Add an autoreply keyword
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 #[poise::command(slash_command, guild_only, default_member_permissions = "MANAGE_GUILD")]
 async fn add(
@@ -84,6 +86,7 @@ async fn add(
     Ok(())
 }
 
+/// Delete an autoreply keyword
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 #[poise::command(slash_command, guild_only, default_member_permissions = "MANAGE_GUILD")]
 async fn delete(
@@ -113,6 +116,7 @@ async fn delete(
     Ok(())
 }
 
+/// Delete all autoreply keywords
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 #[poise::command(
     rename = "delete-all",

@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
+use std::borrow::Cow;
+
 use humansize::{FormatSizeOptions, format_size};
 use poise::serenity_prelude::{self as serenity, Mentionable as _};
 
@@ -71,7 +73,10 @@ pub async fn handle_message(ctx: &serenity::Context, message: &serenity::Message
     Ok(())
 }
 
-fn make_link_components<'a>(link: &'a str, label: &'a str) -> Vec<serenity::CreateActionRow<'a>> {
+fn make_link_components<'a>(
+    link: impl Into<Cow<'a, str>>,
+    label: impl Into<Cow<'a, str>>,
+) -> Vec<serenity::CreateActionRow<'a>> {
     vec![serenity::CreateActionRow::Buttons(
         vec![serenity::CreateButton::new_link(link).label(label)].into(),
     )]
@@ -145,7 +150,7 @@ pub async fn edit(
                 &ctx.http,
                 serenity::CreateMessage::default()
                     .embed(embed)
-                    .components(make_link_components(&ids.link(), "Jump")),
+                    .components(make_link_components(ids.link(), "Jump")),
             )
             .await?;
     }
@@ -189,7 +194,7 @@ pub async fn delete(
                 &ctx.http,
                 serenity::CreateMessage::default()
                     .embed(embed)
-                    .components(make_link_components(&ids.link(), "Jump")),
+                    .components(make_link_components(ids.link(), "Jump")),
             )
             .await?;
     }

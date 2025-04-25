@@ -15,7 +15,6 @@ use std::{
 use tokio::sync::RwLock;
 
 use crate::http::HTTP;
-use crate::utils::Pluralize as _;
 
 mod canonicalize;
 mod models;
@@ -143,10 +142,10 @@ impl SafeBrowsing {
                     );
                 } else {
                     tracing::error!(
-                        "List {:?} checksum has drifted, resetting (actual: {:?}, expected: {:?})",
-                        list_update.threat_type,
-                        checksum,
-                        list_update.checksum.sha256
+                        r#type = list_update.threat_type,
+                        actual = checksum,
+                        expected = list_update.checksum.sha256,
+                        "list checksum has drifted, resetting",
                     );
 
                     self.states.write().await.remove(&list_update.threat_type);
@@ -154,15 +153,15 @@ impl SafeBrowsing {
                 }
             }
 
-            tracing::info!(
-                "Updated Safe Browsing database => {} hash prefixes",
-                self.states
-                    .read()
-                    .await
-                    .values()
-                    .map(|v| v.prefixes.len())
-                    .sum::<usize>(),
-            );
+            let prefixes = self
+                .states
+                .read()
+                .await
+                .values()
+                .map(|v| v.prefixes.len())
+                .sum::<usize>();
+
+            tracing::info!(prefixes, "updated Safe Browsing database");
 
             if !failed {
                 break;
@@ -269,29 +268,28 @@ impl SafeBrowsing {
                 .collect::<Vec<_>>();
 
             tracing::trace!(
-                "Scanned {} {} in {:.2}ms (prefixes matched) => {} {}",
-                urls.len(),
-                "URL".pluralize(urls.len()),
-                bench_start.elapsed().as_millis(),
-                matches.len(),
-                "match".pluralize_alternate(matches.len(), "matches")
+                urls = urls.len(),
+                matches = matches.len(),
+                elapsed = ?bench_start.elapsed(),
+                "scanned with Safe Browsing (prefixes matched)",
             );
 
             return Ok(matches);
         }
 
         tracing::trace!(
-            "Scanned {} {} in {:.2}ms (no prefixes matched) => no matches",
-            urls.len(),
-            "URL".pluralize(urls.len()),
-            bench_start.elapsed().as_millis(),
+            urls = urls.len(),
+            elapsed = ?bench_start.elapsed(),
+            "scanned with Safe Browsing (no prefixes matched)",
         );
 
         Ok(Vec::new())
     }
 
-    fn generate_url_prefixes(url: &str) -> eyre::Result<HashSet<String>> {
+    fn generate_url_prefixes(url: &str) -> eyre::Result<impl Iterator<Item = String>> {
         let mut url = canonicalize(url)?;
+        url.set_scheme("safebrowsing")
+            .map_err(|()| eyre!("could not set safe browsing scheme"))?;
 
         let mut prefixes = HashSet::new();
         prefixes.insert(url.to_string());
@@ -309,16 +307,8 @@ impl SafeBrowsing {
             prefixes.insert(url.to_string());
         }
 
-        let prefixes = prefixes
+        Ok(prefixes
             .into_iter()
-            .map(|v| {
-                v.strip_prefix("https://")
-                    .or_else(|| v.strip_prefix("http://"))
-                    .unwrap_or(&v)
-                    .to_owned()
-            })
-            .collect();
-
-        Ok(prefixes)
+            .map(|v| v.strip_prefix("safebrowsing://").unwrap_or(&v).to_owned()))
     }
 }

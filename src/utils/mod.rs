@@ -17,6 +17,7 @@ mod exit_code_error;
 pub use exit_code_error::ExitCodeError;
 
 mod pluralize;
+#[expect(unused_imports)]
 pub use pluralize::Pluralize;
 
 pub fn truncate(s: &str, new_len: usize) -> String {

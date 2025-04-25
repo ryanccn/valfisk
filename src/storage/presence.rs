@@ -7,44 +7,34 @@ use poise::serenity_prelude::ActivityData;
 use crate::impl_redis_serde;
 use serde::{Deserialize, Serialize};
 
-#[derive(poise::ChoiceParameter, Serialize, Deserialize, Clone, Copy, Debug)]
+#[derive(poise::ChoiceParameter, Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
-pub enum PresenceChoice {
+pub enum PresenceKind {
     Custom,
     Playing,
     Watching,
     Listening,
     Competing,
+    Clear,
 }
 
-impl PresenceChoice {
+impl PresenceKind {
     #[must_use]
-    pub fn to_data(self, content: &str) -> PresenceData {
+    pub fn with_content(self, content: &str) -> PresenceData {
         PresenceData {
             r#type: self,
             content: content.to_owned(),
         }
     }
-
-    #[must_use]
-    pub fn to_activity(self, content: &str) -> ActivityData {
-        match self {
-            Self::Custom => ActivityData::custom(content),
-            Self::Playing => ActivityData::playing(content),
-            Self::Watching => ActivityData::watching(content),
-            Self::Listening => ActivityData::listening(content),
-            Self::Competing => ActivityData::competing(content),
-        }
-    }
 }
 
-impl Default for PresenceChoice {
+impl Default for PresenceKind {
     fn default() -> Self {
         Self::Custom
     }
 }
 
-impl std::fmt::Display for PresenceChoice {
+impl std::fmt::Display for PresenceKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
             Self::Custom => "Custom",
@@ -52,20 +42,28 @@ impl std::fmt::Display for PresenceChoice {
             Self::Watching => "Watching",
             Self::Listening => "Listening",
             Self::Competing => "Competing",
+            Self::Clear => "Clear",
         })
     }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PresenceData {
-    pub r#type: PresenceChoice,
+    pub r#type: PresenceKind,
     pub content: String,
 }
 
 impl PresenceData {
     #[must_use]
-    pub fn to_activity(&self) -> ActivityData {
-        self.r#type.to_activity(&self.content)
+    pub fn to_activity(&self) -> Option<ActivityData> {
+        match self.r#type {
+            PresenceKind::Custom => ActivityData::custom(&self.content).into(),
+            PresenceKind::Playing => ActivityData::playing(&self.content).into(),
+            PresenceKind::Watching => ActivityData::watching(&self.content).into(),
+            PresenceKind::Listening => ActivityData::listening(&self.content).into(),
+            PresenceKind::Competing => ActivityData::competing(&self.content).into(),
+            PresenceKind::Clear => None,
+        }
     }
 }
 

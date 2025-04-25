@@ -33,10 +33,11 @@ pub struct Data {
 }
 
 impl Data {
-    fn new() -> Result<Self> {
+    async fn new() -> Result<Self> {
         let storage = if let Some(url) = &CONFIG.redis_url {
             let client = redis::Client::open(url.clone())?;
-            Some(Storage::from(client))
+            let storage = Storage::redis(client).await?;
+            Some(storage)
         } else {
             tracing::warn!("REDIS_URL is not configured, some features may be disabled");
             None
@@ -104,18 +105,15 @@ async fn valfisk() -> Result<()> {
 
     #[cfg(debug_assertions)]
     {
-        if let Ok(dotenv_path) = dotenvy::dotenv() {
-            tracing::warn!(
-                "Loaded environment variables from {}",
-                dotenv_path.display()
-            );
+        if let Ok(path) = dotenvy::dotenv() {
+            tracing::warn!(?path, "loaded environment variables");
         }
     }
 
     // Preload config from environment
     let _ = *CONFIG;
 
-    let data = Arc::new(Data::new()?);
+    let data = Arc::new(Data::new().await?);
 
     if let Some(safe_browsing) = &data.safe_browsing {
         safe_browsing.update().await?;
@@ -138,7 +136,7 @@ async fn valfisk() -> Result<()> {
 
     tokio::select! {
         () = shutdown() => {
-            tracing::warn!("Shutdown signal received, exiting!");
+            tracing::warn!("shutdown signal received, exiting!");
             Err(ExitCodeError(1).into())
         },
 

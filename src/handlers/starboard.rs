@@ -193,9 +193,9 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                     storage.del_starboard(message.id.get()).await?;
 
                     tracing::debug!(
-                        "Deleted starboard message {} for {}",
-                        existing_starboard_message,
-                        message.id
+                        starboard_id = existing_starboard_message.get(),
+                        message_id = message.id.get(),
+                        "deleted starboard message"
                     );
                 } else {
                     starboard
@@ -210,9 +210,9 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                         .await?;
 
                     tracing::debug!(
-                        "Edited starboard message {} for {}",
-                        existing_starboard_message,
-                        message.id
+                        starboard_id = existing_starboard_message.get(),
+                        message_id = message.id.get(),
+                        "edited starboard message"
                     );
                 }
             } else if !significant_reactions.is_empty() {
@@ -239,9 +239,9 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                     .await?;
 
                 tracing::debug!(
-                    "Created starboard message {} for {}",
-                    starboard_message.id,
-                    message.id
+                    starboard_id = starboard_message.id.get(),
+                    message_id = message.id.get(),
+                    "created starboard message"
                 );
             }
         }
@@ -261,9 +261,9 @@ pub async fn handle_deletion(
         if let Some(starboard_channel) = get_starboard_channel(&ctx, channel_id, guild_id).await? {
             if let Some(starboard_id) = storage.get_starboard(deleted_message_id.get()).await? {
                 tracing::debug!(
-                    "Deleted starboard message {} for {} (source deleted)",
                     starboard_id,
-                    deleted_message_id
+                    message_id = deleted_message_id.get(),
+                    "deleted starboard message (source deleted)",
                 );
 
                 storage.del_starboard(deleted_message_id.get()).await?;

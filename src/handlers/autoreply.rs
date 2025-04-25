@@ -14,7 +14,7 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
     }
 
     if let Some(storage) = &ctx.data::<crate::Data>().storage {
-        let data = storage.getall_autoreply().await?;
+        let data = storage.scan_autoreply().await?;
 
         let responses = data
             .iter()

@@ -5,6 +5,7 @@
 use num_traits::int::PrimInt as Integer;
 
 /// A trait that simplifies the pluralization of nouns.
+#[expect(dead_code)]
 pub trait Pluralize {
     /// Pluralize a string by adding `"s"` to the end of it if `count` is not 1.
     #[must_use]

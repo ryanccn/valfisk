@@ -30,7 +30,7 @@ pub async fn version(ctx: Context<'_>) -> Result<()> {
 
     let revision = option_env!("METADATA_REVISION").map_or_else(
         || "*Unknown*".to_owned(),
-        |rev| format!("[`{rev}`](https://github.com/ryanccn/valfisk/tree/{rev})",),
+        |rev| format!("[`{rev}`](https://github.com/ryanccn/valfisk/tree/{rev})"),
     );
 
     ctx.send(
