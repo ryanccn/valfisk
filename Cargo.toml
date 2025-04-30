@@ -16,7 +16,7 @@ publish = false
 axum = "0.8.3"
 base64 = "0.22.1"
 bytesize = "2.0.1"
-chrono = "0.4.40"
+chrono = "0.4.41"
 color-eyre = "0.6.3"
 dotenvy = "0.15.7"
 envy = "0.4.2"
@@ -39,7 +39,7 @@ serde_json = "1.0.140"
 sha2 = "0.10.8"
 sysinfo = "0.34.2"
 tokio = { version = "1.44.2", features = ["full"] }
-toml = "0.8.20"
+toml = "0.8.22"
 tracing = "0.1.41"
 tracing-error = "0.2.1"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
