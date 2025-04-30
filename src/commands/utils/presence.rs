@@ -13,8 +13,9 @@ use crate::{Context, storage::presence::PresenceKind};
 #[poise::command(
     slash_command,
     ephemeral,
-    guild_only,
-    default_member_permissions = "MANAGE_GUILD"
+    owners_only,
+    default_member_permissions = "ADMINISTRATOR",
+    install_context = "Guild | User"
 )]
 pub async fn presence(
     ctx: Context<'_>,

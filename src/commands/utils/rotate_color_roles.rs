@@ -15,6 +15,7 @@ use crate::{Context, schedule};
 #[poise::command(
     slash_command,
     guild_only,
+    install_context = "Guild",
     ephemeral,
     rename = "rotate-color-roles",
     default_member_permissions = "MANAGE_GUILD"

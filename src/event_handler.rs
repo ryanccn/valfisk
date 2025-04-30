@@ -17,14 +17,46 @@ impl serenity::EventHandler for EventHandler {
         let outcome: eyre::Result<()> = async {
             match event {
                 FullEvent::Ready { data_about_bot, .. } => {
-                    tracing::info!(user = data_about_bot.user.tag(), "connected to Discord");
+                    tracing::info!(
+                        user = data_about_bot.user.tag(),
+                        app = data_about_bot.application.id.get(),
+                        "connected to Discord"
+                    );
 
-                    let commands_vec = commands::to_vec();
-                    poise::builtins::register_globally(&ctx.http, &commands_vec).await?;
+                    let commands_data = commands::to_vec();
+
+                    assert!(
+                        commands_data.iter().filter(|c| c.guild_only).all(|c| {
+                            c.install_context
+                                .as_ref()
+                                .is_some_and(|i| i == &[serenity::InstallationContext::Guild])
+                        }), 
+                        "some commands marked as `guild_only` do not have installation contexts restricted to `guild`"
+                    );
+
+                    assert!(
+                        commands_data.iter().filter(|c| !c.guild_only).all(|c| {
+                            c.install_context
+                                .as_ref()
+                                .is_some_and(|i| i == &[serenity::InstallationContext::Guild, serenity::InstallationContext::User])
+                        }), 
+                        "some commands not marked as `guild_only` do not have unrestricted installation contexts"
+                    );
+
+                    assert!(
+                        commands_data.iter().filter(|c| c.owners_only).all(|c| {
+                            c.default_member_permissions == serenity::Permissions::ADMINISTRATOR
+                        }), 
+                        "some commands marked as `owners_only` do not have `default_member_permissions` set to ADMINISTRATOR"
+                    );
+                    
+                    poise::builtins::register_globally(&ctx.http, &commands_data).await?;
 
                     tracing::info!(
-                        all = commands_vec.len(),
-                        guild_only = commands_vec.iter().filter(|c| c.guild_only).count(),
+                        count = commands_data.len(),
+                        global = ?commands_data.iter().filter(|c| !c.owners_only && !c.guild_only).map(|c| c.name.as_ref()).collect::<Vec<_>>(),
+                        guild = ?commands_data.iter().filter(|c| !c.owners_only && c.guild_only).map(|c| c.name.as_ref()).collect::<Vec<_>>(),
+                        owners = ?commands_data.iter().filter(|c| c.owners_only).map(|c| c.name.as_ref()).collect::<Vec<_>>(),
                         "registered application commands",
                     );
 
@@ -53,14 +85,17 @@ impl serenity::EventHandler for EventHandler {
                     if let Some(storage) = &ctx.data::<crate::Data>().storage {
                         let logged_data = storage.get_message_log(event.message.id.get()).await?;
 
-                        let content = event.message.content.clone();
-                        let author = event.message.author.id;
+                        let content = event.message.content.as_str();
                         let attachments = event.message.attachments.to_vec();
 
                         storage
                             .set_message_log(
                                 event.message.id.get(),
-                                &MessageLog::new(content.as_str(), author, attachments.clone()),
+                                &MessageLog::new(
+                                    content,
+                                    event.message.author.id,
+                                    attachments.clone(),
+                                ),
                             )
                             .await?;
 
@@ -70,10 +105,10 @@ impl serenity::EventHandler for EventHandler {
                                 message: event.message.id,
                                 channel: event.message.channel_id,
                                 guild: event.message.guild_id,
-                                author: Some(author),
+                                author: Some(event.message.author.id),
                             },
                             logged_data.map(|l| l.content).as_deref(),
-                            content.as_ref(),
+                            content,
                             &attachments,
                             &timestamp,
                         )

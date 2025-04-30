@@ -6,7 +6,7 @@ use eyre::Result;
 use poise::serenity_prelude as serenity;
 
 mod autoreply;
-mod code_expansion;
+pub mod code_expansion;
 mod dm;
 mod error;
 pub mod log;
@@ -24,7 +24,7 @@ pub async fn message_guild(ctx: &serenity::Context, message: &serenity::Message)
     tokio::try_join!(
         log::handle_message(ctx, message),
         autoreply::handle(ctx, message),
-        code_expansion::handle(ctx, message)
+        code_expansion::handle_message(ctx, message)
     )?;
 
     Ok(())

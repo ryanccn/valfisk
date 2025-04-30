@@ -33,7 +33,7 @@ struct PagespeedResponse {
 
 /// Run Lighthouse on a URL using Google's PageSpeed API
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
-#[poise::command(slash_command, guild_only)]
+#[poise::command(slash_command, install_context = "Guild | User")]
 pub async fn lighthouse(
     ctx: Context<'_>,
     #[description = "The URL to test"] url: String,

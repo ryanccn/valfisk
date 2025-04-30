@@ -14,6 +14,7 @@ use crate::Context;
 #[poise::command(
     slash_command,
     guild_only,
+    install_context = "Guild",
     subcommands("list", "add", "delete", "delete_all"),
     subcommand_required,
     default_member_permissions = "MANAGE_GUILD"
@@ -24,7 +25,12 @@ pub async fn autoreply(ctx: Context<'_>) -> Result<()> {
 
 /// List autoreply keywords
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
-#[poise::command(slash_command, guild_only, default_member_permissions = "MANAGE_GUILD")]
+#[poise::command(
+    slash_command,
+    guild_only,
+    install_context = "Guild",
+    default_member_permissions = "MANAGE_GUILD"
+)]
 async fn list(ctx: Context<'_>) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
@@ -57,7 +63,12 @@ async fn list(ctx: Context<'_>) -> Result<()> {
 
 /// Add an autoreply keyword
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
-#[poise::command(slash_command, guild_only, default_member_permissions = "MANAGE_GUILD")]
+#[poise::command(
+    slash_command,
+    guild_only,
+    install_context = "Guild",
+    default_member_permissions = "MANAGE_GUILD"
+)]
 async fn add(
     ctx: Context<'_>,
     #[description = "The keyword included in the message (regex)"] keyword: String,
@@ -88,7 +99,12 @@ async fn add(
 
 /// Delete an autoreply keyword
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
-#[poise::command(slash_command, guild_only, default_member_permissions = "MANAGE_GUILD")]
+#[poise::command(
+    slash_command,
+    guild_only,
+    install_context = "Guild",
+    default_member_permissions = "MANAGE_GUILD"
+)]
 async fn delete(
     ctx: Context<'_>,
     #[description = "The keyword included in the message (regex)"] keyword: String,
@@ -122,6 +138,7 @@ async fn delete(
     rename = "delete-all",
     slash_command,
     guild_only,
+    install_context = "Guild",
     default_member_permissions = "MANAGE_GUILD"
 )]
 async fn delete_all(ctx: Context<'_>) -> Result<()> {

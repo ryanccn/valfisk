@@ -16,6 +16,7 @@ use crate::{Context, http::HTTP, template_channel::Template};
     rename = "template-channel",
     slash_command,
     guild_only,
+    install_context = "Guild",
     ephemeral,
     default_member_permissions = "MANAGE_GUILD"
 )]

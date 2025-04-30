@@ -26,13 +26,14 @@ macro_rules! command {
 
 pub fn to_vec() -> Vec<poise::Command<Data, eyre::Report>> {
     vec![
+        command!(useful, code_expand),
         command!(useful, dig),
         command!(useful, lighthouse),
         command!(useful, remind),
         command!(useful, self_timeout),
         command!(useful, self_timeout, transparency),
         command!(useful, translate),
-        command!(useful, translate, translate_private),
+        command!(useful, translate, translate_ephemeral),
         command!(moderation, ban),
         command!(moderation, kick),
         command!(moderation, timeout),

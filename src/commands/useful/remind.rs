@@ -36,7 +36,7 @@ async fn dispatch(http: &serenity::Http, data: &ReminderData) -> Result<()> {
 
 /// Create a reminder for yourself
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
-#[poise::command(slash_command, guild_only)]
+#[poise::command(slash_command, guild_only, install_context = "Guild")]
 pub async fn remind(
     ctx: Context<'_>,
     #[description = "Duration"] duration: String,

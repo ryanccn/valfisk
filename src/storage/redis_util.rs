@@ -2,9 +2,11 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-#[macro_export]
+use super::{log::MessageLog, presence::PresenceData, reminder::ReminderData};
+
 macro_rules! impl_redis_serde {
-    ($t: ty) => {
+    ($($t: ty),+) => {
+        $(
         impl ::redis::FromRedisValue for $t {
             fn from_redis_value(v: &::redis::Value) -> ::redis::RedisResult<Self> {
                 use ::redis::{ErrorKind, RedisError, Value};
@@ -35,5 +37,8 @@ macro_rules! impl_redis_serde {
                 out.write_arg(&::serde_json::to_vec(self).unwrap());
             }
         }
+        )+
     };
 }
+
+impl_redis_serde!(PresenceData, ReminderData, MessageLog);

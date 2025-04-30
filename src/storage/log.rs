@@ -4,7 +4,6 @@
 
 use poise::serenity_prelude::{Attachment, Message, UserId};
 
-use crate::impl_redis_serde;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -35,5 +34,3 @@ impl From<&Message> for MessageLog {
         }
     }
 }
-
-impl_redis_serde!(MessageLog);

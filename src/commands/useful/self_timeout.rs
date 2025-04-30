@@ -14,7 +14,12 @@ use crate::Context;
 
 /// Time yourself out for a specific duration
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
-#[poise::command(rename = "self-timeout", slash_command, guild_only)]
+#[poise::command(
+    rename = "self-timeout",
+    slash_command,
+    guild_only,
+    install_context = "Guild"
+)]
 pub async fn self_timeout(
     ctx: Context<'_>,
     #[description = "The duration to time yourself out for"] duration: String,
@@ -185,6 +190,7 @@ pub async fn self_timeout(
     rename = "self-timeout-transparency",
     slash_command,
     guild_only,
+    install_context = "Guild",
     ephemeral
 )]
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]

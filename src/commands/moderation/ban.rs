@@ -13,6 +13,7 @@ use crate::{Context, config::CONFIG};
     slash_command,
     ephemeral,
     guild_only,
+    install_context = "Guild",
     default_member_permissions = "MODERATE_MEMBERS"
 )]
 pub async fn ban(

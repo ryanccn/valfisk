@@ -129,6 +129,7 @@ async fn valfisk() -> Result<()> {
     .framework(Framework::new(FrameworkOptions {
         commands: commands::to_vec(),
         on_error: |err| Box::pin(handlers::error(err)),
+        owners: CONFIG.owners.clone().unwrap_or_default(),
         ..Default::default()
     }))
     .data(data.clone())

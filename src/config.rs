@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 use serde::Deserialize;
-use std::sync::LazyLock;
+use std::{collections::HashSet, sync::LazyLock};
 
-use poise::serenity_prelude::{GenericChannelId, GuildId, RoleId};
+use poise::serenity_prelude::{GenericChannelId, GuildId, RoleId, UserId};
 
 use crate::handlers::starboard::StarboardEmojis;
 
@@ -15,6 +15,7 @@ pub struct EnvConfig {
     pub redis_url: Option<String>,
 
     pub guild_id: Option<GuildId>,
+    pub owners: Option<HashSet<UserId>>,
 
     pub private_category: Option<GenericChannelId>,
     pub private_starboard_channel: Option<GenericChannelId>,

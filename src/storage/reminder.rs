@@ -4,8 +4,6 @@
 
 use poise::serenity_prelude as serenity;
 
-use crate::impl_redis_serde;
-
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ReminderData {
     pub guild: serenity::GuildId,
@@ -14,5 +12,3 @@ pub struct ReminderData {
     pub content: Option<String>,
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
-
-impl_redis_serde!(ReminderData);

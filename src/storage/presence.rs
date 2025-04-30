@@ -4,7 +4,6 @@
 
 use poise::serenity_prelude::ActivityData;
 
-use crate::impl_redis_serde;
 use serde::{Deserialize, Serialize};
 
 #[derive(poise::ChoiceParameter, Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -66,5 +65,3 @@ impl PresenceData {
         }
     }
 }
-
-impl_redis_serde!(PresenceData);
