@@ -6,6 +6,41 @@ use poise::serenity_prelude as serenity;
 
 use crate::{commands, config::CONFIG, handlers, storage::log::MessageLog};
 
+fn validate_commands(commands: &[poise::Command<crate::Data, eyre::Report>]) {
+    if !commands.iter().filter(|c| c.guild_only).all(|c| {
+        c.install_context
+            .as_ref()
+            .is_some_and(|i| i == &[serenity::InstallationContext::Guild])
+    }) {
+        panic!(
+            "some commands marked as `guild_only` do not have installation contexts restricted to `guild`"
+        );
+    }
+
+    if !commands.iter().filter(|c| !c.guild_only).all(|c| {
+        c.install_context.as_ref().is_some_and(|i| {
+            i == &[
+                serenity::InstallationContext::Guild,
+                serenity::InstallationContext::User,
+            ]
+        })
+    }) {
+        panic!(
+            "some commands marked as `guild_only` do not have installation contexts restricted to `guild`"
+        );
+    }
+
+    if !commands
+        .iter()
+        .filter(|c| c.owners_only)
+        .all(|c| c.default_member_permissions == serenity::Permissions::ADMINISTRATOR)
+    {
+        panic!(
+            "some commands marked as `owners_only` do not have `default_member_permissions` set to ADMINISTRATOR"
+        );
+    }
+}
+
 pub struct EventHandler;
 
 #[serenity::async_trait]
@@ -24,41 +59,38 @@ impl serenity::EventHandler for EventHandler {
                     );
 
                     let commands_data = commands::to_vec();
+                    validate_commands(&commands_data);
 
-                    assert!(
-                        commands_data.iter().filter(|c| c.guild_only).all(|c| {
-                            c.install_context
-                                .as_ref()
-                                .is_some_and(|i| i == &[serenity::InstallationContext::Guild])
-                        }), 
-                        "some commands marked as `guild_only` do not have installation contexts restricted to `guild`"
-                    );
-
-                    assert!(
-                        commands_data.iter().filter(|c| !c.guild_only).all(|c| {
-                            c.install_context
-                                .as_ref()
-                                .is_some_and(|i| i == &[serenity::InstallationContext::Guild, serenity::InstallationContext::User])
-                        }), 
-                        "some commands not marked as `guild_only` do not have unrestricted installation contexts"
-                    );
-
-                    assert!(
-                        commands_data.iter().filter(|c| c.owners_only).all(|c| {
-                            c.default_member_permissions == serenity::Permissions::ADMINISTRATOR
-                        }), 
-                        "some commands marked as `owners_only` do not have `default_member_permissions` set to ADMINISTRATOR"
-                    );
-                    
                     poise::builtins::register_globally(&ctx.http, &commands_data).await?;
 
-                    tracing::info!(
-                        count = commands_data.len(),
-                        global = ?commands_data.iter().filter(|c| !c.owners_only && !c.guild_only).map(|c| c.name.as_ref()).collect::<Vec<_>>(),
-                        guild = ?commands_data.iter().filter(|c| !c.owners_only && c.guild_only).map(|c| c.name.as_ref()).collect::<Vec<_>>(),
-                        owners = ?commands_data.iter().filter(|c| c.owners_only).map(|c| c.name.as_ref()).collect::<Vec<_>>(),
-                        "registered application commands",
-                    );
+                    {
+                        let (count, global, guild, owners) = (
+                            commands_data.len(),
+                            commands_data
+                                .iter()
+                                .filter(|c| !c.owners_only && !c.guild_only)
+                                .map(|c| c.name.as_ref())
+                                .collect::<Vec<_>>(),
+                            commands_data
+                                .iter()
+                                .filter(|c| !c.owners_only && c.guild_only)
+                                .map(|c| c.name.as_ref())
+                                .collect::<Vec<_>>(),
+                            commands_data
+                                .iter()
+                                .filter(|c| c.owners_only)
+                                .map(|c| c.name.as_ref())
+                                .collect::<Vec<_>>(),
+                        );
+
+                        tracing::info!(
+                            count,
+                            ?global,
+                            ?guild,
+                            ?owners,
+                            "registered application commands"
+                        );
+                    }
 
                     commands::restore::presence(ctx).await?;
                     commands::restore::reminders(ctx).await?;
