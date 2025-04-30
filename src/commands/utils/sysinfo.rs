@@ -17,7 +17,8 @@ use crate::Context;
     slash_command,
     owners_only,
     default_member_permissions = "ADMINISTRATOR",
-    install_context = "Guild | User"
+    install_context = "Guild | User",
+    interaction_context = "Guild | BotDm"
 )]
 #[expect(clippy::cast_precision_loss)]
 pub async fn sysinfo(

@@ -16,6 +16,7 @@ use crate::{Context, schedule};
     slash_command,
     guild_only,
     install_context = "Guild",
+    interaction_context = "Guild",
     ephemeral,
     rename = "rotate-color-roles",
     default_member_permissions = "MANAGE_GUILD"

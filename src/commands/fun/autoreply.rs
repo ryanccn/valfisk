@@ -15,6 +15,7 @@ use crate::Context;
     slash_command,
     guild_only,
     install_context = "Guild",
+    interaction_context = "Guild",
     subcommands("list", "add", "delete", "delete_all"),
     subcommand_required,
     default_member_permissions = "MANAGE_GUILD"
@@ -29,6 +30,7 @@ pub async fn autoreply(ctx: Context<'_>) -> Result<()> {
     slash_command,
     guild_only,
     install_context = "Guild",
+    interaction_context = "Guild",
     default_member_permissions = "MANAGE_GUILD"
 )]
 async fn list(ctx: Context<'_>) -> Result<()> {
@@ -67,6 +69,7 @@ async fn list(ctx: Context<'_>) -> Result<()> {
     slash_command,
     guild_only,
     install_context = "Guild",
+    interaction_context = "Guild",
     default_member_permissions = "MANAGE_GUILD"
 )]
 async fn add(
@@ -103,6 +106,7 @@ async fn add(
     slash_command,
     guild_only,
     install_context = "Guild",
+    interaction_context = "Guild",
     default_member_permissions = "MANAGE_GUILD"
 )]
 async fn delete(
@@ -139,6 +143,7 @@ async fn delete(
     slash_command,
     guild_only,
     install_context = "Guild",
+    interaction_context = "Guild",
     default_member_permissions = "MANAGE_GUILD"
 )]
 async fn delete_all(ctx: Context<'_>) -> Result<()> {

@@ -14,6 +14,7 @@ use crate::{Context, config::CONFIG};
     ephemeral,
     guild_only,
     install_context = "Guild",
+    interaction_context = "Guild",
     default_member_permissions = "MODERATE_MEMBERS"
 )]
 pub async fn timeout(

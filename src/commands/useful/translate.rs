@@ -59,7 +59,11 @@ async fn translate_call(src: &str) -> Result<GoogleTranslateResult> {
 
 /// Translates a message
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
-#[poise::command(context_menu_command = "Translate", install_context = "Guild | User")]
+#[poise::command(
+    context_menu_command = "Translate",
+    install_context = "Guild | User",
+    interaction_context = "Guild | BotDm | PrivateChannel"
+)]
 pub async fn translate(ctx: Context<'_>, message: serenity::Message) -> Result<()> {
     ctx.defer().await?;
 
@@ -98,7 +102,8 @@ pub async fn translate(ctx: Context<'_>, message: serenity::Message) -> Result<(
 #[poise::command(
     context_menu_command = "Translate (ephemeral)",
     ephemeral,
-    install_context = "Guild | User"
+    install_context = "Guild | User",
+    interaction_context = "Guild | BotDm | PrivateChannel"
 )]
 pub async fn translate_ephemeral(ctx: Context<'_>, message: serenity::Message) -> Result<()> {
     ctx.defer_ephemeral().await?;

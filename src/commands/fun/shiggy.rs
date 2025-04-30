@@ -17,7 +17,11 @@ struct SafebooruResponse {
 
 /// Fetch a random shiggy
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
-#[poise::command(slash_command, install_context = "Guild | User")]
+#[poise::command(
+    slash_command,
+    install_context = "Guild | User",
+    interaction_context = "Guild | BotDm | PrivateChannel"
+)]
 pub async fn shiggy(
     ctx: Context<'_>,
 

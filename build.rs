@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use std::{env, time::SystemTime};
+use std::env;
 
 fn main() {
     println!(
@@ -13,15 +13,4 @@ fn main() {
         "cargo:rustc-env=METADATA_HOST={}",
         env::var("HOST").unwrap()
     );
-
-    let last_modified = env::var("METADATA_LAST_MODIFIED").unwrap_or_else(|_| {
-        SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_secs()
-            .to_string()
-    });
-
-    println!("cargo:rustc-env=METADATA_LAST_MODIFIED={last_modified}");
-    println!("cargo:rerun-if-env-changed=METADATA_LAST_MODIFIED");
 }

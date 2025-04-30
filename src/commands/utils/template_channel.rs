@@ -17,6 +17,7 @@ use crate::{Context, http::HTTP, template_channel::Template};
     slash_command,
     guild_only,
     install_context = "Guild",
+    interaction_context = "Guild",
     ephemeral,
     default_member_permissions = "MANAGE_GUILD"
 )]

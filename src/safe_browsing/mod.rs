@@ -288,8 +288,6 @@ impl SafeBrowsing {
 
     fn generate_url_prefixes(url: &str) -> eyre::Result<impl Iterator<Item = String>> {
         let mut url = canonicalize(url)?;
-        url.set_scheme("safebrowsing")
-            .map_err(|()| eyre!("could not set safe browsing scheme"))?;
 
         let mut prefixes = HashSet::new();
         prefixes.insert(url.to_string());
@@ -307,8 +305,12 @@ impl SafeBrowsing {
             prefixes.insert(url.to_string());
         }
 
-        Ok(prefixes
-            .into_iter()
-            .map(|v| v.strip_prefix("safebrowsing://").unwrap_or(&v).to_owned()))
+        Ok(prefixes.into_iter().map(|v| {
+            v.strip_prefix("http://")
+                .unwrap_or(&v)
+                .strip_prefix("https://")
+                .unwrap_or(&v)
+                .to_owned()
+        }))
     }
 }

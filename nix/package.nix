@@ -40,7 +40,6 @@ rustPlatform.buildRustPackage (finalAttrs: {
 
   env =
     {
-      METADATA_LAST_MODIFIED = self.lastModified;
       METADATA_REVISION = self.rev or self.dirtyRev or null;
     }
     // lib.optionalAttrs enableLTO {

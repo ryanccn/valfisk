@@ -15,7 +15,8 @@ use crate::{Context, storage::presence::PresenceKind};
     ephemeral,
     owners_only,
     default_member_permissions = "ADMINISTRATOR",
-    install_context = "Guild | User"
+    install_context = "Guild | User",
+    interaction_context = "Guild | BotDm"
 )]
 pub async fn presence(
     ctx: Context<'_>,

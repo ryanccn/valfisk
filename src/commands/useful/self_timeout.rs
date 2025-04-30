@@ -18,7 +18,8 @@ use crate::Context;
     rename = "self-timeout",
     slash_command,
     guild_only,
-    install_context = "Guild"
+    install_context = "Guild",
+    interaction_context = "Guild"
 )]
 pub async fn self_timeout(
     ctx: Context<'_>,
@@ -191,6 +192,7 @@ pub async fn self_timeout(
     slash_command,
     guild_only,
     install_context = "Guild",
+    interaction_context = "Guild",
     ephemeral
 )]
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]

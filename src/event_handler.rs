@@ -13,7 +13,17 @@ fn validate_commands(commands: &[poise::Command<crate::Data, eyre::Report>]) {
             .is_some_and(|i| i == &[serenity::InstallationContext::Guild])
     }) {
         panic!(
-            "some commands marked as `guild_only` do not have installation contexts restricted to `guild`"
+            "some commands marked as `guild_only` do not have installation contexts restricted to `Guild`"
+        );
+    }
+
+    if !commands.iter().filter(|c| c.guild_only).all(|c| {
+        c.interaction_context
+            .as_ref()
+            .is_some_and(|i| i == &[serenity::InteractionContext::Guild])
+    }) {
+        panic!(
+            "some commands marked as `guild_only` do not have interaction contexts restricted to `Guild`"
         );
     }
 
@@ -26,7 +36,25 @@ fn validate_commands(commands: &[poise::Command<crate::Data, eyre::Report>]) {
         })
     }) {
         panic!(
-            "some commands marked as `guild_only` do not have installation contexts restricted to `guild`"
+            "some commands not marked as `guild_only` do not have unrestricted installation contexts"
+        );
+    }
+
+    if !commands
+        .iter()
+        .filter(|c| !c.guild_only && !c.owners_only)
+        .all(|c| {
+            c.interaction_context.as_ref().is_some_and(|i| {
+                i == &[
+                    serenity::InteractionContext::Guild,
+                    serenity::InteractionContext::BotDm,
+                    serenity::InteractionContext::PrivateChannel,
+                ]
+            })
+        })
+    {
+        panic!(
+            "some commands not marked as `guild_only` do not have unrestricted interaction contexts"
         );
     }
 
@@ -37,6 +65,19 @@ fn validate_commands(commands: &[poise::Command<crate::Data, eyre::Report>]) {
     {
         panic!(
             "some commands marked as `owners_only` do not have `default_member_permissions` set to ADMINISTRATOR"
+        );
+    }
+
+    if !commands.iter().filter(|c| c.owners_only).all(|c| {
+        c.interaction_context.as_ref().is_some_and(|i| {
+            i == &[
+                serenity::InteractionContext::Guild,
+                serenity::InteractionContext::BotDm,
+            ]
+        })
+    }) {
+        panic!(
+            "some commands marked as `owners_only` do not have interaction contexts restricted to `Guild` and `BotDm`"
         );
     }
 }

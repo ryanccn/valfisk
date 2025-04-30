@@ -12,7 +12,8 @@ use crate::{Context, handlers::code_expansion};
 #[poise::command(
     rename = "code-expand",
     slash_command,
-    install_context = "Guild | User"
+    install_context = "Guild | User",
+    interaction_context = "Guild | BotDm | PrivateChannel"
 )]
 pub async fn code_expand(ctx: Context<'_>, content: String) -> Result<()> {
     let embeds = code_expansion::resolve(&content).await?;
