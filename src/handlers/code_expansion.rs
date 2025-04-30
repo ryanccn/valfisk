@@ -5,9 +5,9 @@
 use poise::serenity_prelude as serenity;
 use regex::Regex;
 
-use eyre::{Result, eyre};
-use std::sync::LazyLock;
-use tokio::task::JoinSet;
+use eyre::{Result, bail};
+use std::{pin::Pin, sync::LazyLock};
+use tracing::warn;
 
 use crate::{
     http::HTTP,
@@ -15,19 +15,15 @@ use crate::{
 };
 
 static GITHUB: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"https?://github\.com/(?P<repo>[\w-]+/[\w.-]+)/blob/(?P<ref>\S+?)/(?P<file>[^\s?]+)(\?\S*)?#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
+    Regex::new(r"https?://github\.com/(?P<repo>[\w\-]+/[\w.\-]+)/blob/(?P<ref>\S+?)/(?P<file>[^\s?]+)(\?\S*)?#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
 });
 
 #[tracing::instrument]
-async fn github<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>> {
-    let captures = GITHUB
-        .captures(m)
-        .ok_or_else(|| eyre!("could not obtain captures"))?;
-
+async fn github<'a>(captures: regex::Captures<'a>) -> Result<serenity::CreateEmbed<'static>> {
     tracing::debug!(link = &captures[0], "handling GitHub link");
 
     let repo = &captures["repo"];
-    let ref_ = &captures["ref"];
+    let r#ref = &captures["ref"];
     let file = &captures["file"];
 
     let language = file.split('.').next_back().unwrap_or_default();
@@ -39,7 +35,7 @@ async fn github<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>> {
 
     let lines: Vec<String> = HTTP
         .get(format!(
-            "https://raw.githubusercontent.com/{repo}/{ref_}/{file}"
+            "https://raw.githubusercontent.com/{repo}/{ref}/{file}"
         ))
         .send()
         .await?
@@ -50,7 +46,12 @@ async fn github<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>> {
         .map(|s| s.to_owned())
         .collect();
 
-    let selected_lines = lines[(start - 1)..(end.unwrap_or(start))].join("\n");
+    let Some(selected_lines) = lines
+        .get((start - 1)..(end.unwrap_or(start)))
+        .map(|l| l.join("\n"))
+    else {
+        bail!("out of bounds line indexes");
+    };
 
     let embed = serenity::CreateEmbed::default()
         .title(format!(
@@ -60,7 +61,112 @@ async fn github<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>> {
         .description(
             "```".to_owned() + language + "\n" + &truncate(&selected_lines, 2048) + "\n```",
         )
-        .footer(serenity::CreateEmbedFooter::new(ref_.to_owned()))
+        .footer(serenity::CreateEmbedFooter::new("GitHub"))
+        .timestamp(serenity::Timestamp::now());
+
+    Ok(embed)
+}
+
+static CODEBERG: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"https?://codeberg\.org/(?P<repo>[\w\-]+/[\w.\-]+)/src/(?P<ref_type>\S+?)/(?P<ref>\S+?)/(?P<file>[^\s?]+)(\?\S*)?#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
+});
+
+#[tracing::instrument]
+async fn codeberg<'a>(captures: regex::Captures<'a>) -> Result<serenity::CreateEmbed<'static>> {
+    tracing::debug!(link = &captures[0], "handling Codeberg link");
+
+    let repo = &captures["repo"];
+    let ref_type = &captures["ref_type"];
+    let r#ref = &captures["ref"];
+    let file = &captures["file"];
+
+    let language = file.split('.').next_back().unwrap_or_default();
+
+    let start = captures["start"].parse::<usize>()?;
+    let end = captures
+        .name("end")
+        .and_then(|end| end.as_str().parse::<usize>().ok());
+
+    let lines: Vec<String> = HTTP
+        .get(format!(
+            "https://codeberg.org/{repo}/raw/{ref_type}/{ref}/{file}"
+        ))
+        .send()
+        .await?
+        .error_for_status()?
+        .text()
+        .await?
+        .lines()
+        .map(|s| s.to_owned())
+        .collect();
+
+    let Some(selected_lines) = lines
+        .get((start - 1)..(end.unwrap_or(start)))
+        .map(|l| l.join("\n"))
+    else {
+        bail!("out of bounds line indexes");
+    };
+
+    let embed = serenity::CreateEmbed::default()
+        .title(format!(
+            "{repo} {file} L{start}{}",
+            end.map(|end| format!("-{end}")).unwrap_or_default()
+        ))
+        .description(
+            "```".to_owned() + language + "\n" + &truncate(&selected_lines, 2048) + "\n```",
+        )
+        .footer(serenity::CreateEmbedFooter::new("Codeberg"))
+        .timestamp(serenity::Timestamp::now());
+
+    Ok(embed)
+}
+
+static GITLAB: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"https?://gitlab\.com/(?P<repo>[\w\-]+/[\w.\-]+)/-/blob/(?P<ref>\S+?)/(?P<file>[^\s?]+)(\?\S*)?#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
+});
+
+#[tracing::instrument]
+async fn gitlab<'a>(captures: regex::Captures<'a>) -> Result<serenity::CreateEmbed<'static>> {
+    tracing::debug!(link = &captures[0], "handling GitLab link");
+
+    let repo = &captures["repo"];
+    let r#ref = &captures["ref"];
+    let file = &captures["file"];
+
+    let language = file.split('.').next_back().unwrap_or_default();
+
+    let start = captures["start"].parse::<usize>()?;
+    let end = captures
+        .name("end")
+        .and_then(|end| end.as_str().parse::<usize>().ok());
+
+    let lines: Vec<String> = HTTP
+        .get(format!("https://gitlab.com/{repo}/-/raw/{ref}/{file}"))
+        .send()
+        .await?
+        .error_for_status()?
+        .text()
+        .await?
+        .lines()
+        .map(|s| s.to_owned())
+        .collect();
+
+    let Some(selected_lines) = lines
+        .get((start - 1)..(end.unwrap_or(start)))
+        .map(|l| l.join("\n"))
+    else {
+        bail!("out of bounds line indexes");
+    };
+
+    let embed = serenity::CreateEmbed::default()
+        .title(format!(
+            "{repo} {file} L{start}{}",
+            end.map(|end| format!("-{end}")).unwrap_or_default()
+        ))
+        .description(
+            "```".to_owned() + language + "\n" + &truncate(&selected_lines, 2048) + "\n```",
+        )
+        .footer(serenity::CreateEmbedFooter::new("GitLab"))
         .timestamp(serenity::Timestamp::now());
 
     Ok(embed)
@@ -71,11 +177,9 @@ static RUST_PLAYGROUND: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 #[tracing::instrument]
-async fn rust_playground<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>> {
-    let captures = RUST_PLAYGROUND
-        .captures(m)
-        .ok_or_else(|| eyre!("could not obtain captures"))?;
-
+async fn rust_playground<'a>(
+    captures: regex::Captures<'a>,
+) -> Result<serenity::CreateEmbed<'static>> {
     tracing::debug!(link = &captures[0], "handling Rust playground link");
 
     let gist_id = &captures["gist"];
@@ -91,9 +195,9 @@ async fn rust_playground<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>
         .await?;
 
     let embed = serenity::CreateEmbed::default()
-        .title("Rust Playground")
+        .title(gist_id.to_owned())
         .description("```rust\n".to_owned() + &truncate(&gist, 2048) + "\n```")
-        .footer(serenity::CreateEmbedFooter::new(gist_id.to_owned()))
+        .footer(serenity::CreateEmbedFooter::new("play.rust-lang.org"))
         .timestamp(serenity::Timestamp::now())
         .color(0xdea584);
 
@@ -104,11 +208,9 @@ static GO_PLAYGROUND: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"https://go\.dev/play/p/(?P<id>[\w-]+)").unwrap());
 
 #[tracing::instrument]
-async fn go_playground<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>> {
-    let captures = GO_PLAYGROUND
-        .captures(m)
-        .ok_or_else(|| eyre!("could not obtain captures"))?;
-
+async fn go_playground<'a>(
+    captures: regex::Captures<'a>,
+) -> Result<serenity::CreateEmbed<'static>> {
     tracing::debug!(link = &captures[0], "handling Go playground link");
 
     let id = &captures["id"];
@@ -123,43 +225,62 @@ async fn go_playground<'a, 'b>(m: &'a str) -> Result<serenity::CreateEmbed<'b>> 
         .await?;
 
     let embed = serenity::CreateEmbed::default()
-        .title("Go Playground")
+        .title(id.to_owned())
         .description("```go\n".to_owned() + &truncate(&code, 2048) + "\n```")
-        .footer(serenity::CreateEmbedFooter::new(id.to_owned()))
+        .footer(serenity::CreateEmbedFooter::new("go.dev/play"))
         .timestamp(serenity::Timestamp::now())
         .color(0x00b7e7);
 
     Ok(embed)
 }
 
+pub async fn resolve(content: &str) -> Result<Vec<serenity::CreateEmbed>> {
+    let mut embeds_tasks: Vec<
+        Pin<Box<dyn Future<Output = Result<serenity::CreateEmbed>> + Send + Sync>>,
+    > = Vec::new();
+
+    for captures in GITHUB.captures_iter(content) {
+        embeds_tasks.push(Box::pin(async move { github(captures).await }));
+    }
+
+    for captures in CODEBERG.captures_iter(content) {
+        embeds_tasks.push(Box::pin(async move { codeberg(captures).await }));
+    }
+
+    for captures in GITLAB.captures_iter(content) {
+        embeds_tasks.push(Box::pin(async move { gitlab(captures).await }));
+    }
+
+    for captures in RUST_PLAYGROUND.captures_iter(content) {
+        embeds_tasks.push(Box::pin(async move { rust_playground(captures).await }));
+    }
+
+    for captures in GO_PLAYGROUND.captures_iter(content) {
+        embeds_tasks.push(Box::pin(async move { go_playground(captures).await }));
+    }
+
+    let embeds = futures_util::future::join_all(embeds_tasks)
+        .await
+        .into_iter()
+        .filter_map(|r| match r {
+            Ok(c) => Some(c),
+            Err(err) => {
+                warn!("{err:?}");
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+
+    Ok(embeds)
+}
+
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
-pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
+pub async fn handle_message(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
     if message.author.id == ctx.cache.current_user().id {
         return Ok(());
     }
 
-    let mut embeds_tasks: JoinSet<Result<serenity::CreateEmbed>> = JoinSet::new();
-
-    for m in GITHUB.find_iter(&message.content) {
-        let m = m.as_str().to_owned();
-        embeds_tasks.spawn(async move { github(&m).await });
-    }
-
-    for m in RUST_PLAYGROUND.find_iter(&message.content) {
-        let m = m.as_str().to_owned();
-        embeds_tasks.spawn(async move { rust_playground(&m).await });
-    }
-
-    for m in GO_PLAYGROUND.find_iter(&message.content) {
-        let m = m.as_str().to_owned();
-        embeds_tasks.spawn(async move { go_playground(&m).await });
-    }
-
-    let embeds = embeds_tasks
-        .join_all()
-        .await
-        .into_iter()
-        .collect::<Result<Vec<_>>>()?;
+    let embeds = resolve(&message.content).await?;
 
     if !embeds.is_empty() {
         suppress_embeds(ctx, message).await?;
