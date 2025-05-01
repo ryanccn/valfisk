@@ -4,14 +4,15 @@
 
 use crate::Data;
 
+mod admin;
 mod fun;
 mod moderation;
 mod useful;
 mod utils;
 
 pub mod restore {
+    pub use super::admin::presence::restore as presence;
     pub use super::useful::remind::restore as reminders;
-    pub use super::utils::presence::restore as presence;
 }
 
 macro_rules! command {
@@ -24,14 +25,13 @@ macro_rules! command {
     };
 }
 
-pub fn to_vec() -> Vec<poise::Command<Data, eyre::Report>> {
+pub fn all() -> Vec<poise::Command<Data, eyre::Report>> {
     vec![
         command!(useful, code_expand),
         command!(useful, dig),
         command!(useful, lighthouse),
         command!(useful, remind),
         command!(useful, self_timeout),
-        command!(useful, self_timeout, transparency),
         command!(useful, translate),
         command!(useful, translate, translate_ephemeral),
         command!(moderation, ban),
@@ -40,12 +40,13 @@ pub fn to_vec() -> Vec<poise::Command<Data, eyre::Report>> {
         command!(fun, autoreply),
         command!(fun, owo),
         command!(fun, shiggy),
+        command!(utils, config),
         command!(utils, ping),
-        command!(utils, presence),
         command!(utils, rotate_color_roles),
-        command!(utils, say),
-        command!(utils, sysinfo),
         command!(utils, template_channel),
         command!(utils, version),
+        command!(admin, presence),
+        command!(admin, say),
+        command!(admin, sysinfo),
     ]
 }

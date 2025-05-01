@@ -127,7 +127,7 @@ async fn valfisk() -> Result<()> {
     )
     .event_handler(EventHandler)
     .framework(Framework::new(FrameworkOptions {
-        commands: commands::to_vec(),
+        commands: commands::all(),
         on_error: |err| Box::pin(handlers::error(err)),
         owners: CONFIG.owners.clone().unwrap_or_default(),
         ..Default::default()

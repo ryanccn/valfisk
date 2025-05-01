@@ -2,10 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
+pub mod config;
 pub mod ping;
-pub mod presence;
 pub mod rotate_color_roles;
-pub mod say;
-pub mod sysinfo;
 pub mod template_channel;
 pub mod version;

@@ -36,12 +36,16 @@ pub async fn autoreply(ctx: Context<'_>) -> Result<()> {
 async fn list(ctx: Context<'_>) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
+    let guild_id = ctx
+        .guild_id()
+        .ok_or_else(|| eyre!("could not obtain guild ID"))?;
+
     let data = ctx
         .data()
         .storage
         .as_ref()
         .ok_or_else(|| eyre!("storage is not available"))?
-        .scan_autoreply()
+        .scan_autoreply(guild_id.get())
         .await?;
 
     ctx.send(
@@ -79,11 +83,15 @@ async fn add(
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
+    let guild_id = ctx
+        .guild_id()
+        .ok_or_else(|| eyre!("could not obtain guild ID"))?;
+
     ctx.data()
         .storage
         .as_ref()
         .ok_or_else(|| eyre!("storage is not available"))?
-        .add_autoreply(&keyword, &reply)
+        .add_autoreply(guild_id.get(), &keyword, &reply)
         .await?;
 
     ctx.send(
@@ -115,11 +123,15 @@ async fn delete(
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
+    let guild_id = ctx
+        .guild_id()
+        .ok_or_else(|| eyre!("could not obtain guild ID"))?;
+
     ctx.data()
         .storage
         .as_ref()
         .ok_or_else(|| eyre!("storage is not available"))?
-        .del_autoreply(&keyword)
+        .del_autoreply(guild_id.get(), &keyword)
         .await?;
 
     ctx.send(
@@ -149,11 +161,15 @@ async fn delete(
 async fn delete_all(ctx: Context<'_>) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
+    let guild_id = ctx
+        .guild_id()
+        .ok_or_else(|| eyre!("could not obtain guild ID"))?;
+
     ctx.data()
         .storage
         .as_ref()
         .ok_or_else(|| eyre!("storage is not available"))?
-        .delall_autoreply()
+        .delall_autoreply(guild_id.get())
         .await?;
 
     ctx.send(

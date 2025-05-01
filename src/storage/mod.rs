@@ -11,6 +11,8 @@ use std::{fmt, time::Duration};
 use log::MessageLog;
 use reminder::ReminderData;
 
+use crate::config::GuildConfig;
+
 pub mod log;
 pub mod presence;
 mod redis_util;
@@ -51,12 +53,38 @@ impl Storage {
 }
 
 mod consts {
+    pub const GUILD_CONFIG: &str = "guild-config-v1";
     pub const PRESENCE: &str = "presence-v1";
-    pub const STARBOARD: &str = "starboard-v1";
-    pub const SELF_TIMEOUT_TRANSPARENCY: &str = "stt-v1";
-    pub const MESSAGE_LOG: &str = "message-log-v1";
+    pub const STARBOARD: &str = "starboard-v2";
+    pub const MESSAGE_LOG: &str = "message-log-v2";
     pub const REMINDERS: &str = "reminders-v1";
-    pub const AUTOREPLY: &str = "autoreply-v1";
+    pub const AUTOREPLY: &str = "autoreply-v2";
+}
+
+impl Storage {
+    pub async fn get_config(&self, guild_id: u64) -> RedisResult<GuildConfig> {
+        let mut conn = self.conn.clone();
+        let ret: Option<GuildConfig> = conn
+            .get(format!("{}:g{guild_id}", consts::GUILD_CONFIG))
+            .await?;
+        Ok(ret.unwrap_or_default())
+    }
+
+    pub async fn set_config(&self, guild_id: u64, value: &GuildConfig) -> RedisResult<()> {
+        let mut conn = self.conn.clone();
+        let _: () = conn
+            .set(format!("{}:g{guild_id}", consts::GUILD_CONFIG), value)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn del_config(&self, guild_id: u64) -> RedisResult<()> {
+        let mut conn = self.conn.clone();
+        let _: () = conn
+            .del(format!("{}:g{guild_id}", consts::GUILD_CONFIG))
+            .await?;
+        Ok(())
+    }
 }
 
 impl Storage {
@@ -83,7 +111,7 @@ impl Storage {
     pub async fn get_starboard(&self, message_id: u64) -> RedisResult<Option<u64>> {
         let mut conn = self.conn.clone();
         let ret: Option<u64> = conn
-            .get(format!("{}:{message_id}", consts::STARBOARD))
+            .get(format!("{}:m{message_id}", consts::STARBOARD))
             .await?;
         Ok(ret)
     }
@@ -92,7 +120,7 @@ impl Storage {
         let mut conn = self.conn.clone();
         let _: () = conn
             .set_options(
-                format!("{}:{message_id}", consts::STARBOARD),
+                format!("{}:m{message_id}", consts::STARBOARD),
                 value,
                 redis::SetOptions::default().with_expiration(redis::SetExpiry::EX(2592000)),
             )
@@ -103,32 +131,7 @@ impl Storage {
     pub async fn del_starboard(&self, message_id: u64) -> RedisResult<()> {
         let mut conn = self.conn.clone();
         let _: () = conn
-            .del(format!("{}:{message_id}", consts::STARBOARD))
-            .await?;
-        Ok(())
-    }
-}
-
-impl Storage {
-    pub async fn get_self_timeout_transparency(&self, user_id: u64) -> RedisResult<Option<bool>> {
-        let mut conn = self.conn.clone();
-        let ret: Option<bool> = conn
-            .get(format!("{}:{user_id}", consts::SELF_TIMEOUT_TRANSPARENCY))
-            .await?;
-        Ok(ret)
-    }
-
-    pub async fn set_self_timeout_transparency(
-        &self,
-        user_id: u64,
-        value: &bool,
-    ) -> RedisResult<()> {
-        let mut conn = self.conn.clone();
-        let _: () = conn
-            .set(
-                format!("{}:{user_id}", consts::SELF_TIMEOUT_TRANSPARENCY),
-                value,
-            )
+            .del(format!("{}:m{message_id}", consts::STARBOARD))
             .await?;
         Ok(())
     }
@@ -138,7 +141,7 @@ impl Storage {
     pub async fn get_message_log(&self, message_id: u64) -> RedisResult<Option<MessageLog>> {
         let mut conn = self.conn.clone();
         let ret: Option<MessageLog> = conn
-            .get(format!("{}:{message_id}", consts::MESSAGE_LOG))
+            .get(format!("{}:m{message_id}", consts::MESSAGE_LOG))
             .await?;
         Ok(ret)
     }
@@ -147,7 +150,7 @@ impl Storage {
         let mut conn = self.conn.clone();
         let _: () = conn
             .set_options(
-                format!("{}:{message_id}", consts::MESSAGE_LOG),
+                format!("{}:m{message_id}", consts::MESSAGE_LOG),
                 value,
                 redis::SetOptions::default().with_expiration(redis::SetExpiry::EX(86400)),
             )
@@ -158,7 +161,7 @@ impl Storage {
     pub async fn del_message_log(&self, message_id: u64) -> RedisResult<()> {
         let mut conn = self.conn.clone();
         let _: () = conn
-            .del(format!("{}:{message_id}", consts::MESSAGE_LOG))
+            .del(format!("{}:m{message_id}", consts::MESSAGE_LOG))
             .await?;
         Ok(())
     }
@@ -202,12 +205,12 @@ impl Storage {
 }
 
 impl Storage {
-    pub async fn scan_autoreply(&self) -> RedisResult<Vec<(String, String)>> {
+    pub async fn scan_autoreply(&self, guild_id: u64) -> RedisResult<Vec<(String, String)>> {
         use futures_util::StreamExt as _;
 
         let mut conn = self.conn.clone();
         let values: Vec<(String, String)> = conn
-            .hscan(consts::AUTOREPLY)
+            .hscan(format!("{}:g{guild_id}", consts::AUTOREPLY))
             .await?
             .collect::<Vec<_>>()
             .await;
@@ -215,21 +218,27 @@ impl Storage {
         Ok(values)
     }
 
-    pub async fn add_autoreply(&self, f: &str, v: &str) -> RedisResult<()> {
+    pub async fn add_autoreply(&self, guild_id: u64, f: &str, v: &str) -> RedisResult<()> {
         let mut conn = self.conn.clone();
-        let _: () = conn.hset(consts::AUTOREPLY, f, v).await?;
+        let _: () = conn
+            .hset(format!("{}:g{guild_id}", consts::AUTOREPLY), f, v)
+            .await?;
         Ok(())
     }
 
-    pub async fn del_autoreply(&self, f: &str) -> RedisResult<()> {
+    pub async fn del_autoreply(&self, guild_id: u64, f: &str) -> RedisResult<()> {
         let mut conn = self.conn.clone();
-        let _: () = conn.hdel(consts::AUTOREPLY, f).await?;
+        let _: () = conn
+            .hdel(format!("{}:g{guild_id}", consts::AUTOREPLY), f)
+            .await?;
         Ok(())
     }
 
-    pub async fn delall_autoreply(&self) -> RedisResult<()> {
+    pub async fn delall_autoreply(&self, guild_id: u64) -> RedisResult<()> {
         let mut conn = self.conn.clone();
-        let _: () = conn.del(consts::AUTOREPLY).await?;
+        let _: () = conn
+            .del(format!("{}:g{guild_id}", consts::AUTOREPLY))
+            .await?;
         Ok(())
     }
 }

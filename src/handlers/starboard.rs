@@ -4,28 +4,61 @@
 
 use std::str::FromStr;
 
-use eyre::Result;
+use eyre::{Result, eyre};
 use poise::serenity_prelude::{self as serenity, Mentionable as _};
 
-use crate::config::CONFIG;
+use crate::config::GuildConfig;
 
 async fn get_starboard_channel(
-    http: impl serenity::CacheHttp,
+    ctx: &serenity::Context,
+    guild_config: &GuildConfig,
     channel: serenity::GenericChannelId,
     guild: Option<serenity::GuildId>,
 ) -> Result<Option<serenity::GenericChannelId>> {
-    let Some(serenity::Channel::Guild(guild_channel)) = channel.to_channel(&http, guild).await.ok()
+    let Some(serenity::Channel::Guild(guild_channel)) = channel.to_channel(&ctx, guild).await.ok()
     else {
         return Ok(None);
     };
 
-    if CONFIG.private_category.is_some()
-        && CONFIG.private_category == guild_channel.parent_id.map(|id| id.widen())
+    let guild_category = match &guild_channel.parent_id {
+        Some(parent_id) => Some(parent_id.to_guild_channel(&ctx, guild).await?),
+        None => None,
+    };
+
+    let guild = guild_channel
+        .base
+        .guild_id
+        .to_guild_cached(&ctx.cache)
+        .ok_or_else(|| eyre!("could not obtain guild"))?;
+
+    let everyone_role = guild
+        .roles
+        .get(&serenity::RoleId::new(guild.id.get()))
+        .ok_or_else(|| eyre!("could not obtain @everyone role"))?;
+
+    if guild_config.private_category.is_some()
+        && guild_config.private_category == guild_channel.parent_id.map(|id| id.widen())
     {
-        return Ok(CONFIG.private_starboard_channel);
+        return Ok(guild_config.private_starboard_channel);
     }
 
-    Ok(CONFIG.starboard_channel)
+    if guild_channel.permission_overwrites.iter().any(|p| {
+        p.kind == serenity::PermissionOverwriteType::Role(everyone_role.id)
+            && (p.allow.view_channel())
+    }) || !guild_channel.permission_overwrites.iter().any(|p| {
+        p.kind == serenity::PermissionOverwriteType::Role(everyone_role.id)
+            && (p.deny.view_channel())
+    }) && !guild_category.as_ref().is_some_and(|cat| {
+        cat.permission_overwrites.iter().any(|p| {
+            p.kind == serenity::PermissionOverwriteType::Role(everyone_role.id)
+                && (p.deny.view_channel())
+        })
+    }) && everyone_role.permissions.view_channel()
+    {
+        return Ok(guild_config.starboard_channel);
+    }
+
+    Ok(None)
 }
 
 #[derive(Default, Debug)]
@@ -81,15 +114,27 @@ impl<'de> serde::Deserialize<'de> for StarboardEmojis {
     }
 }
 
-fn is_significant_reaction(reaction: &serenity::MessageReaction) -> bool {
-    CONFIG.starboard_emojis.allow(reaction) && reaction.count >= CONFIG.starboard_threshold
+fn is_significant_reaction(
+    guild_config: &GuildConfig,
+    reaction: &serenity::MessageReaction,
+) -> bool {
+    guild_config
+        .starboard_emojis
+        .as_deref()
+        .unwrap_or_default()
+        .parse::<StarboardEmojis>()
+        .is_ok_and(|r| r.allow(reaction))
+        && reaction.count >= guild_config.starboard_threshold.unwrap_or(3)
 }
 
-fn get_significant_reactions(message: &serenity::Message) -> Vec<(serenity::ReactionType, u64)> {
+fn get_significant_reactions(
+    guild_config: &GuildConfig,
+    message: &serenity::Message,
+) -> Vec<(serenity::ReactionType, u64)> {
     let mut collected_reactions: Vec<(serenity::ReactionType, u64)> = message
         .reactions
         .iter()
-        .filter(|r| is_significant_reaction(r))
+        .filter(|r| is_significant_reaction(guild_config, r))
         .map(|r| (r.reaction_type.clone(), r.count))
         .collect();
 
@@ -173,76 +218,88 @@ async fn make_message_embed<'a>(
 }
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
-pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
-    if let Some(storage) = &ctx.data::<crate::Data>().storage {
-        if let Some(starboard) =
-            get_starboard_channel(&ctx, message.channel_id, message.guild_id).await?
-        {
-            let significant_reactions = get_significant_reactions(message);
+pub async fn handle(
+    ctx: &serenity::Context,
+    guild_id: Option<serenity::GuildId>,
+    message: &serenity::Message,
+) -> Result<()> {
+    if let Some(guild_id) = guild_id {
+        if let Some(storage) = &ctx.data::<crate::Data>().storage {
+            let guild_config = storage.get_config(guild_id.get()).await?;
 
-            if let Some(existing_starboard_message) = storage
-                .get_starboard(message.id.get())
-                .await?
-                .map(|s| s.into())
+            if let Some(starboard) =
+                get_starboard_channel(ctx, &guild_config, message.channel_id, message.guild_id)
+                    .await?
             {
-                if significant_reactions.is_empty() {
-                    starboard
-                        .delete_message(&ctx.http, existing_starboard_message, None)
-                        .await?;
+                let significant_reactions = get_significant_reactions(&guild_config, message);
 
-                    storage.del_starboard(message.id.get()).await?;
+                if let Some(existing_starboard_message) = storage
+                    .get_starboard(message.id.get())
+                    .await?
+                    .map(|s| s.into())
+                {
+                    if significant_reactions.is_empty() {
+                        storage.del_starboard(message.id.get()).await?;
 
-                    tracing::debug!(
-                        starboard_id = existing_starboard_message.get(),
-                        message_id = message.id.get(),
-                        "deleted starboard message"
+                        let _ = starboard
+                            .delete_message(&ctx.http, existing_starboard_message, None)
+                            .await;
+
+                        tracing::debug!(
+                            starboard_id = existing_starboard_message.get(),
+                            message_id = message.id.get(),
+                            "deleted starboard message"
+                        );
+                    } else {
+                        starboard
+                            .edit_message(
+                                &ctx.http,
+                                existing_starboard_message,
+                                serenity::EditMessage::default().content(serialize_reactions(
+                                    message.channel_id,
+                                    &significant_reactions,
+                                )),
+                            )
+                            .await?;
+
+                        tracing::debug!(
+                            starboard_id = existing_starboard_message.get(),
+                            message_id = message.id.get(),
+                            "edited starboard message"
+                        );
+                    }
+                } else if !significant_reactions.is_empty() {
+                    let content = serialize_reactions(message.channel_id, &significant_reactions);
+                    let embed = make_message_embed(ctx, message).await;
+
+                    let row = serenity::CreateActionRow::Buttons(
+                        vec![
+                            serenity::CreateButton::new_link(message.link())
+                                .label("Jump to message"),
+                        ]
+                        .into(),
                     );
-                } else {
-                    starboard
-                        .edit_message(
+
+                    let starboard_message = starboard
+                        .send_message(
                             &ctx.http,
-                            existing_starboard_message,
-                            serenity::EditMessage::default().content(serialize_reactions(
-                                message.channel_id,
-                                &significant_reactions,
-                            )),
+                            serenity::CreateMessage::default()
+                                .content(content)
+                                .embed(embed)
+                                .components(vec![row]),
                         )
                         .await?;
 
+                    storage
+                        .set_starboard(message.id.get(), &starboard_message.id.get())
+                        .await?;
+
                     tracing::debug!(
-                        starboard_id = existing_starboard_message.get(),
+                        starboard_id = starboard_message.id.get(),
                         message_id = message.id.get(),
-                        "edited starboard message"
+                        "created starboard message"
                     );
                 }
-            } else if !significant_reactions.is_empty() {
-                let content = serialize_reactions(message.channel_id, &significant_reactions);
-                let embed = make_message_embed(ctx, message).await;
-
-                let row = serenity::CreateActionRow::Buttons(
-                    vec![serenity::CreateButton::new_link(message.link()).label("Jump to message")]
-                        .into(),
-                );
-
-                let starboard_message = starboard
-                    .send_message(
-                        &ctx.http,
-                        serenity::CreateMessage::default()
-                            .content(content)
-                            .embed(embed)
-                            .components(vec![row]),
-                    )
-                    .await?;
-
-                storage
-                    .set_starboard(message.id.get(), &starboard_message.id.get())
-                    .await?;
-
-                tracing::debug!(
-                    starboard_id = starboard_message.id.get(),
-                    message_id = message.id.get(),
-                    "created starboard message"
-                );
             }
         }
     }
@@ -257,20 +314,27 @@ pub async fn handle_deletion(
     channel_id: serenity::GenericChannelId,
     guild_id: Option<serenity::GuildId>,
 ) -> Result<()> {
-    if let Some(storage) = &ctx.data::<crate::Data>().storage {
-        if let Some(starboard_channel) = get_starboard_channel(&ctx, channel_id, guild_id).await? {
-            if let Some(starboard_id) = storage.get_starboard(deleted_message_id.get()).await? {
-                tracing::debug!(
-                    starboard_id,
-                    message_id = deleted_message_id.get(),
-                    "deleted starboard message (source deleted)",
-                );
+    if let Some(guild_id) = guild_id {
+        if let Some(storage) = &ctx.data::<crate::Data>().storage {
+            let guild_config = storage.get_config(guild_id.get()).await?;
 
-                storage.del_starboard(deleted_message_id.get()).await?;
+            if let Some(starboard_channel) =
+                get_starboard_channel(ctx, &guild_config, channel_id, Some(guild_id)).await?
+            {
+                if let Some(starboard_id) = storage.get_starboard(deleted_message_id.get()).await? {
+                    storage.del_starboard(deleted_message_id.get()).await?;
 
-                ctx.http
-                    .delete_message(starboard_channel, starboard_id.into(), None)
-                    .await?;
+                    let _ = ctx
+                        .http
+                        .delete_message(starboard_channel, starboard_id.into(), None)
+                        .await;
+
+                    tracing::debug!(
+                        starboard_id,
+                        message_id = deleted_message_id.get(),
+                        "deleted starboard message (source deleted)",
+                    );
+                }
             }
         }
     }

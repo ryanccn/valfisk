@@ -9,7 +9,7 @@ use std::sync::LazyLock;
 use eyre::Result;
 
 use super::log::format_user;
-use crate::{config::CONFIG, utils};
+use crate::utils;
 
 static URL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
@@ -50,37 +50,43 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                     .await?;
             }
 
-            if let Some(logs_channel) = CONFIG.message_logs_channel {
-                let embed = serenity::CreateEmbed::default()
-                    .title("Safe Browsing")
-                    .field("Channel", message.channel_id.mention().to_string(), false)
-                    .field("Author", format_user(Some(&message.author.id)), false)
-                    .field("Content", utils::truncate(&content, 1024), false)
-                    .field(
-                        "URLs",
-                        matches
-                            .iter()
-                            .map(|m| format!("`{}` → {}", m.0, m.1.threat_type))
-                            .collect::<Vec<_>>()
-                            .join("\n"),
-                        false,
-                    )
-                    .color(0xff6b6b)
-                    .timestamp(serenity::Timestamp::now());
+            if let Some(guild_id) = message.guild_id {
+                if let Some(storage) = &ctx.data::<crate::Data>().storage {
+                    let guild_config = storage.get_config(guild_id.get()).await?;
 
-                logs_channel
-                    .send_message(
-                        &ctx.http,
-                        serenity::CreateMessage::default()
-                            .content(
-                                CONFIG
-                                    .moderator_role
-                                    .map(|r| r.mention().to_string())
-                                    .unwrap_or_default(),
+                    if let Some(logs_channel) = guild_config.message_logs_channel {
+                        let embed = serenity::CreateEmbed::default()
+                            .title("Safe Browsing")
+                            .field("Channel", message.channel_id.mention().to_string(), false)
+                            .field("Author", format_user(Some(&message.author.id)), false)
+                            .field("Content", utils::truncate(&content, 1024), false)
+                            .field(
+                                "URLs",
+                                matches
+                                    .iter()
+                                    .map(|m| format!("`{}` → {}", m.0, m.1.threat_type))
+                                    .collect::<Vec<_>>()
+                                    .join("\n"),
+                                false,
                             )
-                            .embed(embed),
-                    )
-                    .await?;
+                            .color(0xff6b6b)
+                            .timestamp(serenity::Timestamp::now());
+
+                        logs_channel
+                            .send_message(
+                                &ctx.http,
+                                serenity::CreateMessage::default()
+                                    .content(
+                                        guild_config
+                                            .moderator_role
+                                            .map(|r| r.mention().to_string())
+                                            .unwrap_or_default(),
+                                    )
+                                    .embed(embed),
+                            )
+                            .await?;
+                    }
+                }
             }
 
             return Ok(true);

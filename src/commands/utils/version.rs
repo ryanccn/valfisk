@@ -21,6 +21,8 @@ pub async fn version(ctx: Context<'_>) -> Result<()> {
         .map(|v| format!(" v{v}"))
         .unwrap_or_default();
 
+    let description = option_env!("CARGO_PKG_DESCRIPTION").unwrap_or_default();
+
     let target = option_env!("METADATA_TARGET")
         .map_or_else(|| "*Unknown*".to_owned(), |target| format!("`{target}`"));
 
@@ -36,6 +38,7 @@ pub async fn version(ctx: Context<'_>) -> Result<()> {
         CreateReply::default().embed(
             CreateEmbed::default()
                 .title(format!("Valfisk{version_suffix}"))
+                .description(description)
                 .field("Runtime OS", format!("{ARCH}-{OS}"), true)
                 .field("Target", &target, false)
                 .field("Build host", &host, false)

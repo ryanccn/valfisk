@@ -2,42 +2,80 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use poise::serenity_prelude::{EditRole, Http, RoleId};
-
+use poise::serenity_prelude::{EditRole, GuildId, GuildPagination, Http, RoleId};
 use rand::Rng as _;
-use std::{sync::Arc, time::Duration};
+
+use std::{collections::HashSet, sync::Arc, time::Duration};
 use tokio::{task::JoinSet, time};
 
 use chrono::{NaiveTime, TimeDelta, Timelike, Utc};
 use eyre::{Result, eyre};
 
-use crate::{Data, config::CONFIG};
+use crate::Data;
 
-#[tracing::instrument(skip(http))]
-pub async fn rotate_color_roles(
-    http: &Arc<Http>,
-    override_role: Option<RoleId>,
-) -> Result<Vec<RoleId>> {
-    let roles = override_role.map_or_else(|| CONFIG.random_color_roles.clone(), |role| vec![role]);
+pub async fn rotate_color_role(
+    http: &Http,
+    guild: GuildId,
+    role: RoleId,
+) -> Result<HashSet<RoleId>> {
+    let mut role = guild.role(http, role).await?;
 
-    if let Some(guild) = CONFIG.guild_id {
-        for role in &roles {
-            let mut role = guild.role(http, *role).await?;
-            let color: u32 = {
-                let mut rand = rand::rng();
-                rand.random_range(0x000000..=0xffffff)
-            };
+    let color: u32 = {
+        let mut rand = rand::rng();
+        rand.random_range(0x000000..=0xffffff)
+    };
 
-            role.edit(http, EditRole::default().colour(color)).await?;
-            tracing::info!(
-                role = ?role.id,
-                color = format!("{color:#x}"),
-                "rotated role color"
-            );
+    role.edit(http, EditRole::default().colour(color)).await?;
+    tracing::debug!(
+        role = ?role.id,
+        color = format!("{color:#x}"),
+        "rotated role color"
+    );
+
+    let mut ret = HashSet::new();
+    ret.insert(role.id);
+
+    Ok(ret)
+}
+
+pub async fn rotate_color_roles_guild(
+    http: &Http,
+    data: &Data,
+    guild: GuildId,
+) -> Result<HashSet<RoleId>> {
+    if let Some(storage) = &data.storage {
+        let guild_config = storage.get_config(guild.get()).await?;
+
+        for role in &guild_config.random_color_roles {
+            rotate_color_role(http, guild, *role).await?;
+        }
+
+        return Ok(guild_config.random_color_roles.clone());
+    }
+
+    Ok(HashSet::new())
+}
+
+pub async fn rotate_color_roles_global(http: &Http, data: &Data) -> Result<()> {
+    let mut cursor: Option<GuildId> = None;
+
+    loop {
+        let guilds = http
+            .get_guilds(cursor.map(GuildPagination::After), Some(50.try_into()?))
+            .await?;
+
+        if guilds.is_empty() {
+            break;
+        }
+
+        cursor = guilds.last().map(|g| g.id);
+
+        for guild in guilds {
+            rotate_color_roles_guild(http, data, guild.id).await?;
         }
     }
 
-    Ok(roles)
+    Ok(())
 }
 
 #[tracing::instrument(skip_all)]
@@ -46,6 +84,7 @@ pub async fn run(http: Arc<Http>, data: Arc<Data>) -> Result<()> {
 
     tasks.spawn({
         let http = http.clone();
+        let data = data.clone();
 
         async move {
             tracing::info_span!("rotate_color_roles")
@@ -62,7 +101,7 @@ pub async fn run(http: Arc<Http>, data: Arc<Data>) -> Result<()> {
 
                         time::sleep((next - now).to_std()?).await;
 
-                        if let Err(err) = rotate_color_roles(&http, None).await {
+                        if let Err(err) = rotate_color_roles_global(&http, &data).await {
                             tracing::error!("{err:?}");
                         }
 

@@ -32,4 +32,5 @@ where
     }
 }
 
+#[expect(dead_code)]
 pub type AxumResult<T> = Result<T, AxumError>;

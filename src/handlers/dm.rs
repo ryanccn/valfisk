@@ -52,8 +52,6 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
             logs_channel
                 .send_message(&ctx.http, serenity::CreateMessage::default().embed(embed))
                 .await?;
-
-            message.react(&ctx.http, '✅').await?;
         }
     }
 

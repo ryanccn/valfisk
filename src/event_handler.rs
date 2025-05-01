@@ -69,15 +69,22 @@ fn validate_commands(commands: &[poise::Command<crate::Data, eyre::Report>]) {
     }
 
     if !commands.iter().filter(|c| c.owners_only).all(|c| {
-        c.interaction_context.as_ref().is_some_and(|i| {
-            i == &[
-                serenity::InteractionContext::Guild,
-                serenity::InteractionContext::BotDm,
-            ]
-        })
+        c.install_context
+            .as_ref()
+            .is_some_and(|i| i == &[serenity::InstallationContext::Guild])
     }) {
         panic!(
-            "some commands marked as `owners_only` do not have interaction contexts restricted to `Guild` and `BotDm`"
+            "some commands marked as `owners_only` do not have install contexts restricted to `Guild`"
+        );
+    }
+
+    if !commands.iter().filter(|c| c.owners_only).all(|c| {
+        c.interaction_context
+            .as_ref()
+            .is_some_and(|i| i == &[serenity::InteractionContext::Guild])
+    }) {
+        panic!(
+            "some commands marked as `owners_only` do not have interaction contexts restricted to `Guild`"
         );
     }
 }
@@ -99,39 +106,46 @@ impl serenity::EventHandler for EventHandler {
                         "connected to Discord"
                     );
 
-                    let commands_data = commands::to_vec();
+                    let commands_data = commands::all();
                     validate_commands(&commands_data);
 
-                    poise::builtins::register_globally(&ctx.http, &commands_data).await?;
+                    let (count, global, guild, owners) = (
+                        commands_data.len(),
+                        commands_data
+                            .iter()
+                            .filter(|c| !c.owners_only && !c.guild_only)
+                            .map(|c| c.name.to_string())
+                            .collect::<Vec<_>>(),
+                        commands_data
+                            .iter()
+                            .filter(|c| !c.owners_only && c.guild_only)
+                            .map(|c| c.name.to_string())
+                            .collect::<Vec<_>>(),
+                        commands_data
+                            .iter()
+                            .filter(|c| c.owners_only)
+                            .map(|c| c.name.to_string())
+                            .collect::<Vec<_>>(),
+                    );
 
-                    {
-                        let (count, global, guild, owners) = (
-                            commands_data.len(),
-                            commands_data
-                                .iter()
-                                .filter(|c| !c.owners_only && !c.guild_only)
-                                .map(|c| c.name.as_ref())
-                                .collect::<Vec<_>>(),
-                            commands_data
-                                .iter()
-                                .filter(|c| !c.owners_only && c.guild_only)
-                                .map(|c| c.name.as_ref())
-                                .collect::<Vec<_>>(),
-                            commands_data
-                                .iter()
-                                .filter(|c| c.owners_only)
-                                .map(|c| c.name.as_ref())
-                                .collect::<Vec<_>>(),
-                        );
+                    let (public_commands, owner_commands) = commands_data
+                        .into_iter()
+                        .partition::<Vec<_>, _>(|c| !c.owners_only);
 
-                        tracing::info!(
-                            count,
-                            ?global,
-                            ?guild,
-                            ?owners,
-                            "registered application commands"
-                        );
+                    poise::builtins::register_globally(&ctx.http, &public_commands).await?;
+
+                    if let Some(guild) = CONFIG.admin_guild_id {
+                        poise::builtins::register_in_guild(&ctx.http, &owner_commands, guild)
+                            .await?;
                     }
+
+                    tracing::info!(
+                        count,
+                        ?global,
+                        ?guild,
+                        ?owners,
+                        "registered application commands"
+                    );
 
                     commands::restore::presence(ctx).await?;
                     commands::restore::reminders(ctx).await?;
@@ -237,7 +251,7 @@ impl serenity::EventHandler for EventHandler {
                     }
 
                     let message = add_reaction.message(&ctx).await?;
-                    handlers::starboard::handle(ctx, &message).await?;
+                    handlers::starboard::handle(ctx, add_reaction.guild_id, &message).await?;
                 }
 
                 FullEvent::ReactionRemove {
@@ -248,7 +262,7 @@ impl serenity::EventHandler for EventHandler {
                     }
 
                     let message = removed_reaction.message(&ctx).await?;
-                    handlers::starboard::handle(ctx, &message).await?;
+                    handlers::starboard::handle(ctx, removed_reaction.guild_id, &message).await?;
                 }
 
                 FullEvent::ReactionRemoveAll {
@@ -262,7 +276,7 @@ impl serenity::EventHandler for EventHandler {
                     }
 
                     let message = channel_id.message(&ctx, *removed_from_message_id).await?;
-                    handlers::starboard::handle(ctx, &message).await?;
+                    handlers::starboard::handle(ctx, *guild_id, &message).await?;
                 }
 
                 FullEvent::ReactionRemoveEmoji {
@@ -273,26 +287,26 @@ impl serenity::EventHandler for EventHandler {
                     }
 
                     let message = removed_reactions.message(&ctx).await?;
-                    handlers::starboard::handle(ctx, &message).await?;
+                    handlers::starboard::handle(ctx, removed_reactions.guild_id, &message).await?;
                 }
 
                 FullEvent::GuildMemberAddition { new_member, .. } => {
-                    handlers::log::member_join(ctx, &new_member.user).await?;
+                    handlers::log::member_join(ctx, new_member).await?;
                 }
 
                 FullEvent::GuildMemberRemoval {
                     user,
                     member_data_if_available,
+                    guild_id,
                     ..
                 } => {
-                    handlers::log::member_leave(ctx, user, member_data_if_available.as_ref())
-                        .await?;
-                }
-
-                FullEvent::GuildCreate { guild, .. } => {
-                    if CONFIG.guild_id.is_some_and(|id| id != guild.id) {
-                        guild.id.leave(&ctx.http).await?;
-                    }
+                    handlers::log::member_leave(
+                        ctx,
+                        user,
+                        member_data_if_available.as_ref(),
+                        *guild_id,
+                    )
+                    .await?;
                 }
 
                 &_ => {}

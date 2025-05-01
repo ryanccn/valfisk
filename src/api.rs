@@ -8,7 +8,7 @@ use axum::{
     extract::Request,
     middleware,
     response::Response,
-    routing::{Router, get, post},
+    routing::{Router, get},
 };
 
 use std::sync::Arc;
@@ -18,18 +18,10 @@ use crate::config::CONFIG;
 
 mod routes {
     use serde_json::json;
-    use std::sync::Arc;
 
     use axum::{
-        extract::{Form, State},
         http::StatusCode,
         response::{IntoResponse, Json},
-    };
-    use poise::serenity_prelude as serenity;
-
-    use crate::{
-        config::CONFIG,
-        utils::{AxumResult, truncate},
     };
 
     #[tracing::instrument(skip_all)]
@@ -46,68 +38,10 @@ mod routes {
     pub async fn not_found() -> impl IntoResponse {
         (StatusCode::NOT_FOUND, Json(json!({ "error": "Not found" })))
     }
-
-    #[derive(serde::Deserialize, Debug)]
-    pub struct KofiFormData {
-        data: String,
-    }
-
-    #[derive(serde::Deserialize)]
-    #[allow(dead_code)]
-    pub struct KofiData {
-        verification_token: String,
-        r#type: String,
-        is_public: bool,
-        from_name: String,
-        message: Option<String>,
-        amount: String,
-        currency: String,
-        timestamp: serenity::Timestamp,
-    }
-
-    #[tracing::instrument(skip_all)]
-    pub async fn kofi_webhook(
-        State(state): State<Arc<super::AppState>>,
-        form: Form<KofiFormData>,
-    ) -> AxumResult<(StatusCode, impl IntoResponse)> {
-        let data: KofiData = serde_json::from_str(&form.0.data)?;
-
-        if Some(data.verification_token) != CONFIG.kofi_verification_token {
-            return Ok((
-                StatusCode::UNAUTHORIZED,
-                Json(json!({ "error": "Unauthorized" })),
-            ));
-        }
-
-        if data.is_public {
-            if let Some(channel) = CONFIG.kofi_notify_channel {
-                let mut embed = serenity::CreateEmbed::default()
-                    .title(format!("Thank you to {}!", data.from_name))
-                    .description(format!(
-                        "For donating **{} {}** 🥳",
-                        data.amount, data.currency
-                    ))
-                    .timestamp(data.timestamp)
-                    .color(0xffd43b);
-
-                if let Some(message) = data.message {
-                    embed = embed.field("Message", truncate(&message, 1024), false);
-                }
-
-                channel
-                    .send_message(
-                        &state.serenity_http,
-                        serenity::CreateMessage::default().embed(embed),
-                    )
-                    .await?;
-            }
-        }
-
-        Ok((StatusCode::OK, Json(json!({ "ok": true }))))
-    }
 }
 
 #[derive(Debug)]
+#[expect(dead_code)]
 struct AppState {
     serenity_http: Arc<serenity::Http>,
 }
@@ -148,7 +82,6 @@ pub async fn serve(serenity_http: Arc<serenity::Http>) -> eyre::Result<()> {
 
     let app = Router::new()
         .route("/", get(routes::ping).head(routes::ping_head))
-        .route("/ko-fi", post(routes::kofi_webhook))
         .fallback(routes::not_found)
         .layer(middleware::from_fn(security_middleware))
         .with_state(state);

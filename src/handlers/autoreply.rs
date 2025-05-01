@@ -13,34 +13,36 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
         return Ok(());
     }
 
-    if let Some(storage) = &ctx.data::<crate::Data>().storage {
-        let data = storage.scan_autoreply().await?;
+    if let Some(guild_id) = message.guild_id {
+        if let Some(storage) = &ctx.data::<crate::Data>().storage {
+            let data = storage.scan_autoreply(guild_id.get()).await?;
 
-        let responses = data
-            .iter()
-            .filter_map(|(pattern, replacement)| {
-                RegexBuilder::new(pattern)
-                    .multi_line(true)
-                    .build()
-                    .ok()
-                    .and_then(|regex| {
-                        regex.captures(&message.content).map(|captures| {
-                            let mut expanded = String::new();
-                            captures.expand(replacement, &mut expanded);
-                            expanded
+            let responses = data
+                .iter()
+                .filter_map(|(pattern, replacement)| {
+                    RegexBuilder::new(pattern)
+                        .multi_line(true)
+                        .build()
+                        .ok()
+                        .and_then(|regex| {
+                            regex.captures(&message.content).map(|captures| {
+                                let mut expanded = String::new();
+                                captures.expand(replacement, &mut expanded);
+                                expanded
+                            })
                         })
-                    })
-            })
-            .filter(|s| !s.is_empty())
-            .collect::<Vec<_>>();
+                })
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>();
 
-        let possible_reply = {
-            let mut rng = rand::rng();
-            responses.choose(&mut rng)
-        };
+            let possible_reply = {
+                let mut rng = rand::rng();
+                responses.choose(&mut rng)
+            };
 
-        if let Some(reply) = possible_reply {
-            message.reply(&ctx.http, reply).await?;
+            if let Some(reply) = possible_reply {
+                message.reply(&ctx.http, reply).await?;
+            }
         }
     }
 

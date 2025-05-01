@@ -15,24 +15,16 @@ use crate::Context;
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
+    ephemeral,
     owners_only,
     default_member_permissions = "ADMINISTRATOR",
-    install_context = "Guild | User",
-    interaction_context = "Guild | BotDm"
+    guild_only,
+    install_context = "Guild",
+    interaction_context = "Guild"
 )]
 #[expect(clippy::cast_precision_loss)]
-pub async fn sysinfo(
-    ctx: Context<'_>,
-    #[description = "Whether the response should be ephemeral (defaults to true)"]
-    ephemeral: Option<bool>,
-) -> Result<()> {
-    let ephemeral = ephemeral.unwrap_or(true);
-
-    if ephemeral {
-        ctx.defer_ephemeral().await?;
-    } else {
-        ctx.defer().await?;
-    }
+pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
+    ctx.defer_ephemeral().await?;
 
     let refresh_kind = RefreshKind::default()
         .with_cpu(CpuRefreshKind::default().with_cpu_usage())

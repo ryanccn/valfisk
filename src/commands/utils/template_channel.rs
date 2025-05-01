@@ -15,16 +15,18 @@ use crate::{Context, http::HTTP, template_channel::Template};
 #[poise::command(
     rename = "template-channel",
     slash_command,
+    ephemeral,
     guild_only,
     install_context = "Guild",
     interaction_context = "Guild",
-    ephemeral,
     default_member_permissions = "MANAGE_GUILD"
 )]
 pub async fn template_channel(
     ctx: Context<'_>,
     #[description = "The URL to fetch the template from"] url: String,
-    #[description = "The channel to apply the template to"] channel: GenericChannelId,
+    #[description = "The channel to apply the template to"]
+    #[channel_types("Text")]
+    channel: GenericChannelId,
     #[description = "Whether or not to clear the channel (default true)"] clear: Option<bool>,
 ) -> Result<()> {
     let clear = clear.unwrap_or(true);

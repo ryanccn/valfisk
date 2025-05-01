@@ -2,6 +2,10 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
+use std::ops::{Deref, DerefMut};
+
+use crate::config::GuildConfig;
+
 use super::{log::MessageLog, presence::PresenceData, reminder::ReminderData};
 
 macro_rules! impl_redis_serde {
@@ -41,4 +45,27 @@ macro_rules! impl_redis_serde {
     };
 }
 
-impl_redis_serde!(PresenceData, ReminderData, MessageLog);
+#[derive(serde::Serialize, serde::Deserialize, Debug, Default)]
+#[serde(transparent)]
+pub struct SerdeJsonValue(pub serde_json::Value);
+
+impl Deref for SerdeJsonValue {
+    type Target = serde_json::Value;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for SerdeJsonValue {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl_redis_serde!(
+    PresenceData,
+    ReminderData,
+    MessageLog,
+    GuildConfig,
+    SerdeJsonValue
+);

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use eyre::Result;
+use eyre::{Result, eyre};
 use poise::{
     CreateReply,
     serenity_prelude::{self as serenity, Mentionable as _},
@@ -26,7 +26,16 @@ pub async fn rotate_color_roles(
     #[description = "The role color to rotate"] role: Option<serenity::RoleId>,
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
-    let roles = schedule::rotate_color_roles(&ctx.serenity_context().http, role).await?;
+
+    let guild_id = ctx
+        .guild_id()
+        .ok_or_else(|| eyre!("could not obtain guild ID"))?;
+
+    let roles = if let Some(role) = role {
+        schedule::rotate_color_role(ctx.http(), guild_id, role).await?
+    } else {
+        schedule::rotate_color_roles_guild(ctx.http(), &ctx.data(), guild_id).await?
+    };
 
     ctx.send(
         CreateReply::default().embed(

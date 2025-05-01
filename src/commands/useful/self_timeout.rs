@@ -122,40 +122,6 @@ pub async fn self_timeout(
                             .components(vec![]),
                     )
                     .await?;
-
-                if let Some(storage) = &ctx.data().storage {
-                    if let Ok(serenity::Channel::Guild(guild_channel)) =
-                        ctx.channel_id().to_channel(&ctx, ctx.guild_id()).await
-                    {
-                        if storage
-                            .get_self_timeout_transparency(ctx.author().id.get())
-                            .await?
-                            .unwrap_or(false)
-                            && ctx.guild().is_some_and(|guild| {
-                                guild
-                                    .user_permissions_in(&guild_channel, &member)
-                                    .send_messages()
-                            })
-                        {
-                            let mut info_embed_extended = info_embed.author(
-                                serenity::CreateEmbedAuthor::new(ctx.author().tag())
-                                    .icon_url(ctx.author().face()),
-                            );
-
-                            if let Some(reason) = reason {
-                                info_embed_extended =
-                                    info_embed_extended.field("Reason", reason, false);
-                            }
-
-                            guild_channel
-                                .send_message(
-                                    ctx.http(),
-                                    serenity::CreateMessage::default().embed(info_embed_extended),
-                                )
-                                .await?;
-                        }
-                    }
-                }
             } else if interaction.data.custom_id == cancel_button_id {
                 confirm_reply
                     .edit(
@@ -182,46 +148,6 @@ pub async fn self_timeout(
     } else {
         ctx.say("Invalid duration!").await?;
     }
-
-    Ok(())
-}
-
-/// Configure self-timeout transparency
-#[poise::command(
-    rename = "self-timeout-transparency",
-    slash_command,
-    guild_only,
-    install_context = "Guild",
-    interaction_context = "Guild",
-    ephemeral
-)]
-#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
-pub async fn transparency(
-    ctx: Context<'_>,
-    #[description = "Whether transparency is on or off"] status: bool,
-) -> Result<()> {
-    ctx.data()
-        .storage
-        .as_ref()
-        .ok_or_else(|| eyre!("storage is not available for the transparency feature"))?
-        .set_self_timeout_transparency(ctx.author().id.get(), &status)
-        .await?;
-
-    let desc = if status {
-        "Your self-timeouts will now be publicly logged to the channel that you ran the self-timeout in."
-    } else {
-        "Your self-timeouts will no longer be publicly logged."
-    };
-
-    ctx.send(
-        poise::CreateReply::default().embed(
-            serenity::CreateEmbed::default()
-                .title("Self-timeout transparency updated!")
-                .description(desc)
-                .color(0x4ade80),
-        ),
-    )
-    .await?;
 
     Ok(())
 }

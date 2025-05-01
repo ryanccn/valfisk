@@ -5,7 +5,7 @@
 use eyre::Result;
 use poise::serenity_prelude as serenity;
 
-use crate::{Context, config::CONFIG};
+use crate::Context;
 
 /// Ban a member
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
@@ -78,17 +78,21 @@ pub async fn ban(
         dm_embed = dm_embed.field("User notified", "No", false);
     }
 
-    if let Some(logs_channel) = CONFIG.moderation_logs_channel {
-        let server_embed = dm_embed.footer(
-            serenity::CreateEmbedFooter::new(ctx.author().tag()).icon_url(ctx.author().face()),
-        );
+    if let Some(storage) = &ctx.data().storage {
+        let guild_config = storage.get_config(member.guild_id.get()).await?;
 
-        logs_channel
-            .send_message(
-                ctx.http(),
-                serenity::CreateMessage::default().embed(server_embed),
-            )
-            .await?;
+        if let Some(logs_channel) = guild_config.moderation_logs_channel {
+            let server_embed = dm_embed.footer(
+                serenity::CreateEmbedFooter::new(ctx.author().tag()).icon_url(ctx.author().face()),
+            );
+
+            logs_channel
+                .send_message(
+                    ctx.http(),
+                    serenity::CreateMessage::default().embed(server_embed),
+                )
+                .await?;
+        }
     }
 
     ctx.say("Success!").await?;

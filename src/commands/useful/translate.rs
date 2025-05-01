@@ -2,59 +2,52 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use eyre::Result;
+use eyre::{Result, eyre};
 use poise::{CreateReply, serenity_prelude as serenity};
 
-use crate::{Context, http::HTTP};
+use crate::{Context, config::CONFIG, http::HTTP};
 
 #[derive(serde::Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-struct GoogleTranslateSentence {
-    trans: Option<String>,
-}
-
-#[derive(serde::Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
 struct GoogleTranslateResponse {
-    src: String,
-    sentences: Vec<GoogleTranslateSentence>,
+    data: GoogleTranslateTranslations,
 }
 
-#[derive(Debug)]
-struct GoogleTranslateResult {
-    translation: String,
-    src: String,
+#[derive(serde::Deserialize, Debug)]
+struct GoogleTranslateTranslations {
+    translations: Vec<GoogleTranslateTranslation>,
 }
 
-async fn translate_call(src: &str) -> Result<GoogleTranslateResult> {
-    let data: GoogleTranslateResponse = HTTP
-        .get("https://translate.googleapis.com/translate_a/single")
+#[derive(serde::Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct GoogleTranslateTranslation {
+    translated_text: String,
+    detected_source_language: String,
+}
+
+async fn translate_call(src: &str) -> Result<GoogleTranslateTranslation> {
+    let token = CONFIG
+        .translation_api_key
+        .as_deref()
+        .ok_or_else(|| eyre!("could not obtain `translation_api_key` from environment"))?;
+
+    let GoogleTranslateResponse { data } = HTTP
+        .get("https://translation.googleapis.com/language/translate/v2")
         .query(&[
-            ("client", "gtx"),
-            ("sl", "auto"),
-            ("tl", "en"),
-            ("dt", "t"),
-            ("dj", "1"),
-            ("source", "input"),
             ("q", src),
+            ("target", "en"),
+            ("format", "text"),
+            ("key", token),
         ])
-        .header("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36")
         .send()
         .await?
         .error_for_status()?
         .json()
         .await?;
 
-    let translation = data
-        .sentences
+    data.translations
         .into_iter()
-        .filter_map(|s| s.trans)
-        .collect::<String>();
-
-    Ok(GoogleTranslateResult {
-        translation,
-        src: data.src,
-    })
+        .next()
+        .ok_or_else(|| eyre!("did not receive translation from Google Cloud Translation API"))
 }
 
 /// Translates a message
@@ -81,15 +74,18 @@ pub async fn translate(ctx: Context<'_>, message: serenity::Message) -> Result<(
         return Ok(());
     }
 
-    let GoogleTranslateResult { translation, src } = translate_call(&message.content).await?;
+    let resp = translate_call(&message.content).await?;
 
     ctx.send(
         CreateReply::default().embed(
             serenity::CreateEmbed::default()
                 .title("Translation")
-                .description(&translation)
+                .description(&resp.translated_text)
                 .color(0x34d399)
-                .footer(serenity::CreateEmbedFooter::new(format!("{src} → en"))),
+                .footer(serenity::CreateEmbedFooter::new(format!(
+                    "{} → en",
+                    resp.detected_source_language
+                ))),
         ),
     )
     .await?;
@@ -122,15 +118,18 @@ pub async fn translate_ephemeral(ctx: Context<'_>, message: serenity::Message) -
         return Ok(());
     }
 
-    let GoogleTranslateResult { translation, src } = translate_call(&message.content).await?;
+    let resp = translate_call(&message.content).await?;
 
     ctx.send(
         CreateReply::default().embed(
             serenity::CreateEmbed::default()
                 .title("Translation")
-                .description(&translation)
+                .description(&resp.translated_text)
                 .color(0x34d399)
-                .footer(serenity::CreateEmbedFooter::new(format!("{src} → en"))),
+                .footer(serenity::CreateEmbedFooter::new(format!(
+                    "{} → en",
+                    resp.detected_source_language
+                ))),
         ),
     )
     .await?;
