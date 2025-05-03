@@ -2,9 +2,11 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use std::fmt::Display;
-
 use eyre::Result;
+use std::{fmt::Display, time::Duration};
+use tokio::time::timeout;
+
+use nanoid::nanoid;
 use poise::serenity_prelude::{self as serenity, Mentionable};
 
 use crate::utils;
@@ -56,4 +58,58 @@ pub fn format_attachments(attachments: &[serenity::Attachment]) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+pub async fn interaction_confirm<'a>(
+    ctx: &crate::Context<'a>,
+    embed: serenity::CreateEmbed<'_>,
+) -> Result<(bool, poise::ReplyHandle<'a>)> {
+    use futures_util::StreamExt as _;
+
+    let confirm_button_id = nanoid!(16);
+    let cancel_button_id = nanoid!(16);
+
+    let handle = ctx
+        .send(poise::CreateReply::default().embed(embed).components(
+            vec![serenity::CreateActionRow::Buttons(
+                    vec![
+                        serenity::CreateButton::new(&confirm_button_id)
+                            .label("Confirm")
+                            .style(serenity::ButtonStyle::Primary),
+                        serenity::CreateButton::new(&cancel_button_id)
+                            .label("Cancel")
+                            .style(serenity::ButtonStyle::Secondary),
+                    ]
+                    .into(),
+                )],
+        ))
+        .await?;
+
+    let interaction = timeout(
+        Duration::from_secs(24 * 60 * 60),
+        serenity::collect(ctx.serenity_context(), {
+            let confirm_message_id = handle.message().await?.id;
+
+            move |event| match event {
+                serenity::Event::InteractionCreate(event) => event
+                    .interaction
+                    .as_message_component()
+                    .take_if(|i| i.message.id == confirm_message_id)
+                    .cloned(),
+                _ => None,
+            }
+        })
+        .next(),
+    )
+    .await?;
+
+    if let Some(interaction) = interaction {
+        interaction.defer(ctx.http()).await?;
+
+        if interaction.data.custom_id == confirm_button_id {
+            return Ok((true, handle));
+        }
+    }
+
+    Ok((false, handle))
 }
