@@ -48,16 +48,14 @@ async fn is_excluded_message(
         return true;
     }
 
-    if let Some(guild) = ids.guild {
-        if let Some(author) = ids.author {
-            if let Ok(member) = guild.member(&ctx.http, author).await {
-                if member.roles(&ctx.cache).is_some_and(|roles| {
-                    roles
-                        .iter()
-                        .any(|role| role.has_permission(serenity::Permissions::ADMINISTRATOR))
-                }) {
-                    return true;
-                }
+    if let (Some(guild), Some(author)) = (ids.guild, ids.author) {
+        if let Ok(member) = guild.member(&ctx.http, author).await {
+            if member.roles(&ctx.cache).is_some_and(|roles| {
+                roles
+                    .iter()
+                    .any(|role| role.has_permission(serenity::Permissions::ADMINISTRATOR))
+            }) {
+                return true;
             }
         }
     }
@@ -95,7 +93,7 @@ fn make_link_components<'a>(
 pub async fn edit(
     ctx: &serenity::Context,
     ids: LogMessageIds,
-    prev_content: Option<&str>,
+    prev_content: &str,
     new_content: &str,
     attachments: &[serenity::Attachment],
     timestamp: &serenity::Timestamp,
@@ -130,8 +128,7 @@ pub async fn edit(
                     )
                     .field(
                         "Previous content",
-                        prev_content
-                            .map_or_else(|| "*Unknown*".to_owned(), |s| utils::truncate(s, 1024)),
+                        utils::truncate(prev_content, 1024),
                         false,
                     )
                     .field("New content", utils::truncate(new_content, 1024), false)

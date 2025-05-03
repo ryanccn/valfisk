@@ -7,7 +7,7 @@ use crate::config::GuildConfig;
 use super::{log::MessageLog, presence::PresenceData, reminder::ReminderData};
 
 macro_rules! impl_redis_serde {
-    ($($t: ty),+) => {
+    ($($t: ty),+ $(,)?) => {
         $(
         impl ::redis::FromRedisValue for $t {
             fn from_redis_value(v: &::redis::Value) -> ::redis::RedisResult<Self> {

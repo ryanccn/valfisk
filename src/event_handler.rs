@@ -170,36 +170,38 @@ impl serenity::EventHandler for EventHandler {
                         .unwrap_or_else(serenity::Timestamp::now);
 
                     if let Some(storage) = &ctx.data::<crate::Data>().storage {
-                        let logged_data = storage.get_message_log(event.message.id).await?;
+                        let prev_data = storage.get_message_log(event.message.id).await?;
 
-                        let content = event.message.content.as_str();
+                        let new_content = event.message.content.as_str();
                         let attachments = event.message.attachments.to_vec();
 
                         storage
                             .set_message_log(
                                 event.message.id,
                                 &MessageLog::new(
-                                    content,
+                                    new_content,
                                     event.message.author.id,
                                     attachments.clone(),
                                 ),
                             )
                             .await?;
 
-                        handlers::log::edit(
-                            ctx,
-                            handlers::log::LogMessageIds {
-                                message: event.message.id,
-                                channel: event.message.channel_id,
-                                guild: event.message.guild_id,
-                                author: Some(event.message.author.id),
-                            },
-                            logged_data.map(|l| l.content).as_deref(),
-                            content,
-                            &attachments,
-                            &timestamp,
-                        )
-                        .await?;
+                        if let Some(prev_content) = &prev_data.map(|p| p.content) {
+                            handlers::log::edit(
+                                ctx,
+                                handlers::log::LogMessageIds {
+                                    message: event.message.id,
+                                    channel: event.message.channel_id,
+                                    guild: event.message.guild_id,
+                                    author: Some(event.message.author.id),
+                                },
+                                prev_content,
+                                new_content,
+                                &attachments,
+                                &timestamp,
+                            )
+                            .await?;
+                        }
                     }
                 }
 
