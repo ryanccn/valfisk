@@ -170,14 +170,14 @@ impl serenity::EventHandler for EventHandler {
                         .unwrap_or_else(serenity::Timestamp::now);
 
                     if let Some(storage) = &ctx.data::<crate::Data>().storage {
-                        let logged_data = storage.get_message_log(event.message.id.get()).await?;
+                        let logged_data = storage.get_message_log(event.message.id).await?;
 
                         let content = event.message.content.as_str();
                         let attachments = event.message.attachments.to_vec();
 
                         storage
                             .set_message_log(
-                                event.message.id.get(),
+                                event.message.id,
                                 &MessageLog::new(
                                     content,
                                     event.message.author.id,
@@ -225,7 +225,7 @@ impl serenity::EventHandler for EventHandler {
 
                     if let Some(storage) = &ctx.data::<crate::Data>().storage {
                         if let Some(logged_data) =
-                            storage.get_message_log(deleted_message_id.get()).await?
+                            storage.get_message_log(*deleted_message_id).await?
                         {
                             handlers::log::delete(
                                 ctx,
@@ -240,7 +240,7 @@ impl serenity::EventHandler for EventHandler {
                             )
                             .await?;
 
-                            storage.del_message_log(deleted_message_id.get()).await?;
+                            storage.del_message_log(*deleted_message_id).await?;
                         }
                     }
                 }

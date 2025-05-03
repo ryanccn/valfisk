@@ -8,14 +8,11 @@ use std::sync::LazyLock;
 
 use eyre::Result;
 
-use super::log::format_user;
 use crate::utils;
 
 static URL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(
-        r"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)",
-    )
-    .unwrap()
+    Regex::new(r"https?:\/\/[-a-zA-Z0-9@:%._\+~#=]+\.[a-zA-Z0-9()]+\b[-a-zA-Z0-9()@:%_\+.~#?&//=]*")
+        .unwrap()
 });
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
@@ -41,24 +38,40 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                 .delete(&ctx.http, Some("URL(s) flagged by Safe Browsing"))
                 .await?;
 
-            if let Ok(mut member) = message.member(&ctx).await {
+            let timed_out = if let Ok(mut member) = message.member(&ctx).await {
                 member
                     .disable_communication_until(
                         &ctx.http,
-                        (chrono::Utc::now() + chrono::TimeDelta::minutes(10)).into(),
+                        (chrono::Utc::now() + chrono::TimeDelta::hours(1)).into(),
                     )
-                    .await?;
-            }
+                    .await
+                    .is_ok()
+            } else {
+                false
+            };
 
             if let Some(guild_id) = message.guild_id {
                 if let Some(storage) = &ctx.data::<crate::Data>().storage {
-                    let guild_config = storage.get_config(guild_id.get()).await?;
+                    let guild_config = storage.get_config(guild_id).await?;
 
                     if let Some(logs_channel) = guild_config.message_logs_channel {
                         let embed = serenity::CreateEmbed::default()
                             .title("Safe Browsing")
-                            .field("Channel", message.channel_id.mention().to_string(), false)
-                            .field("Author", format_user(Some(&message.author.id)), false)
+                            .field(
+                                "Channel",
+                                utils::serenity::format_mentionable(Some(message.channel_id)),
+                                false,
+                            )
+                            .field(
+                                "Author",
+                                utils::serenity::format_mentionable(Some(message.author.id)),
+                                false,
+                            )
+                            .field(
+                                "Author timed out",
+                                if timed_out { "Yes" } else { "Failed" },
+                                false,
+                            )
                             .field("Content", utils::truncate(&content, 1024), false)
                             .field(
                                 "URLs",

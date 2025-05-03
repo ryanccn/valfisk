@@ -6,19 +6,19 @@ use eyre::Result;
 
 use indexmap::IndexMap;
 use poise::serenity_prelude::{CreateEmbed, CreateMessage};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 const fn default_to_false() -> bool {
     false
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Template {
     #[serde(default)]
     pub components: Vec<Component>,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum Component {
     Embed(EmbedComponent),
@@ -27,13 +27,13 @@ pub enum Component {
     Text(TextComponent),
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct EmbedComponent {
     #[serde(default)]
     embeds: Vec<EmbedComponentEmbed>,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct EmbedComponentEmbed {
     title: Option<String>,
     description: Option<String>,
@@ -41,7 +41,7 @@ pub struct EmbedComponentEmbed {
     fields: Option<Vec<EmbedComponentEmbedField>>,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct EmbedComponentEmbedField {
     name: String,
     value: String,
@@ -49,7 +49,7 @@ pub struct EmbedComponentEmbedField {
     inline: bool,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct RulesComponent {
     #[serde(default)]
     rules: IndexMap<String, String>,
@@ -57,14 +57,14 @@ pub struct RulesComponent {
     colors: Vec<u32>,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct LinksComponent {
     title: String,
     color: Option<u32>,
     links: IndexMap<String, String>,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct TextComponent {
     text: String,
 }

@@ -8,20 +8,26 @@ use tokio::{task, time};
 
 use crate::{Context, storage::reminder::ReminderData};
 
-#[tracing::instrument(skip(http))]
-async fn dispatch(http: &serenity::Http, data: &ReminderData) -> Result<()> {
-    let user = data.user.to_user(&http).await?;
+#[tracing::instrument(skip(http, data))]
+async fn dispatch(
+    http: &serenity::Http,
+    data: Option<&crate::Data>,
+    reminder: &ReminderData,
+) -> Result<()> {
+    let user = reminder.user.to_user(&http).await?;
 
-    data.channel
+    reminder
+        .channel
         .send_message(
             http,
             serenity::CreateMessage::default()
-                .content(data.user.mention().to_string())
+                .content(reminder.user.mention().to_string())
                 .embed(
                     serenity::CreateEmbed::default()
                         .title("Reminder")
                         .description(
-                            data.content
+                            reminder
+                                .content
                                 .clone()
                                 .unwrap_or_else(|| "*No content*".into()),
                         )
@@ -30,6 +36,10 @@ async fn dispatch(http: &serenity::Http, data: &ReminderData) -> Result<()> {
                 ),
         )
         .await?;
+
+    if let Some(storage) = &data.and_then(|d| d.storage.as_ref()) {
+        storage.clean_reminders().await?;
+    }
 
     Ok(())
 }
@@ -77,7 +87,7 @@ pub async fn remind(
         }
 
         if let Some(channel) = channel {
-            let data = ReminderData {
+            let reminder = ReminderData {
                 channel,
                 user: ctx.author().id,
                 content: content.clone(),
@@ -86,11 +96,12 @@ pub async fn remind(
 
             task::spawn({
                 let http = ctx.serenity_context().http.clone();
-                let data = data.clone();
+                let data = ctx.data().clone();
+                let reminder = reminder.clone();
 
                 async move {
                     time::sleep(duration).await;
-                    if let Err(err) = dispatch(&http, &data).await {
+                    if let Err(err) = dispatch(&http, Some(&data), &reminder).await {
                         tracing::error!("{err:?}");
                     }
                 }
@@ -120,7 +131,7 @@ pub async fn remind(
             .await?;
 
             if let Some(storage) = &ctx.data().storage {
-                storage.add_reminders(&data).await?;
+                storage.add_reminders(&reminder).await?;
                 storage.clean_reminders().await?;
             }
         }
@@ -138,17 +149,18 @@ pub async fn restore(ctx: &serenity::Context) -> Result<()> {
     if let Some(storage) = &ctx.data::<crate::Data>().storage {
         let reminders = storage.scan_reminders().await?;
 
-        for data in &reminders {
+        for reminder in &reminders {
             task::spawn({
                 let http = ctx.http.clone();
-                let data = data.clone();
-                let duration = (data.timestamp - chrono::Utc::now())
+                let reminder = reminder.clone();
+
+                let duration = (reminder.timestamp - chrono::Utc::now())
                     .to_std()
                     .unwrap_or_default();
 
                 async move {
                     time::sleep(duration).await;
-                    if let Err(err) = dispatch(&http, &data).await {
+                    if let Err(err) = dispatch(&http, None, &reminder).await {
                         tracing::error!("{err:?}");
                     }
                 }

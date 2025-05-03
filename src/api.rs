@@ -59,7 +59,6 @@ async fn security_middleware(request: Request, next: middleware::Next) -> Respon
         "cross-origin-resource-policy",
         "same-origin".parse().unwrap(),
     );
-    h.insert("origin-agent-cluster", "?1".parse().unwrap());
     h.insert("referrer-policy", "no-referrer".parse().unwrap());
     h.insert("x-content-type-options", "nosniff".parse().unwrap());
     h.insert("x-frame-options", "DENY".parse().unwrap());

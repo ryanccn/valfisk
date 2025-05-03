@@ -67,16 +67,16 @@ impl SafeBrowsing {
                 list_update_requests: THREAT_TYPES
                     .into_iter()
                     .map(|threat_type| ListUpdateRequest {
-                        threat_type: threat_type.to_string(),
-                        platform_type: "ANY_PLATFORM".to_string(),
-                        threat_entry_type: "URL".to_string(),
+                        threat_type: threat_type.to_owned(),
+                        platform_type: "ANY_PLATFORM".to_owned(),
+                        threat_entry_type: "URL".to_owned(),
                         state: current_states.get(threat_type).cloned().unwrap_or_default(),
 
                         constraints: ThreatListConstraints {
                             max_update_entries: 50000,
                             max_database_entries: 100000,
-                            region: "US".to_string(),
-                            supported_compressions: vec!["RAW".to_string()],
+                            region: "US".to_owned(),
+                            supported_compressions: vec!["RAW".to_owned()],
                         },
                     })
                     .collect(),
@@ -229,8 +229,8 @@ impl SafeBrowsing {
 
                 threat_info: ThreatInfo {
                     threat_types: THREAT_TYPES.map(String::from).to_vec(),
-                    platform_types: vec!["ANY_PLATFORM".to_string()],
-                    threat_entry_types: vec!["URL".to_string()],
+                    platform_types: vec!["ANY_PLATFORM".to_owned()],
+                    threat_entry_types: vec!["URL".to_owned()],
                     threat_entries: matched_hash_prefixes
                         .par_iter()
                         .map(|hash| ThreatEntry {

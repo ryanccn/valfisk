@@ -4,8 +4,7 @@
 
 use std::borrow::Cow;
 
-use humansize::{FormatSizeOptions, format_size};
-use poise::serenity_prelude::{self as serenity, Mentionable as _};
+use poise::serenity_prelude as serenity;
 
 use eyre::Result;
 
@@ -51,8 +50,12 @@ async fn is_excluded_message(
 
     if let Some(guild) = ids.guild {
         if let Some(author) = ids.author {
-            if let Ok(author_member) = guild.member(&ctx.http, author).await {
-                if utils::serenity::is_administrator(ctx, &author_member) {
+            if let Ok(member) = guild.member(&ctx.http, author).await {
+                if member.roles(&ctx.cache).is_some_and(|roles| {
+                    roles
+                        .iter()
+                        .any(|role| role.has_permission(serenity::Permissions::ADMINISTRATOR))
+                }) {
                     return true;
                 }
             }
@@ -66,15 +69,13 @@ async fn is_excluded_message(
 pub async fn handle_message(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
     if let Some(guild_id) = message.guild_id {
         if let Some(storage) = &ctx.data::<crate::Data>().storage {
-            let guild_config = storage.get_config(guild_id.get()).await?;
+            let guild_config = storage.get_config(guild_id).await?;
 
             if is_excluded_message(ctx, &guild_config, message.into()).await {
                 return Ok(());
             }
 
-            storage
-                .set_message_log(message.id.get(), &message.into())
-                .await?;
+            storage.set_message_log(message.id, &message.into()).await?;
         }
     }
 
@@ -90,31 +91,6 @@ fn make_link_components<'a>(
     )]
 }
 
-pub fn format_user(user: Option<&serenity::UserId>) -> String {
-    user.map_or_else(
-        || "*Unknown*".to_owned(),
-        |user| format!("{} ({user})", user.mention()),
-    )
-}
-
-fn format_attachments(attachments: &[serenity::Attachment]) -> String {
-    attachments
-        .iter()
-        .map(|att| {
-            format!(
-                "[{}]({}) ({})",
-                att.filename,
-                att.url,
-                format_size(
-                    att.size,
-                    FormatSizeOptions::default().space_after_value(true)
-                )
-            )
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
-}
-
 #[tracing::instrument(skip_all, fields(id = ids.message.get()))]
 pub async fn edit(
     ctx: &serenity::Context,
@@ -126,7 +102,7 @@ pub async fn edit(
 ) -> Result<()> {
     if let Some(guild_id) = ids.guild {
         if let Some(storage) = &ctx.data::<crate::Data>().storage {
-            let guild_config = storage.get_config(guild_id.get()).await?;
+            let guild_config = storage.get_config(guild_id).await?;
 
             if is_excluded_message(ctx, &guild_config, ids).await {
                 return Ok(());
@@ -142,7 +118,16 @@ pub async fn edit(
 
                 let mut embed = serenity::CreateEmbed::default()
                     .author(embed_author)
-                    .field("Channel", ids.channel.mention().to_string(), false)
+                    .field(
+                        "Channel",
+                        utils::serenity::format_mentionable(Some(ids.channel)),
+                        false,
+                    )
+                    .field(
+                        "Author",
+                        utils::serenity::format_mentionable(ids.author),
+                        false,
+                    )
                     .field(
                         "Previous content",
                         prev_content
@@ -150,12 +135,15 @@ pub async fn edit(
                         false,
                     )
                     .field("New content", utils::truncate(new_content, 1024), false)
-                    .field("Author", format_user(ids.author.as_ref()), false)
                     .color(0xffd43b)
                     .timestamp(timestamp);
 
                 if !attachments.is_empty() {
-                    embed = embed.field("Attachments", format_attachments(attachments), false);
+                    embed = embed.field(
+                        "Attachments",
+                        utils::serenity::format_attachments(attachments),
+                        false,
+                    );
                 }
 
                 logs_channel
@@ -182,7 +170,7 @@ pub async fn delete(
 ) -> Result<()> {
     if let Some(guild_id) = ids.guild {
         if let Some(storage) = &ctx.data::<crate::Data>().storage {
-            let guild_config = storage.get_config(guild_id.get()).await?;
+            let guild_config = storage.get_config(guild_id).await?;
 
             if is_excluded_message(ctx, &guild_config, ids).await {
                 return Ok(());
@@ -198,14 +186,26 @@ pub async fn delete(
 
                 let mut embed = serenity::CreateEmbed::default()
                     .author(embed_author)
-                    .field("Channel", ids.channel.mention().to_string(), false)
+                    .field(
+                        "Channel",
+                        utils::serenity::format_mentionable(Some(ids.channel)),
+                        false,
+                    )
+                    .field(
+                        "Author",
+                        utils::serenity::format_mentionable(ids.author),
+                        false,
+                    )
                     .field("Content", &log.content, false)
-                    .field("Author", format_user(ids.author.as_ref()), false)
                     .color(0xff6b6b)
                     .timestamp(timestamp);
 
                 if !log.attachments.is_empty() {
-                    embed = embed.field("Attachments", format_attachments(&log.attachments), false);
+                    embed = embed.field(
+                        "Attachments",
+                        utils::serenity::format_attachments(&log.attachments),
+                        false,
+                    );
                 }
 
                 logs_channel
@@ -226,7 +226,7 @@ pub async fn delete(
 #[tracing::instrument(skip_all, fields(id = member.user.id.get()))]
 pub async fn member_join(ctx: &serenity::Context, member: &serenity::Member) -> Result<()> {
     if let Some(storage) = &ctx.data::<crate::Data>().storage {
-        let guild_config = storage.get_config(member.guild_id.get()).await?;
+        let guild_config = storage.get_config(member.guild_id).await?;
 
         if let Some(logs_channel) = guild_config.member_logs_channel {
             logs_channel
@@ -262,7 +262,7 @@ pub async fn member_leave(
     guild_id: serenity::GuildId,
 ) -> Result<()> {
     if let Some(storage) = &ctx.data::<crate::Data>().storage {
-        let guild_config = storage.get_config(guild_id.get()).await?;
+        let guild_config = storage.get_config(guild_id).await?;
 
         if let Some(logs_channel) = guild_config.member_logs_channel {
             let mut embed = serenity::CreateEmbed::default()

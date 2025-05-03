@@ -85,7 +85,7 @@ async fn get(ctx: Context<'_>) -> Result<()> {
         .as_ref()
         .ok_or_else(|| eyre!("storage is not available"))?;
 
-    let data = storage.get_config(guild_id.get()).await?;
+    let data = storage.get_config(guild_id).await?;
 
     ctx.send(
         CreateReply::default().embed(
@@ -168,7 +168,7 @@ async fn put(
         .as_ref()
         .ok_or_else(|| eyre!("storage is not available"))?;
 
-    let mut data = storage.get_config(guild_id.get()).await?;
+    let mut data = storage.get_config(guild_id).await?;
 
     if let Some(value) = private_category {
         data.private_category = Some(value);
@@ -214,7 +214,7 @@ async fn put(
         data.random_color_roles = parse_id_set(&value)?;
     }
 
-    storage.set_config(guild_id.get(), &data).await?;
+    storage.set_config(guild_id, &data).await?;
 
     ctx.send(
         CreateReply::default().embed(
@@ -258,7 +258,7 @@ async fn del(
         .as_ref()
         .ok_or_else(|| eyre!("storage is not available"))?;
 
-    let mut data = storage.get_config(guild_id.get()).await?;
+    let mut data = storage.get_config(guild_id).await?;
 
     match key {
         GuildConfigKey::PrivateCategory => data.private_category = None,
@@ -280,7 +280,7 @@ async fn del(
         GuildConfigKey::RandomColorRoles => data.random_color_roles = HashSet::new(),
     }
 
-    storage.set_config(guild_id.get(), &data).await?;
+    storage.set_config(guild_id, &data).await?;
 
     ctx.send(
         CreateReply::default().embed(
@@ -321,7 +321,7 @@ async fn reset(ctx: Context<'_>) -> Result<()> {
         .as_ref()
         .ok_or_else(|| eyre!("storage is not available"))?;
 
-    storage.del_config(guild_id.get()).await?;
+    storage.del_config(guild_id).await?;
 
     ctx.send(
         CreateReply::default().embed(

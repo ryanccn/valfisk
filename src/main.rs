@@ -98,7 +98,7 @@ async fn valfisk() -> Result<()> {
         .with(tracing_subscriber::fmt::layer())
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("valfisk=info,warn,error")),
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("valfisk=info,warn")),
         )
         .with(tracing_error::ErrorLayer::default())
         .init();

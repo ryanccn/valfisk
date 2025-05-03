@@ -45,7 +45,7 @@ async fn list(ctx: Context<'_>) -> Result<()> {
         .storage
         .as_ref()
         .ok_or_else(|| eyre!("storage is not available"))?
-        .scan_autoreply(guild_id.get())
+        .scan_autoreply(guild_id)
         .await?;
 
     ctx.send(
@@ -91,7 +91,7 @@ async fn add(
         .storage
         .as_ref()
         .ok_or_else(|| eyre!("storage is not available"))?
-        .add_autoreply(guild_id.get(), &keyword, &reply)
+        .add_autoreply(guild_id, &keyword, &reply)
         .await?;
 
     ctx.send(
@@ -131,7 +131,7 @@ async fn delete(
         .storage
         .as_ref()
         .ok_or_else(|| eyre!("storage is not available"))?
-        .del_autoreply(guild_id.get(), &keyword)
+        .del_autoreply(guild_id, &keyword)
         .await?;
 
     ctx.send(
@@ -169,7 +169,7 @@ async fn delete_all(ctx: Context<'_>) -> Result<()> {
         .storage
         .as_ref()
         .ok_or_else(|| eyre!("storage is not available"))?
-        .delall_autoreply(guild_id.get())
+        .delall_autoreply(guild_id)
         .await?;
 
     ctx.send(

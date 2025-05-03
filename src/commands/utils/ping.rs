@@ -14,12 +14,11 @@ use crate::Context;
     interaction_context = "Guild | BotDm | PrivateChannel"
 )]
 pub async fn ping(ctx: Context<'_>) -> Result<()> {
-    let ping = match ctx.ping().await {
-        Some(d) => humantime::format_duration(d).to_string(),
-        None => "?".to_string(),
-    };
-
-    ctx.say(format!("Pong! `{ping}`")).await?;
+    ctx.say(format!(
+        "Pong! `{}`",
+        humantime::format_duration(ctx.ping().await.unwrap_or_default())
+    ))
+    .await?;
 
     Ok(())
 }

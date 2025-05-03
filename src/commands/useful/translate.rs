@@ -97,6 +97,7 @@ pub async fn translate(ctx: Context<'_>, message: serenity::Message) -> Result<(
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 #[poise::command(
     context_menu_command = "Translate (ephemeral)",
+    rename = "translate-ephemeral",
     ephemeral,
     install_context = "Guild | User",
     interaction_context = "Guild | BotDm | PrivateChannel"

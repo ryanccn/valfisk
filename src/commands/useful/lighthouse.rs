@@ -60,13 +60,13 @@ pub async fn lighthouse(
         let data: PagespeedResponse = HTTP
             .get("https://pagespeedonline.googleapis.com/pagespeedonline/v5/runPagespeed")
             .query(&[
-                ("url", &url),
-                ("strategy", &"MOBILE".to_owned()),
-                ("category", &"PERFORMANCE".to_owned()),
-                ("category", &"ACCESSIBILITY".to_owned()),
-                ("category", &"BEST_PRACTICES".to_owned()),
-                ("category", &"SEO".to_owned()),
-                ("key", pagespeed_token),
+                ("url", url.as_str()),
+                ("strategy", "MOBILE"),
+                ("category", "PERFORMANCE"),
+                ("category", "ACCESSIBILITY"),
+                ("category", "BEST_PRACTICES"),
+                ("category", "SEO"),
+                ("key", pagespeed_token.as_str()),
             ])
             .timeout(Duration::from_secs(60))
             .send()

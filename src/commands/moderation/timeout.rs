@@ -5,7 +5,7 @@
 use eyre::Result;
 use poise::serenity_prelude as serenity;
 
-use crate::Context;
+use crate::{Context, utils};
 
 /// Timeout a member
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
@@ -40,7 +40,11 @@ pub async fn timeout(
 
         let mut dm_embed = serenity::CreateEmbed::default()
             .title("Timeout")
-            .field("User", format!("{} ({})", member, member.user.id), false)
+            .field(
+                "User",
+                utils::serenity::format_mentionable(Some(member.user.id)),
+                false,
+            )
             .color(0x9775fa)
             .timestamp(serenity::Timestamp::now());
 
@@ -78,7 +82,7 @@ pub async fn timeout(
         }
 
         if let Some(storage) = &ctx.data().storage {
-            let guild_config = storage.get_config(member.guild_id.get()).await?;
+            let guild_config = storage.get_config(member.guild_id).await?;
 
             if let Some(logs_channel) = guild_config.moderation_logs_channel {
                 let server_embed = dm_embed.footer(

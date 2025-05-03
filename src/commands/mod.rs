@@ -30,6 +30,8 @@ pub fn all() -> Vec<poise::Command<Data, eyre::Report>> {
         command!(useful, code_expand),
         command!(useful, dig),
         command!(useful, lighthouse),
+        command!(useful, feeds, hacker_news),
+        command!(useful, feeds, lobsters),
         command!(useful, remind),
         command!(useful, self_timeout),
         command!(useful, translate),

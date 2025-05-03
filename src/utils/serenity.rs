@@ -2,8 +2,12 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
+use std::fmt::Display;
+
 use eyre::Result;
-use poise::serenity_prelude as serenity;
+use poise::serenity_prelude::{self as serenity, Mentionable};
+
+use crate::utils;
 
 pub async fn suppress_embeds(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
     use futures_util::StreamExt as _;
@@ -32,10 +36,24 @@ pub async fn suppress_embeds(ctx: &serenity::Context, message: &serenity::Messag
     Ok(())
 }
 
-pub fn is_administrator(ctx: &serenity::Context, member: &serenity::Member) -> bool {
-    member.roles(&ctx.cache).is_some_and(|roles| {
-        roles
-            .iter()
-            .any(|role| role.has_permission(serenity::Permissions::ADMINISTRATOR))
-    })
+pub fn format_mentionable(id: Option<impl Mentionable + Display>) -> String {
+    id.map_or_else(
+        || "*Unknown*".to_owned(),
+        |id| format!("{} `{id}`", id.mention()),
+    )
+}
+
+pub fn format_attachments(attachments: &[serenity::Attachment]) -> String {
+    attachments
+        .iter()
+        .map(|att| {
+            format!(
+                "[{}]({}) ({})",
+                att.filename,
+                att.url,
+                utils::format_bytes(att.size.into())
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }

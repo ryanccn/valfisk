@@ -9,7 +9,7 @@ use tokio::time::sleep;
 use poise::{CreateReply, serenity_prelude::CreateEmbed};
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, Pid, ProcessRefreshKind, RefreshKind, System};
 
-use crate::Context;
+use crate::{Context, utils};
 
 /// Get system information for the bot host
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
@@ -56,8 +56,8 @@ pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
             "Memory",
             format!(
                 "{}/{} ({:.2}%)",
-                bytesize::ByteSize::b(sys.used_memory()).display().iec(),
-                bytesize::ByteSize::b(sys.total_memory()).display().iec(),
+                utils::format_bytes(sys.used_memory()),
+                utils::format_bytes(sys.total_memory()),
                 (sys.used_memory() as f64) / (sys.total_memory() as f64) * 100.
             ),
             true,
@@ -80,14 +80,7 @@ pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
                 format!("{:.2}%", proc.cpu_usage()),
                 true,
             )
-            .field(
-                "Process memory",
-                bytesize::ByteSize::b(proc.memory())
-                    .display()
-                    .iec()
-                    .to_string(),
-                true,
-            )
+            .field("Process memory", utils::format_bytes(proc.memory()), true)
             .field(
                 "Process uptime",
                 humantime::format_duration(Duration::from_secs(proc.run_time())).to_string(),

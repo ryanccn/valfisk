@@ -280,6 +280,13 @@ pub async fn handle_message(ctx: &serenity::Context, message: &serenity::Message
         return Ok(());
     }
 
+    if message
+        .flags
+        .is_some_and(|f| f.contains(serenity::MessageFlags::SUPPRESS_NOTIFICATIONS))
+    {
+        return Ok(());
+    }
+
     let embeds = resolve(&message.content).await?;
 
     if !embeds.is_empty() {

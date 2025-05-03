@@ -7,12 +7,12 @@ use std::fmt::Debug;
 use nanoid::nanoid;
 use poise::{
     CreateReply,
-    serenity_prelude::{
-        CreateEmbed, CreateEmbedFooter, CreateMessage, Mentionable as _, Timestamp,
-    },
+    serenity_prelude::{CreateEmbed, CreateEmbedFooter, CreateMessage, Timestamp},
 };
 
 use crate::{Context, config::CONFIG};
+
+use super::serenity::format_mentionable;
 
 /// A wrapper type that encapsulates reports ([`eyre::Report`]) or panic strings ([`Option<String>`]).
 pub enum ReportOrPanic<'a> {
@@ -70,7 +70,8 @@ impl ValfiskError<'_> {
     /// Reply to the interaction with an embed informing the user of an error, containing the randomly generated error ID.
     #[tracing::instrument(skip(self))]
     pub async fn handle_reply(&self) {
-        self.ctx
+        if let Err(err) = self
+            .ctx
             .send(
                 CreateReply::default().embed(
                     CreateEmbed::default()
@@ -82,14 +83,16 @@ impl ValfiskError<'_> {
                 ),
             )
             .await
-            .ok();
+        {
+            tracing::error!("{err:?}");
+        }
     }
 
     /// Report the error to a channel defined through the environment variable `ERROR_LOGS_CHANNEL`.
     #[tracing::instrument(skip(self))]
     pub async fn handle_report(&self) {
         if let Some(channel) = CONFIG.error_logs_channel {
-            let embed = CreateEmbed::default()
+            let mut embed = CreateEmbed::default()
                 .title("An error occurred!")
                 .description(format!("```\n{:#?}\n```", self.report_or_panic))
                 .footer(CreateEmbedFooter::new(&self.error_id))
@@ -102,15 +105,34 @@ impl ValfiskError<'_> {
                 )
                 .field(
                     "Channel",
-                    self.ctx.channel_id().mention().to_string(),
+                    format_mentionable(Some(self.ctx.channel_id())),
                     false,
                 )
-                .field("User", self.ctx.author().mention().to_string(), false);
+                .field(
+                    "User",
+                    format_mentionable(Some(self.ctx.author().id)),
+                    false,
+                );
 
-            channel
+            if let Some(guild) = self.ctx.partial_guild().await {
+                embed = embed.field(
+                    "Guild",
+                    format!(
+                        "**{}** ({})\n*Owner*: {}",
+                        guild.name,
+                        guild.id,
+                        format_mentionable(Some(guild.owner_id)),
+                    ),
+                    false,
+                );
+            }
+
+            if let Err(err) = channel
                 .send_message(self.ctx.http(), CreateMessage::default().embed(embed))
                 .await
-                .ok();
+            {
+                tracing::error!("{err:?}");
+            }
         }
     }
 

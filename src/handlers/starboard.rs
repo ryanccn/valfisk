@@ -225,7 +225,7 @@ pub async fn handle(
 ) -> Result<()> {
     if let Some(guild_id) = guild_id {
         if let Some(storage) = &ctx.data::<crate::Data>().storage {
-            let guild_config = storage.get_config(guild_id.get()).await?;
+            let guild_config = storage.get_config(guild_id).await?;
 
             if let Some(starboard) =
                 get_starboard_channel(ctx, &guild_config, message.channel_id, message.guild_id)
@@ -233,13 +233,11 @@ pub async fn handle(
             {
                 let significant_reactions = get_significant_reactions(&guild_config, message);
 
-                if let Some(existing_starboard_message) = storage
-                    .get_starboard(message.id.get())
-                    .await?
-                    .map(|s| s.into())
+                if let Some(existing_starboard_message) =
+                    storage.get_starboard(message.id).await?.map(|s| s.into())
                 {
                     if significant_reactions.is_empty() {
-                        storage.del_starboard(message.id.get()).await?;
+                        storage.del_starboard(message.id).await?;
 
                         let _ = starboard
                             .delete_message(&ctx.http, existing_starboard_message, None)
@@ -291,7 +289,7 @@ pub async fn handle(
                         .await?;
 
                     storage
-                        .set_starboard(message.id.get(), &starboard_message.id.get())
+                        .set_starboard(message.id, &starboard_message.id.get())
                         .await?;
 
                     tracing::debug!(
@@ -316,13 +314,13 @@ pub async fn handle_deletion(
 ) -> Result<()> {
     if let Some(guild_id) = guild_id {
         if let Some(storage) = &ctx.data::<crate::Data>().storage {
-            let guild_config = storage.get_config(guild_id.get()).await?;
+            let guild_config = storage.get_config(guild_id).await?;
 
             if let Some(starboard_channel) =
                 get_starboard_channel(ctx, &guild_config, channel_id, Some(guild_id)).await?
             {
-                if let Some(starboard_id) = storage.get_starboard(deleted_message_id.get()).await? {
-                    storage.del_starboard(deleted_message_id.get()).await?;
+                if let Some(starboard_id) = storage.get_starboard(deleted_message_id).await? {
+                    storage.del_starboard(deleted_message_id).await?;
 
                     let _ = ctx
                         .http

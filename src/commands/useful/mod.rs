@@ -4,6 +4,7 @@
 
 pub mod code_expand;
 pub mod dig;
+pub mod feeds;
 pub mod lighthouse;
 pub mod remind;
 pub mod self_timeout;

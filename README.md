@@ -19,6 +19,7 @@ Valfisk is a next-generation general purpose Discord app, built with [Poise](htt
 - Make DNS queries to a variety of DNS-over-HTTPS resolvers
 - Reminders (public by default when installed by servers and private when not)
 - Translate messages using Google's [Cloud Translation API](https://cloud.google.com/translate/docs/)
+- Show front page posts from [Hacker News](https://news.ycombinator.com/) and [Lobsters](https://lobste.rs/)
 
 ### Servers
 
