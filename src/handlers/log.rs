@@ -96,13 +96,17 @@ pub async fn edit(
     prev_content: &str,
     new_content: &str,
     attachments: &[serenity::Attachment],
-    timestamp: &serenity::Timestamp,
+    timestamp: &chrono::DateTime<chrono::Utc>,
 ) -> Result<()> {
     if let Some(guild_id) = ids.guild {
         if let Some(storage) = &ctx.data::<crate::Data>().storage {
             let guild_config = storage.get_config(guild_id).await?;
 
             if is_excluded_message(ctx, &guild_config, ids).await {
+                return Ok(());
+            }
+
+            if prev_content == new_content {
                 return Ok(());
             }
 
@@ -133,7 +137,7 @@ pub async fn edit(
                     )
                     .field("New content", utils::truncate(new_content, 1024), false)
                     .color(0xffd43b)
-                    .timestamp(timestamp);
+                    .timestamp(serenity::Timestamp::from(*timestamp));
 
                 if !attachments.is_empty() {
                     embed = embed.field(
@@ -163,7 +167,7 @@ pub async fn delete(
     ctx: &serenity::Context,
     ids: LogMessageIds,
     log: &MessageLog,
-    timestamp: &serenity::Timestamp,
+    timestamp: &chrono::DateTime<chrono::Utc>,
 ) -> Result<()> {
     if let Some(guild_id) = ids.guild {
         if let Some(storage) = &ctx.data::<crate::Data>().storage {
@@ -195,7 +199,7 @@ pub async fn delete(
                     )
                     .field("Content", &log.content, false)
                     .color(0xff6b6b)
-                    .timestamp(timestamp);
+                    .timestamp(serenity::Timestamp::from(*timestamp));
 
                 if !log.attachments.is_empty() {
                     embed = embed.field(

@@ -164,10 +164,10 @@ impl serenity::EventHandler for EventHandler {
                         return Ok(());
                     }
 
-                    let timestamp = event
+                    let edited_timestamp = event
                         .message
                         .edited_timestamp
-                        .unwrap_or_else(serenity::Timestamp::now);
+                        .map_or_else(chrono::Utc::now, |ts| ts.to_utc());
 
                     if let Some(storage) = &ctx.data::<crate::Data>().storage {
                         let prev_data = storage.get_message_log(event.message.id).await?;
@@ -178,11 +178,11 @@ impl serenity::EventHandler for EventHandler {
                         storage
                             .set_message_log(
                                 event.message.id,
-                                &MessageLog::new(
-                                    new_content,
-                                    event.message.author.id,
-                                    attachments.clone(),
-                                ),
+                                &MessageLog {
+                                    content: new_content.to_owned(),
+                                    author: event.message.author.id,
+                                    attachments: attachments.clone(),
+                                },
                             )
                             .await?;
 
@@ -198,7 +198,7 @@ impl serenity::EventHandler for EventHandler {
                                 prev_content,
                                 new_content,
                                 &attachments,
-                                &timestamp,
+                                &edited_timestamp,
                             )
                             .await?;
                         }
@@ -215,15 +215,7 @@ impl serenity::EventHandler for EventHandler {
                         return Ok(());
                     }
 
-                    handlers::starboard::handle_deletion(
-                        ctx,
-                        *deleted_message_id,
-                        *channel_id,
-                        *guild_id,
-                    )
-                    .await?;
-
-                    let timestamp = serenity::Timestamp::now();
+                    let timestamp = chrono::Utc::now();
 
                     if let Some(storage) = &ctx.data::<crate::Data>().storage {
                         if let Some(logged_data) =
@@ -245,6 +237,14 @@ impl serenity::EventHandler for EventHandler {
                             storage.del_message_log(*deleted_message_id).await?;
                         }
                     }
+
+                    handlers::starboard::handle_deletion(
+                        ctx,
+                        *deleted_message_id,
+                        *channel_id,
+                        *guild_id,
+                    )
+                    .await?;
                 }
 
                 FullEvent::ReactionAdd { add_reaction, .. } => {
@@ -309,6 +309,16 @@ impl serenity::EventHandler for EventHandler {
                         *guild_id,
                     )
                     .await?;
+                }
+
+                FullEvent::GuildCreate { guild, .. } => {
+                    if CONFIG
+                        .allowed_guilds
+                        .as_ref()
+                        .is_some_and(|a| !a.contains(&guild.id))
+                    {
+                        ctx.http.leave_guild(guild.id).await?;
+                    }
                 }
 
                 &_ => {}

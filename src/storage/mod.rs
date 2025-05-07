@@ -228,11 +228,11 @@ impl Storage {
         use futures_util::StreamExt as _;
 
         let mut conn = self.conn.clone();
-        let values: Vec<ReminderData> = redis::cmd("ZSCAN")
-            .arg(keys::REMINDERS)
-            .cursor_arg(0)
-            .arg("NOSCORES")
-            .clone()
+
+        let mut cmd = redis::cmd("ZSCAN");
+        cmd.arg(keys::REMINDERS).cursor_arg(0).arg("NOSCORES");
+
+        let values: Vec<ReminderData> = cmd
             .iter_async::<ReminderData>(&mut conn)
             .await?
             .collect::<Vec<_>>()

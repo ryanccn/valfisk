@@ -25,7 +25,7 @@ struct GoogleTranslateTranslation {
 }
 
 async fn translate_call(src: &str) -> Result<GoogleTranslateTranslation> {
-    let token = CONFIG
+    let key = CONFIG
         .translation_api_key
         .as_deref()
         .ok_or_else(|| eyre!("could not obtain `translation_api_key` from environment"))?;
@@ -36,7 +36,7 @@ async fn translate_call(src: &str) -> Result<GoogleTranslateTranslation> {
             ("q", src),
             ("target", "en"),
             ("format", "text"),
-            ("key", token),
+            ("key", key),
         ])
         .send()
         .await?

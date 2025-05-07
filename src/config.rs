@@ -12,6 +12,8 @@ pub struct EnvConfig {
     pub discord_token: String,
     pub redis_url: Option<String>,
 
+    pub allowed_guilds: Option<HashSet<GuildId>>,
+
     pub admin_guild_id: Option<GuildId>,
     pub owners: Option<HashSet<UserId>>,
     pub error_logs_channel: Option<GenericChannelId>,

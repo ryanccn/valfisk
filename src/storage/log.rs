@@ -10,19 +10,8 @@ use serde::{Deserialize, Serialize};
 pub struct MessageLog {
     pub content: String,
     pub author: UserId,
-
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub attachments: Vec<Attachment>,
-}
-
-impl MessageLog {
-    pub fn new(content: &str, author: UserId, attachments: Vec<Attachment>) -> Self {
-        Self {
-            content: content.to_owned(),
-            author,
-            attachments,
-        }
-    }
 }
 
 impl From<&Message> for MessageLog {

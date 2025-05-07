@@ -15,37 +15,37 @@ async fn get_starboard_channel(
     channel: serenity::GenericChannelId,
     guild: Option<serenity::GuildId>,
 ) -> Result<Option<serenity::GenericChannelId>> {
-    let Some(serenity::Channel::Guild(guild_channel)) = channel.to_channel(&ctx, guild).await.ok()
+    let Some(channel) = channel
+        .to_channel(&ctx, guild)
+        .await
+        .ok()
+        .and_then(|ch| ch.guild())
     else {
         return Ok(None);
     };
 
-    let guild_category = match &guild_channel.parent_id {
-        Some(parent_id) => Some(parent_id.to_guild_channel(&ctx, guild).await?),
-        None => None,
-    };
-
-    let guild = guild_channel
-        .base
-        .guild_id
-        .to_guild_cached(&ctx.cache)
-        .ok_or_else(|| eyre!("could not obtain guild"))?;
-
-    let everyone_role = guild
-        .roles
-        .get(&serenity::RoleId::new(guild.id.get()))
-        .ok_or_else(|| eyre!("could not obtain @everyone role"))?;
-
     if guild_config.private_category.is_some()
-        && guild_config.private_category == guild_channel.parent_id.map(|id| id.widen())
+        && guild_config.private_category == channel.parent_id.map(|id| id.widen())
     {
         return Ok(guild_config.private_starboard_channel);
     }
 
-    if guild_channel.permission_overwrites.iter().any(|p| {
+    let guild = channel.base.guild_id.to_partial_guild(ctx).await?;
+
+    let everyone_role = guild
+        .roles
+        .get(&guild.id.everyone_role())
+        .ok_or_else(|| eyre!("could not obtain @everyone role"))?;
+
+    let guild_category = match &channel.parent_id {
+        Some(parent_id) => Some(parent_id.to_guild_channel(&ctx, Some(guild.id)).await?),
+        None => None,
+    };
+
+    if channel.permission_overwrites.iter().any(|p| {
         p.kind == serenity::PermissionOverwriteType::Role(everyone_role.id)
             && (p.allow.view_channel())
-    }) || !guild_channel.permission_overwrites.iter().any(|p| {
+    }) || !channel.permission_overwrites.iter().any(|p| {
         p.kind == serenity::PermissionOverwriteType::Role(everyone_role.id)
             && (p.deny.view_channel())
     }) && !guild_category.as_ref().is_some_and(|cat| {

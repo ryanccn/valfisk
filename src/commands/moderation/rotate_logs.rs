@@ -14,8 +14,16 @@ async fn recreate(
     ctx: Context<'_>,
     channel: serenity::GenericChannelId,
     guild: serenity::GuildId,
+    actor: &serenity::User,
 ) -> Result<Option<serenity::GenericChannelId>> {
-    let serenity::Channel::Guild(channel) = channel.to_channel(&ctx, Some(guild)).await? else {
+    let audit_log_reason = format!("Log rotation by {} ({})", actor.tag(), actor.id);
+
+    let Some(channel) = channel
+        .to_channel(&ctx, Some(guild))
+        .await
+        .ok()
+        .and_then(|ch| ch.guild())
+    else {
         return Ok(None);
     };
 
@@ -23,7 +31,8 @@ async fn recreate(
         .kind(serenity::ChannelType::Text)
         .nsfw(channel.nsfw)
         .permissions(&channel.permission_overwrites)
-        .position(channel.position);
+        .position(channel.position)
+        .audit_log_reason(&audit_log_reason);
 
     if let Some(data) = channel.parent_id {
         create_channel = create_channel.category(data);
@@ -35,7 +44,7 @@ async fn recreate(
 
     let new_channel = guild.create_channel(ctx.http(), create_channel).await?;
 
-    channel.delete(ctx.http(), None).await?;
+    channel.delete(ctx.http(), Some(&audit_log_reason)).await?;
 
     Ok(Some(new_channel.id.widen()))
 }
@@ -63,6 +72,8 @@ pub async fn rotate_logs(
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
+    let actor = ctx.author();
+
     let guild_id = ctx
         .guild_id()
         .ok_or_else(|| eyre!("could not obtain guild ID"))?;
@@ -88,7 +99,7 @@ pub async fn rotate_logs(
 
         if kind.is_none_or(|k| k == RotateLogsKind::Moderation) {
             if let Some(channel) = guild_config.moderation_logs_channel {
-                if let Some(ch) = recreate(ctx, channel, guild_id).await? {
+                if let Some(ch) = recreate(ctx, channel, guild_id, actor).await? {
                     new_channels.push(ch);
                     guild_config.moderation_logs_channel = Some(ch);
                 }
@@ -97,7 +108,7 @@ pub async fn rotate_logs(
 
         if kind.is_none_or(|k| k == RotateLogsKind::Message) {
             if let Some(channel) = guild_config.message_logs_channel {
-                if let Some(ch) = recreate(ctx, channel, guild_id).await? {
+                if let Some(ch) = recreate(ctx, channel, guild_id, actor).await? {
                     new_channels.push(ch);
                     guild_config.message_logs_channel = Some(ch);
                 }
@@ -106,7 +117,7 @@ pub async fn rotate_logs(
 
         if kind.is_none_or(|k| k == RotateLogsKind::Member) {
             if let Some(channel) = guild_config.member_logs_channel {
-                if let Some(ch) = recreate(ctx, channel, guild_id).await? {
+                if let Some(ch) = recreate(ctx, channel, guild_id, actor).await? {
                     new_channels.push(ch);
                     guild_config.member_logs_channel = Some(ch);
                 }

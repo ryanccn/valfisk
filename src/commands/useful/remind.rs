@@ -2,24 +2,26 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use eyre::Result;
-use poise::serenity_prelude::{self as serenity, Mentionable as _};
+use std::sync::Arc;
 use tokio::{task, time};
 
-use crate::{Context, storage::reminder::ReminderData};
+use eyre::Result;
+use poise::serenity_prelude::{self as serenity, Mentionable as _};
 
-#[tracing::instrument(skip(http, data))]
+use crate::{Context, storage::reminder::ReminderData, utils::serenity::PartialContext};
+
+#[tracing::instrument(skip(ctx, data))]
 async fn dispatch(
-    http: &serenity::Http,
+    ctx: impl serenity::CacheHttp,
     data: Option<&crate::Data>,
     reminder: &ReminderData,
 ) -> Result<()> {
-    let user = reminder.user.to_user(&http).await?;
+    let user = reminder.user.to_user(&ctx).await?;
 
     reminder
         .channel
         .send_message(
-            http,
+            ctx.http(),
             serenity::CreateMessage::default()
                 .content(reminder.user.mention().to_string())
                 .embed(
@@ -71,11 +73,9 @@ pub async fn remind(
             .map(|ch| ch.id.widen());
 
         if let Some(member) = ctx.author_member().await {
-            if let Ok(serenity::Channel::Guild(guild_channel)) =
-                ctx.channel_id().to_channel(&ctx, ctx.guild_id()).await
-            {
+            if let Some(guild_channel) = ctx.channel().await.and_then(|ch| ch.guild()) {
                 if !private
-                    && ctx.guild().is_some_and(|guild| {
+                    && ctx.partial_guild().await.is_some_and(|guild| {
                         guild
                             .user_permissions_in(&guild_channel, &member)
                             .send_messages()
@@ -95,13 +95,13 @@ pub async fn remind(
             };
 
             task::spawn({
-                let http = ctx.serenity_context().http.clone();
-                let data = ctx.data().clone();
+                let ctxish = PartialContext::from(ctx.serenity_context());
+                let data = Arc::clone(&ctx.data());
                 let reminder = reminder.clone();
 
                 async move {
                     time::sleep(duration).await;
-                    if let Err(err) = dispatch(&http, Some(&data), &reminder).await {
+                    if let Err(err) = dispatch(&ctxish, Some(&data), &reminder).await {
                         tracing::error!("{err:?}");
                     }
                 }
@@ -151,7 +151,7 @@ pub async fn restore(ctx: &serenity::Context) -> Result<()> {
 
         for reminder in &reminders {
             task::spawn({
-                let http = ctx.http.clone();
+                let ctxish = PartialContext::from(ctx);
                 let reminder = reminder.clone();
 
                 let duration = (reminder.timestamp - chrono::Utc::now())
@@ -160,7 +160,7 @@ pub async fn restore(ctx: &serenity::Context) -> Result<()> {
 
                 async move {
                     time::sleep(duration).await;
-                    if let Err(err) = dispatch(&http, None, &reminder).await {
+                    if let Err(err) = dispatch(&ctxish, None, &reminder).await {
                         tracing::error!("{err:?}");
                     }
                 }

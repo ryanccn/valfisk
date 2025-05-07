@@ -3,13 +3,37 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 use eyre::Result;
-use std::{fmt::Display, time::Duration};
+use std::{fmt::Display, sync::Arc, time::Duration};
 use tokio::time::timeout;
 
 use nanoid::nanoid;
 use poise::serenity_prelude::{self as serenity, Mentionable};
 
 use crate::utils;
+
+pub struct PartialContext {
+    cache: Arc<serenity::Cache>,
+    http: Arc<serenity::Http>,
+}
+
+impl serenity::CacheHttp for PartialContext {
+    fn http(&self) -> &serenity::Http {
+        &self.http
+    }
+
+    fn cache(&self) -> Option<&Arc<serenity::Cache>> {
+        Some(&self.cache)
+    }
+}
+
+impl From<&serenity::Context> for PartialContext {
+    fn from(value: &serenity::Context) -> Self {
+        Self {
+            cache: Arc::clone(&value.cache),
+            http: Arc::clone(&value.http),
+        }
+    }
+}
 
 pub async fn suppress_embeds(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
     use futures_util::StreamExt as _;

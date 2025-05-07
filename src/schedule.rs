@@ -85,8 +85,8 @@ pub async fn run(http: Arc<Http>, data: Arc<Data>) -> Result<()> {
     let mut tasks: JoinSet<Result<()>> = JoinSet::new();
 
     tasks.spawn({
-        let http = http.clone();
-        let data = data.clone();
+        let http = Arc::clone(&http);
+        let data = Arc::clone(&data);
 
         async move {
             tracing::info_span!("rotate_color_roles")
@@ -115,7 +115,7 @@ pub async fn run(http: Arc<Http>, data: Arc<Data>) -> Result<()> {
     });
 
     tasks.spawn({
-        let data = data.clone();
+        let data = Arc::clone(&data);
 
         async move {
             tracing::info_span!("safe_browsing")

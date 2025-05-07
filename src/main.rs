@@ -132,7 +132,7 @@ async fn valfisk() -> Result<()> {
         owners: CONFIG.owners.clone().unwrap_or_default(),
         ..Default::default()
     }))
-    .data(data.clone())
+    .data(Arc::clone(&data))
     .await?;
 
     tokio::select! {
@@ -141,8 +141,8 @@ async fn valfisk() -> Result<()> {
             Err(ExitCodeError(1).into())
         },
 
-        result = api::serve(client.http.clone()) => { result },
-        result = schedule::run(client.http.clone(), data.clone()) => { result },
+        result = api::serve(Arc::clone(&client.http)) => { result },
+        result = schedule::run(Arc::clone(&client.http), Arc::clone(&data)) => { result },
         result = client.start() => { result.map_err(|e| e.into()) },
     }
 }
