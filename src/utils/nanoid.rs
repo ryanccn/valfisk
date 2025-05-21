@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2025 Ryan Cao <hello@ryanccn.dev>
+//
+// SPDX-License-Identifier: AGPL-3.0-only
+
 use rand::prelude::*;
 
 static ALPHABET: [char; 64] = [
