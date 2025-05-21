@@ -172,7 +172,7 @@ impl SafeBrowsing {
     }
 
     #[tracing::instrument(skip_all)]
-    pub async fn check_urls(&self, urls: &[&str]) -> eyre::Result<Vec<(String, ThreatMatch)>> {
+    pub async fn check(&self, urls: &[&str]) -> eyre::Result<Vec<(String, ThreatMatch)>> {
         if urls.is_empty() {
             return Ok(Vec::new());
         }

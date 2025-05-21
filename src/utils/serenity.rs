@@ -6,7 +6,6 @@ use eyre::Result;
 use std::{fmt::Display, sync::Arc, time::Duration};
 use tokio::time::timeout;
 
-use nanoid::nanoid;
 use poise::serenity_prelude::{self as serenity, Mentionable};
 
 use crate::utils;
@@ -90,8 +89,8 @@ pub async fn interaction_confirm<'a>(
 ) -> Result<(bool, poise::ReplyHandle<'a>)> {
     use futures_util::StreamExt as _;
 
-    let confirm_button_id = nanoid!(16);
-    let cancel_button_id = nanoid!(16);
+    let confirm_button_id = utils::nanoid(16);
+    let cancel_button_id = utils::nanoid(16);
 
     let handle = ctx
         .send(poise::CreateReply::default().embed(embed).components(

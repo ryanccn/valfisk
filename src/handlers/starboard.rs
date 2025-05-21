@@ -127,15 +127,15 @@ fn is_significant_reaction(
         && reaction.count >= guild_config.starboard_threshold.unwrap_or(3)
 }
 
-fn get_significant_reactions(
+fn get_significant_reactions<'a>(
     guild_config: &GuildConfig,
-    message: &serenity::Message,
-) -> Vec<(serenity::ReactionType, u64)> {
-    let mut collected_reactions: Vec<(serenity::ReactionType, u64)> = message
+    message: &'a serenity::Message,
+) -> Vec<(&'a serenity::ReactionType, u64)> {
+    let mut collected_reactions: Vec<(&serenity::ReactionType, u64)> = message
         .reactions
         .iter()
         .filter(|r| is_significant_reaction(guild_config, r))
-        .map(|r| (r.reaction_type.clone(), r.count))
+        .map(|r| (&r.reaction_type, r.count))
         .collect();
 
     collected_reactions.sort_by_key(|i| match &i.0 {
@@ -149,7 +149,7 @@ fn get_significant_reactions(
 
 fn serialize_reactions(
     channel: serenity::GenericChannelId,
-    reactions: &[(serenity::ReactionType, u64)],
+    reactions: &[(&serenity::ReactionType, u64)],
 ) -> String {
     let reaction_string = reactions
         .iter()

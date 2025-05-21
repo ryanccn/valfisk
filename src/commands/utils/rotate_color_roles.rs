@@ -40,7 +40,7 @@ pub async fn rotate_color_roles(
     ctx.send(
         CreateReply::default().embed(
             serenity::CreateEmbed::default()
-                .title("Rotated color roles!")
+                .title("Rotated color roles")
                 .description(
                     roles
                         .iter()

@@ -7,7 +7,7 @@ use poise::CreateReply;
 
 use crate::{Context, handlers::code_expansion};
 
-/// Expand a link to source code on GitHub, Codeberg, etc.
+/// Expand a link to lines of source code on GitHub, Codeberg, GitLab, and the Rust and Go playgrounds.
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 #[poise::command(
     rename = "code-expand",
@@ -15,7 +15,10 @@ use crate::{Context, handlers::code_expansion};
     install_context = "Guild | User",
     interaction_context = "Guild | BotDm | PrivateChannel"
 )]
-pub async fn code_expand(ctx: Context<'_>, content: String) -> Result<()> {
+pub async fn code_expand(
+    ctx: Context<'_>,
+    #[description = "A link, or multiple links"] content: String,
+) -> Result<()> {
     let embeds = code_expansion::resolve(&content).await?;
 
     if embeds.is_empty() {

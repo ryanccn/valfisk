@@ -4,13 +4,12 @@
 
 use std::fmt::Debug;
 
-use nanoid::nanoid;
 use poise::{
     CreateReply,
     serenity_prelude::{CreateEmbed, CreateEmbedFooter, CreateMessage, Timestamp},
 };
 
-use crate::{Context, config::CONFIG};
+use crate::{Context, config::CONFIG, utils::nanoid};
 
 use super::serenity::format_mentionable;
 
@@ -26,11 +25,11 @@ pub enum ReportOrPanic<'a> {
 #[derive(Debug)]
 pub struct ValfiskError<'a> {
     /// The report or panic.
-    pub report_or_panic: ReportOrPanic<'a>,
+    report_or_panic: ReportOrPanic<'a>,
     /// The Poise context.
-    pub ctx: &'a Context<'a>,
+    ctx: &'a Context<'a>,
     /// A randomly generated error ID.
-    pub error_id: String,
+    error_id: String,
 }
 
 impl ValfiskError<'_> {
@@ -40,7 +39,7 @@ impl ValfiskError<'_> {
         ValfiskError {
             report_or_panic: ReportOrPanic::Report(error),
             ctx,
-            error_id: nanoid!(8),
+            error_id: nanoid(8),
         }
     }
 
@@ -50,7 +49,7 @@ impl ValfiskError<'_> {
         ValfiskError {
             report_or_panic: ReportOrPanic::Panic(panic),
             ctx,
-            error_id: nanoid!(8),
+            error_id: nanoid(8),
         }
     }
 
@@ -76,7 +75,7 @@ impl ValfiskError<'_> {
                 CreateReply::default().embed(
                     CreateEmbed::default()
                         .title("An error occurred!")
-                        .description("Hmm. I wonder what happened there?")
+                        .description("You can contact the owner of this app with the error ID shown below if you need support.")
                         .footer(CreateEmbedFooter::new(&self.error_id))
                         .timestamp(Timestamp::now())
                         .color(0xff6b6b),
@@ -92,9 +91,25 @@ impl ValfiskError<'_> {
     #[tracing::instrument(skip(self))]
     pub async fn handle_report(&self) {
         if let Some(channel) = CONFIG.error_logs_channel {
+            let mut error_string = format!("{:#?}", self.report_or_panic);
+            error_string = error_string.replace(&CONFIG.discord_token, "<redacted>");
+
+            if let Some(data) = &CONFIG.redis_url {
+                error_string = error_string.replace(data, "<redacted>");
+            }
+            if let Some(data) = &CONFIG.pagespeed_api_key {
+                error_string = error_string.replace(data, "<redacted>");
+            }
+            if let Some(data) = &CONFIG.safe_browsing_api_key {
+                error_string = error_string.replace(data, "<redacted>");
+            }
+            if let Some(data) = &CONFIG.translation_api_key {
+                error_string = error_string.replace(data, "<redacted>");
+            }
+
             let mut embed = CreateEmbed::default()
                 .title("An error occurred!")
-                .description(format!("```\n{:#?}\n```", self.report_or_panic))
+                .description(format!("```\n{error_string}\n```"))
                 .footer(CreateEmbedFooter::new(&self.error_id))
                 .timestamp(Timestamp::now())
                 .color(0xff6b6b)

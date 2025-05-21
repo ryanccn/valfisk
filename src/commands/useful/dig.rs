@@ -8,7 +8,7 @@ use poise::{
 };
 
 use hickory_resolver::{
-    TokioResolver,
+    Name, TokioResolver,
     config::{NameServerConfigGroup, ResolveHosts, ResolverConfig, ResolverOpts},
     name_server::TokioConnectionProvider,
     proto::rr::RecordType,
@@ -18,6 +18,12 @@ use eyre::Result;
 use std::sync::LazyLock;
 
 use crate::Context;
+
+fn fqdn(name: &str) -> Result<Name> {
+    let mut name = Name::from_utf8(name)?;
+    name.set_fqdn(true);
+    Ok(name)
+}
 
 fn set_resolver_opts(options: &mut ResolverOpts, bootstrap: bool) {
     options.attempts = 5;
@@ -160,7 +166,7 @@ impl ResolverChoice {
         let domain = self.domain();
 
         let ips = BOOTSTRAP_RESOLVER
-            .lookup_ip(domain.to_owned() + ".")
+            .lookup_ip(fqdn(domain)?)
             .await?
             .into_iter()
             .collect::<Vec<_>>();
@@ -200,7 +206,12 @@ pub async fn dig(
         builder.build()
     };
 
-    match hickory.lookup(&name, r#type.as_record_type()).await {
+    let Ok(fqdn) = fqdn(&name) else {
+        ctx.say("Invalid domain name provided!").await?;
+        return Ok(());
+    };
+
+    match hickory.lookup(fqdn, r#type.as_record_type()).await {
         Ok(response) => {
             ctx.send(
                 CreateReply::default().embed(

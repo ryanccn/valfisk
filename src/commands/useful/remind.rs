@@ -110,7 +110,7 @@ pub async fn remind(
             ctx.send(
                 poise::CreateReply::default().embed(
                     serenity::CreateEmbed::default()
-                        .title("Reminder set!")
+                        .title("Reminder set")
                         .field(
                             "Time",
                             format!("<t:{0}:F> (<t:{0}:R>)", timestamp.timestamp()),

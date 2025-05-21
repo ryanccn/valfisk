@@ -25,7 +25,7 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
         let content = message.content.to_string();
 
         let matches = safe_browsing
-            .check_urls(
+            .check(
                 &URL_REGEX
                     .find_iter(&content)
                     .map(|u| u.as_str())

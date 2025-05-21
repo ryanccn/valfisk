@@ -3,7 +3,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 use eyre::Result;
-use std::{collections::HashMap, time::Duration};
+use regex::Regex;
+use std::{collections::HashMap, sync::LazyLock, time::Duration};
 
 use poise::{CreateReply, serenity_prelude as serenity};
 use serde::{Deserialize, Serialize};
@@ -31,6 +32,13 @@ struct PagespeedResponse {
     lighthouse_result: LighthouseResultData,
 }
 
+static URL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^https?:\/\/[-a-zA-Z0-9@:%._\+~#=]+\.[a-zA-Z0-9()]+\b[-a-zA-Z0-9()@:%_\+.~#?&//=]*$",
+    )
+    .unwrap()
+});
+
 /// Run Lighthouse on a URL using Google's PageSpeed API
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 #[poise::command(
@@ -44,13 +52,18 @@ pub async fn lighthouse(
 ) -> Result<()> {
     ctx.defer().await?;
 
-    if let Some(pagespeed_token) = &CONFIG.pagespeed_api_key {
+    if !URL_REGEX.is_match(&url) {
+        ctx.say("Invalid URL provided!").await?;
+        return Ok(());
+    }
+
+    if let Some(key) = &CONFIG.pagespeed_api_key {
         let reply_handle = ctx
             .send(
                 CreateReply::default().embed(
                     serenity::CreateEmbed::new()
                         .title("Lighthouse audit in progress")
-                        .description("This could take around a minute!")
+                        .description("This could take around a minute.")
                         .color(0x66d9e8)
                         .timestamp(serenity::Timestamp::now()),
                 ),
@@ -66,9 +79,9 @@ pub async fn lighthouse(
                 ("category", "ACCESSIBILITY"),
                 ("category", "BEST_PRACTICES"),
                 ("category", "SEO"),
-                ("key", pagespeed_token.as_str()),
+                ("key", key.as_str()),
             ])
-            .timeout(Duration::from_secs(60))
+            .timeout(Duration::from_secs(90))
             .send()
             .await?
             .error_for_status()?
@@ -95,8 +108,11 @@ pub async fn lighthouse(
         ctx.send(
             CreateReply::default().embed(
                 serenity::CreateEmbed::new()
-                    .title(r"PageSpeed API key not provided!")
-                    .description(r"The `PAGESPEED_API_KEY` environment variable is required to be set to use this command."),
+                    .title("PageSpeed API not configured!")
+                    .description(
+                        "Contact the owner of this app if this command is supposed to be working.",
+                    )
+                    .color(0xff6b6b),
             ),
         )
         .await?;

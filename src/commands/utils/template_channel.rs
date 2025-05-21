@@ -59,7 +59,7 @@ pub async fn template_channel(
     ctx.send(
         CreateReply::default().embed(
             CreateEmbed::default()
-                .title("Applied channel template!")
+                .title("Applied channel template")
                 .field("URL", format!("`{url}`"), false)
                 .field("Channel", channel.mention().to_string(), false)
                 .field("Components", data.components.len().to_string(), false)

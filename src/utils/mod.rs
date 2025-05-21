@@ -10,8 +10,8 @@ mod error_handling;
 pub use error_handling::ValfiskError;
 mod exit_code_error;
 pub use exit_code_error::ExitCodeError;
-mod pluralize;
-// pub use pluralize::Pluralize;
+mod nanoid;
+pub use nanoid::nanoid;
 pub mod serenity;
 
 pub fn truncate(s: &str, new_len: usize) -> String {

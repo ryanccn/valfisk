@@ -32,7 +32,7 @@ pub async fn presence(
     ctx.send(
         CreateReply::default().embed(
             serenity::CreateEmbed::default()
-                .title("Presence set!")
+                .title("Presence set")
                 .field("Type", data.r#type.to_string(), false)
                 .field("Content", &data.content, false)
                 .color(0x4ade80),

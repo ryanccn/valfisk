@@ -24,12 +24,7 @@ struct GoogleTranslateTranslation {
     detected_source_language: String,
 }
 
-async fn translate_call(src: &str) -> Result<GoogleTranslateTranslation> {
-    let key = CONFIG
-        .translation_api_key
-        .as_deref()
-        .ok_or_else(|| eyre!("could not obtain `translation_api_key` from environment"))?;
-
+async fn translate_call(src: &str, key: &str) -> Result<GoogleTranslateTranslation> {
     let GoogleTranslateResponse { data } = HTTP
         .get("https://translation.googleapis.com/language/translate/v2")
         .query(&[
@@ -74,21 +69,35 @@ pub async fn translate(ctx: Context<'_>, message: serenity::Message) -> Result<(
         return Ok(());
     }
 
-    let resp = translate_call(&message.content).await?;
+    if let Some(key) = &CONFIG.translation_api_key {
+        let resp = translate_call(&message.content, key).await?;
 
-    ctx.send(
-        CreateReply::default().embed(
-            serenity::CreateEmbed::default()
-                .title("Translation")
-                .description(&resp.translated_text)
-                .color(0x34d399)
-                .footer(serenity::CreateEmbedFooter::new(format!(
-                    "{} → en",
-                    resp.detected_source_language
-                ))),
-        ),
-    )
-    .await?;
+        ctx.send(
+            CreateReply::default().embed(
+                serenity::CreateEmbed::default()
+                    .title("Translation")
+                    .description(&resp.translated_text)
+                    .color(0x34d399)
+                    .footer(serenity::CreateEmbedFooter::new(format!(
+                        "{} → en",
+                        resp.detected_source_language
+                    ))),
+            ),
+        )
+        .await?;
+    } else {
+        ctx.send(
+            CreateReply::default().embed(
+                serenity::CreateEmbed::new()
+                    .title("Cloud Translation API not configured!")
+                    .description(
+                        "Contact the owner of this app if this command is supposed to be working.",
+                    )
+                    .color(0xff6b6b),
+            ),
+        )
+        .await?;
+    }
 
     Ok(())
 }
@@ -119,21 +128,35 @@ pub async fn translate_ephemeral(ctx: Context<'_>, message: serenity::Message) -
         return Ok(());
     }
 
-    let resp = translate_call(&message.content).await?;
+    if let Some(key) = &CONFIG.translation_api_key {
+        let resp = translate_call(&message.content, key).await?;
 
-    ctx.send(
-        CreateReply::default().embed(
-            serenity::CreateEmbed::default()
-                .title("Translation")
-                .description(&resp.translated_text)
-                .color(0x34d399)
-                .footer(serenity::CreateEmbedFooter::new(format!(
-                    "{} → en",
-                    resp.detected_source_language
-                ))),
-        ),
-    )
-    .await?;
+        ctx.send(
+            CreateReply::default().embed(
+                serenity::CreateEmbed::default()
+                    .title("Translation")
+                    .description(&resp.translated_text)
+                    .color(0x34d399)
+                    .footer(serenity::CreateEmbedFooter::new(format!(
+                        "{} → en",
+                        resp.detected_source_language
+                    ))),
+            ),
+        )
+        .await?;
+    } else {
+        ctx.send(
+            CreateReply::default().embed(
+                serenity::CreateEmbed::new()
+                    .title("Cloud Translation API not configured!")
+                    .description(
+                        "Contact the owner of this app if this command is supposed to be working.",
+                    )
+                    .color(0xff6b6b),
+            ),
+        )
+        .await?;
+    }
 
     Ok(())
 }
