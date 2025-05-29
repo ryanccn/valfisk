@@ -36,8 +36,6 @@ rustPlatform.buildRustPackage (finalAttrs: {
     };
   };
 
-  doCheck = false;
-
   env =
     {
       METADATA_REVISION = self.rev or self.dirtyRev or null;

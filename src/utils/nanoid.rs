@@ -2,8 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use rand::prelude::*;
-use std::iter;
+use rand::{distr::slice::Choose, prelude::*};
 
 static ALPHABET: [char; 64] = [
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
@@ -15,7 +14,21 @@ static ALPHABET: [char; 64] = [
 pub fn nanoid(len: usize) -> String {
     let rng = &mut rand::rng();
 
-    iter::repeat_with(|| ALPHABET.choose(rng).unwrap())
+    Choose::new(&ALPHABET)
+        .unwrap()
+        .sample_iter(rng)
         .take(len)
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn nanoid_works() {
+        let id = nanoid(12);
+        assert_eq!(id.len(), 12);
+        assert!(id.chars().all(|c| ALPHABET.contains(&c)));
+    }
 }

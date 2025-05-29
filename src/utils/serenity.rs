@@ -136,3 +136,26 @@ pub async fn interaction_confirm<'a>(
 
     Ok((false, handle))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use poise::serenity_prelude::{GenericChannelId, RoleId, UserId};
+
+    #[test]
+    fn format_mentionable_works() {
+        assert_eq!(format_mentionable(None::<UserId>), "*Unknown*");
+        assert_eq!(
+            format_mentionable(UserId::new(1234).into()),
+            "<@1234> `1234`"
+        );
+        assert_eq!(
+            format_mentionable(GenericChannelId::new(1234).into()),
+            "<#1234> `1234`"
+        );
+        assert_eq!(
+            format_mentionable(RoleId::new(1234).into()),
+            "<@&1234> `1234`"
+        );
+    }
+}

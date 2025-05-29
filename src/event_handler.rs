@@ -333,3 +333,13 @@ impl serenity::EventHandler for EventHandler {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::commands;
+
+    #[test]
+    fn commands_are_valid() {
+        super::validate_commands(&commands::all());
+    }
+}

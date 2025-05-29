@@ -14,6 +14,32 @@ use crate::{
     utils::{serenity::suppress_embeds, truncate},
 };
 
+fn dedent(source: &str) -> String {
+    let mut cur_indent: Option<String> = None;
+
+    for line in source.lines().filter(|l| !l.trim().is_empty()) {
+        let whitespace = line
+            .chars()
+            .take_while(|c| c.is_whitespace())
+            .collect::<String>();
+
+        cur_indent = if cur_indent
+            .as_ref()
+            .is_none_or(|s| s.starts_with(&whitespace))
+        {
+            Some(whitespace)
+        } else {
+            cur_indent
+        };
+    }
+
+    source
+        .lines()
+        .map(|l| l.replacen(cur_indent.as_deref().unwrap_or_default(), "", 1))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 static GITHUB: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"https?://github\.com/(?P<repo>[\w\-]+/[\w.\-]+)/blob/(?P<ref>\S+?)/(?P<file>[^\s?]+)(\?\S*)?#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
 });
@@ -59,7 +85,11 @@ async fn github<'a>(captures: regex::Captures<'a>) -> Result<serenity::CreateEmb
             end.map(|end| format!("-{end}")).unwrap_or_default()
         ))
         .description(
-            "```".to_owned() + language + "\n" + &truncate(&selected_lines, 2048) + "\n```",
+            "```".to_owned()
+                + language
+                + "\n"
+                + &truncate(&dedent(&selected_lines), 2048)
+                + "\n```",
         )
         .footer(serenity::CreateEmbedFooter::new("GitHub"))
         .timestamp(serenity::Timestamp::now());
@@ -113,7 +143,11 @@ async fn codeberg<'a>(captures: regex::Captures<'a>) -> Result<serenity::CreateE
             end.map(|end| format!("-{end}")).unwrap_or_default()
         ))
         .description(
-            "```".to_owned() + language + "\n" + &truncate(&selected_lines, 2048) + "\n```",
+            "```".to_owned()
+                + language
+                + "\n"
+                + &truncate(&dedent(&selected_lines), 2048)
+                + "\n```",
         )
         .footer(serenity::CreateEmbedFooter::new("Codeberg"))
         .timestamp(serenity::Timestamp::now());
@@ -164,7 +198,11 @@ async fn gitlab<'a>(captures: regex::Captures<'a>) -> Result<serenity::CreateEmb
             end.map(|end| format!("-{end}")).unwrap_or_default()
         ))
         .description(
-            "```".to_owned() + language + "\n" + &truncate(&selected_lines, 2048) + "\n```",
+            "```".to_owned()
+                + language
+                + "\n"
+                + &truncate(&dedent(&selected_lines), 2048)
+                + "\n```",
         )
         .footer(serenity::CreateEmbedFooter::new("GitLab"))
         .timestamp(serenity::Timestamp::now());
@@ -196,7 +234,7 @@ async fn rust_playground<'a>(
 
     let embed = serenity::CreateEmbed::default()
         .title(gist_id.to_owned())
-        .description("```rust\n".to_owned() + &truncate(&gist, 2048) + "\n```")
+        .description("```rust\n".to_owned() + &truncate(&dedent(&gist), 2048) + "\n```")
         .footer(serenity::CreateEmbedFooter::new("play.rust-lang.org"))
         .timestamp(serenity::Timestamp::now())
         .color(0xdea584);
@@ -226,7 +264,7 @@ async fn go_playground<'a>(
 
     let embed = serenity::CreateEmbed::default()
         .title(id.to_owned())
-        .description("```go\n".to_owned() + &truncate(&code, 2048) + "\n```")
+        .description("```go\n".to_owned() + &truncate(&dedent(&code), 2048) + "\n```")
         .footer(serenity::CreateEmbedFooter::new("go.dev/play"))
         .timestamp(serenity::Timestamp::now())
         .color(0x00b7e7);
@@ -307,4 +345,21 @@ pub async fn handle_message(ctx: &serenity::Context, message: &serenity::Message
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dedent_works() {
+        assert_eq!(dedent(""), "");
+        assert_eq!(dedent("\ta"), "a");
+        assert_eq!(dedent("    a"), "a");
+        assert_eq!(dedent("a\n\tb\nc"), "a\n\tb\nc");
+        assert_eq!(dedent("\ta\n\t\tb\n\tc"), "a\n\tb\nc");
+        assert_eq!(dedent("  a\n    b\n  c"), "a\n  b\nc");
+        assert_eq!(dedent("a  \n  b  \nc  "), "a  \n  b  \nc  ");
+        assert_eq!(dedent("  a  \n    b  \n  c  "), "a  \n  b  \nc  ");
+    }
 }
