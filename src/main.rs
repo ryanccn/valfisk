@@ -7,7 +7,7 @@ use std::{process::ExitCode, sync::Arc};
 use tokio::{signal, sync::mpsc, task};
 use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
-use poise::{Framework, FrameworkOptions, serenity_prelude as serenity};
+use poise::{Framework, FrameworkOptions, PrefixFrameworkOptions, serenity_prelude as serenity};
 
 use crate::{
     config::CONFIG, event_handler::EventHandler, safe_browsing::SafeBrowsing, storage::Storage,
@@ -130,6 +130,10 @@ async fn valfisk() -> Result<()> {
         commands: commands::all(),
         on_error: |err| Box::pin(handlers::error(err)),
         owners: CONFIG.owners.clone().unwrap_or_default(),
+        prefix_options: PrefixFrameworkOptions {
+            mention_as_prefix: false,
+            ..Default::default()
+        },
         ..Default::default()
     }))
     .data(Arc::clone(&data))

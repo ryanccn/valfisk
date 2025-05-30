@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use poise::serenity_prelude::{GuildId, MessageId};
+use poise::serenity_prelude::{GuildId, MessageId, UserId};
 use redis::{
     AsyncCommands as _, RedisResult,
     aio::{ConnectionManager, ConnectionManagerConfig},
@@ -125,6 +125,7 @@ mod keys {
     pub const MESSAGE_LOG: StorageKey = StorageKey::new("message-log-v2");
     pub const REMINDERS: StorageKey = StorageKey::new("reminders-v1");
     pub const AUTOREPLY: StorageKey = StorageKey::new("autoreply-v2");
+    pub const INTELLIGENCE_CONSENT: StorageKey = StorageKey::new("intelligence-consent-v1");
 }
 
 impl Storage {
@@ -289,6 +290,24 @@ impl Storage {
     pub async fn delall_autoreply(&self, guild_id: GuildId) -> RedisResult<()> {
         let mut conn = self.conn.clone();
         let _: () = conn.del(keys::AUTOREPLY.guild(guild_id)).await?;
+        Ok(())
+    }
+}
+
+impl Storage {
+    pub async fn get_intelligence_consent(&self, user_id: UserId) -> RedisResult<bool> {
+        let mut conn = self.conn.clone();
+        let value: bool = conn
+            .sismember(keys::INTELLIGENCE_CONSENT, user_id.get())
+            .await?;
+
+        Ok(value)
+    }
+
+    pub async fn add_intelligence_consent(&self, user_id: UserId) -> RedisResult<()> {
+        let mut conn = self.conn.clone();
+        let _: () = conn.sadd(keys::INTELLIGENCE_CONSENT, user_id.get()).await?;
+
         Ok(())
     }
 }

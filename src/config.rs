@@ -23,6 +23,9 @@ pub struct EnvConfig {
     pub safe_browsing_api_key: Option<String>,
     pub translation_api_key: Option<String>,
 
+    pub intelligence_allowed_guilds: Option<HashSet<GuildId>>,
+    pub openrouter_api_key: Option<String>,
+
     #[serde(default = "defaults::host")]
     pub host: String,
     #[serde(default = "defaults::port")]

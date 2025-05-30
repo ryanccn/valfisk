@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 use poise::serenity_prelude::{EditRole, GuildId, GuildPagination, Http, RoleId};
-use rand::Rng as _;
 
 use std::{collections::HashSet, sync::Arc, time::Duration};
 use tokio::{task::JoinSet, time};
@@ -19,10 +18,7 @@ pub async fn rotate_color_role(
     role: RoleId,
 ) -> Result<HashSet<RoleId>> {
     if let Ok(mut role) = guild.role(http, role).await {
-        let color: u32 = {
-            let mut rand = rand::rng();
-            rand.random_range(0x000000..=0xffffff)
-        };
+        let color: u32 = rand::random_range(0x000000..=0xffffff);
 
         role.edit(http, EditRole::default().colour(color)).await?;
         tracing::debug!(

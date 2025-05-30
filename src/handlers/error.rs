@@ -19,6 +19,8 @@ pub async fn error(err: FrameworkError<'_, Data, eyre::Report>) {
                 .await;
         }
 
+        FrameworkError::UnknownCommand { .. } => {}
+
         _ => {
             tracing::error!("{err:?}");
         }

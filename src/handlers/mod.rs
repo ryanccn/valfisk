@@ -9,6 +9,7 @@ mod autoreply;
 pub mod code_expansion;
 mod dm;
 mod error;
+mod intelligence;
 pub mod log;
 mod safe_browsing;
 pub mod starboard;
@@ -24,7 +25,8 @@ pub async fn message_guild(ctx: &serenity::Context, message: &serenity::Message)
     tokio::try_join!(
         log::handle_message(ctx, message),
         autoreply::handle(ctx, message),
-        code_expansion::handle_message(ctx, message)
+        code_expansion::handle_message(ctx, message),
+        intelligence::handle(ctx, message)
     )?;
 
     Ok(())
