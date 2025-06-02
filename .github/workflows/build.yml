@@ -24,7 +24,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Nix
-        uses: cachix/install-nix-action@526118121621777ccd86f79b04685a9319637641 # ratchet:cachix/install-nix-action@v31
+        uses: cachix/install-nix-action@17fe5fb4a23ad6cbbe47d6b3f359611ad276644c # ratchet:cachix/install-nix-action@v31
 
       - name: Build
         run: nix build --fallback --print-build-logs '.#valfisk'
