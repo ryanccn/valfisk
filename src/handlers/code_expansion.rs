@@ -45,7 +45,7 @@ static GITHUB: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 #[tracing::instrument]
-async fn github<'a>(captures: regex::Captures<'a>) -> Result<serenity::CreateEmbed<'static>> {
+async fn github(captures: regex::Captures<'_>) -> Result<serenity::CreateEmbed<'static>> {
     tracing::debug!(link = &captures[0], "handling GitHub link");
 
     let repo = &captures["repo"];
@@ -102,7 +102,7 @@ static CODEBERG: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 #[tracing::instrument]
-async fn codeberg<'a>(captures: regex::Captures<'a>) -> Result<serenity::CreateEmbed<'static>> {
+async fn codeberg(captures: regex::Captures<'_>) -> Result<serenity::CreateEmbed<'static>> {
     tracing::debug!(link = &captures[0], "handling Codeberg link");
 
     let repo = &captures["repo"];
@@ -160,7 +160,7 @@ static GITLAB: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 #[tracing::instrument]
-async fn gitlab<'a>(captures: regex::Captures<'a>) -> Result<serenity::CreateEmbed<'static>> {
+async fn gitlab(captures: regex::Captures<'_>) -> Result<serenity::CreateEmbed<'static>> {
     tracing::debug!(link = &captures[0], "handling GitLab link");
 
     let repo = &captures["repo"];
@@ -215,9 +215,7 @@ static RUST_PLAYGROUND: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 #[tracing::instrument]
-async fn rust_playground<'a>(
-    captures: regex::Captures<'a>,
-) -> Result<serenity::CreateEmbed<'static>> {
+async fn rust_playground(captures: regex::Captures<'_>) -> Result<serenity::CreateEmbed<'static>> {
     tracing::debug!(link = &captures[0], "handling Rust playground link");
 
     let gist_id = &captures["gist"];
@@ -246,9 +244,7 @@ static GO_PLAYGROUND: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"https://go\.dev/play/p/(?P<id>[\w-]+)").unwrap());
 
 #[tracing::instrument]
-async fn go_playground<'a>(
-    captures: regex::Captures<'a>,
-) -> Result<serenity::CreateEmbed<'static>> {
+async fn go_playground(captures: regex::Captures<'_>) -> Result<serenity::CreateEmbed<'static>> {
     tracing::debug!(link = &captures[0], "handling Go playground link");
 
     let id = &captures["id"];

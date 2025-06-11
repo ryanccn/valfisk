@@ -203,12 +203,12 @@ async fn make_message_embed<'a>(
         .map(|ch| ch.base.guild_id)
     {
         if let Ok(member) = guild_id.member(&ctx, message.author.id).await {
-            for role_id in &member.roles {
-                if let Ok(role) = guild_id.role(&ctx.http, *role_id).await {
-                    if role.colour.0 != 0x99aab5 {
-                        builder = builder.color(role.colour);
-                        break;
-                    }
+            if let Some(mut roles) = member.roles(&ctx.cache) {
+                roles.retain(|r| r.colour.0 != 0);
+                roles.sort_unstable_by_key(|r| r.position);
+
+                if let Some(role) = roles.last() {
+                    builder = builder.color(role.colour);
                 }
             }
         }

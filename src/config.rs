@@ -23,7 +23,7 @@ pub struct EnvConfig {
     pub safe_browsing_api_key: Option<String>,
     pub translation_api_key: Option<String>,
 
-    pub intelligence_allowed_guilds: Option<HashSet<GuildId>>,
+    pub intelligence_allowed_roles: Option<HashSet<RoleId>>,
     pub openrouter_api_key: Option<String>,
 
     #[serde(default = "defaults::host")]
