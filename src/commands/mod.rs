@@ -36,6 +36,7 @@ pub fn all() -> Vec<poise::Command<Data, eyre::Report>> {
         command!(useful, self_timeout),
         command!(useful, translate),
         command!(useful, translate, translate_ephemeral),
+        command!(useful, user),
         command!(moderation, ban),
         command!(moderation, kick),
         command!(moderation, rotate_logs),

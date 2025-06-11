@@ -20,6 +20,7 @@ Valfisk is a next-generation general purpose Discord app, built with [Poise](htt
 - Reminders (public by default when installed by servers, private when not)
 - Translate messages using a context menu command
 - Show front page posts from [Hacker News](https://news.ycombinator.com/) and [Lobsters](https://lobste.rs/)
+- Retrieve public information about a Discord user
 
 ### Server-only
 

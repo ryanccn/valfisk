@@ -9,3 +9,4 @@ pub mod lighthouse;
 pub mod remind;
 pub mod self_timeout;
 pub mod translate;
+pub mod user;
