@@ -49,7 +49,7 @@ async fn is_excluded_message(
     }
 
     if let (Some(guild), Some(author)) = (ids.guild, ids.author) {
-        if let Ok(member) = guild.member(&ctx.http, author).await {
+        if let Ok(member) = guild.member(&ctx, author).await {
             if member.roles(&ctx.cache).is_some_and(|roles| {
                 roles
                     .iter()

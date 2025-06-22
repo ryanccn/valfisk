@@ -15,7 +15,7 @@ use hickory_resolver::{
 };
 
 use eyre::Result;
-use std::sync::LazyLock;
+use std::{fmt, sync::LazyLock};
 
 use crate::Context;
 
@@ -98,8 +98,8 @@ impl RecordTypeChoice {
     }
 }
 
-impl std::fmt::Display for RecordTypeChoice {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for RecordTypeChoice {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.as_record_type().fmt(f)
     }
 }

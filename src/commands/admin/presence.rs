@@ -8,7 +8,7 @@ use eyre::Result;
 
 use crate::{Context, storage::presence::PresenceKind};
 
-/// Modify the Discord presence shown by the bot
+/// Modify the Discord presence shown by the app
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,

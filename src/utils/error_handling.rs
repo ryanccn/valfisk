@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use std::fmt::Debug;
+use std::fmt;
 
 use poise::{
     CreateReply,
@@ -160,11 +160,11 @@ impl ValfiskError<'_> {
     }
 }
 
-impl Debug for ReportOrPanic<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for ReportOrPanic<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Report(e) => Debug::fmt(e, f),
-            Self::Panic(p) => Debug::fmt(p, f),
+            Self::Report(e) => fmt::Debug::fmt(e, f),
+            Self::Panic(p) => fmt::Debug::fmt(p, f),
         }
     }
 }

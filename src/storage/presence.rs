@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
+use std::fmt;
+
 use poise::serenity_prelude::ActivityData;
 
 use serde::{Deserialize, Serialize};
@@ -33,8 +35,8 @@ impl Default for PresenceKind {
     }
 }
 
-impl std::fmt::Display for PresenceKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for PresenceKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
             Self::Custom => "Custom",
             Self::Playing => "Playing",

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use reqwest::Client;
+use reqwest::{Client, tls};
 use std::{sync::LazyLock, time::Duration};
 
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
@@ -12,6 +12,7 @@ pub static HTTP: LazyLock<Client> = LazyLock::new(|| {
         .user_agent(USER_AGENT)
         .timeout(Duration::from_secs(30))
         .https_only(true)
+        .min_tls_version(tls::Version::TLS_1_2)
         .build()
         .unwrap()
 });

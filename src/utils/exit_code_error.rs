@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use std::process::ExitCode;
+use std::{fmt, process::ExitCode};
 
 #[derive(Debug)]
 pub struct ExitCodeError(pub u8);
@@ -13,8 +13,8 @@ impl ExitCodeError {
     }
 }
 
-impl std::fmt::Display for ExitCodeError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for ExitCodeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
 }

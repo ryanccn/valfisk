@@ -59,7 +59,7 @@ pub async fn timeout(
         );
 
         if dm.unwrap_or(true) {
-            if let Ok(dm) = member.user.create_dm_channel(ctx.http()).await {
+            if let Ok(dm) = member.user.create_dm_channel(ctx).await {
                 if dm
                     .id
                     .widen()

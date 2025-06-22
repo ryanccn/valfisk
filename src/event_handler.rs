@@ -100,6 +100,8 @@ impl serenity::EventHandler for EventHandler {
         let outcome: eyre::Result<()> = async {
             match event {
                 FullEvent::Ready { data_about_bot, .. } => {
+                    use poise::builtins::{register_globally, register_in_guild};
+
                     tracing::info!(
                         user = data_about_bot.user.tag(),
                         app = data_about_bot.application.id.get(),
@@ -132,11 +134,10 @@ impl serenity::EventHandler for EventHandler {
                         .into_iter()
                         .partition::<Vec<_>, _>(|c| !c.owners_only);
 
-                    poise::builtins::register_globally(&ctx.http, &public_commands).await?;
+                    register_globally(&ctx.http, &public_commands).await?;
 
                     if let Some(guild) = CONFIG.admin_guild_id {
-                        poise::builtins::register_in_guild(&ctx.http, &owner_commands, guild)
-                            .await?;
+                        register_in_guild(&ctx.http, &owner_commands, guild).await?;
                     }
 
                     tracing::info!(
