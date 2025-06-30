@@ -24,7 +24,7 @@ eyre = "0.6.12"
 futures-util = "0.3.31"
 hickory-resolver = { version = "0.25.2", features = ["https-ring", "dnssec-ring", "webpki-roots"] }
 humantime = "2.2.0"
-indexmap = { version = "2.9.0", features = ["serde"] }
+indexmap = { version = "2.10.0", features = ["serde"] }
 percent-encoding = "2.3.1"
 poise = { git = "https://github.com/serenity-rs/poise.git", branch = "serenity-next" }
 rand = "0.9.1"
