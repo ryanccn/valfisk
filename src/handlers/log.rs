@@ -48,25 +48,23 @@ async fn is_excluded_message(
         return true;
     }
 
-    if let (Some(guild), Some(author)) = (ids.guild, ids.author) {
-        if let Ok(member) = guild.member(&ctx, author).await {
-            if member.roles(&ctx.cache).is_some_and(|roles| {
+    if let (Some(guild), Some(author)) = (ids.guild, ids.author)
+        && let Ok(member) = guild.member(&ctx, author).await
+            && member.roles(&ctx.cache).is_some_and(|roles| {
                 roles
                     .iter()
                     .any(|role| role.has_permission(serenity::Permissions::ADMINISTRATOR))
             }) {
                 return true;
             }
-        }
-    }
 
     false
 }
 
 #[tracing::instrument(skip_all, fields(id = message.id.get()))]
 pub async fn handle_message(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
-    if let Some(guild_id) = message.guild_id {
-        if let Some(storage) = &ctx.data::<crate::Data>().storage {
+    if let Some(guild_id) = message.guild_id
+        && let Some(storage) = &ctx.data::<crate::Data>().storage {
             let guild_config = storage.get_config(guild_id).await?;
 
             if is_excluded_message(ctx, &guild_config, message.into()).await {
@@ -75,7 +73,6 @@ pub async fn handle_message(ctx: &serenity::Context, message: &serenity::Message
 
             storage.set_message_log(message.id, &message.into()).await?;
         }
-    }
 
     Ok(())
 }
@@ -83,9 +80,11 @@ pub async fn handle_message(ctx: &serenity::Context, message: &serenity::Message
 fn make_link_components<'a>(
     link: impl Into<Cow<'a, str>>,
     label: impl Into<Cow<'a, str>>,
-) -> Vec<serenity::CreateActionRow<'a>> {
-    vec![serenity::CreateActionRow::Buttons(
-        vec![serenity::CreateButton::new_link(link).label(label)].into(),
+) -> Vec<serenity::CreateComponent<'a>> {
+    vec![serenity::CreateComponent::ActionRow(
+        serenity::CreateActionRow::Buttons(
+            vec![serenity::CreateButton::new_link(link).label(label)].into(),
+        ),
     )]
 }
 
@@ -98,64 +97,64 @@ pub async fn edit(
     attachments: &[serenity::Attachment],
     timestamp: &chrono::DateTime<chrono::Utc>,
 ) -> Result<()> {
-    if let Some(guild_id) = ids.guild {
-        if let Some(storage) = &ctx.data::<crate::Data>().storage {
-            let guild_config = storage.get_config(guild_id).await?;
+    if let Some(guild_id) = ids.guild
+        && let Some(storage) = &ctx.data::<crate::Data>().storage
+    {
+        let guild_config = storage.get_config(guild_id).await?;
 
-            if is_excluded_message(ctx, &guild_config, ids).await {
-                return Ok(());
+        if is_excluded_message(ctx, &guild_config, ids).await {
+            return Ok(());
+        }
+
+        if prev_content == new_content {
+            return Ok(());
+        }
+
+        if let Some(logs_channel) = guild_config.message_logs_channel {
+            let mut embed_author = serenity::CreateEmbedAuthor::new("Message Edited");
+            if let Some(author) = ids.author
+                && let Ok(user) = author.to_user(&ctx).await
+            {
+                embed_author = embed_author.icon_url(user.face());
             }
 
-            if prev_content == new_content {
-                return Ok(());
+            let mut embed = serenity::CreateEmbed::default()
+                .author(embed_author)
+                .field(
+                    "Channel",
+                    utils::serenity::format_mentionable(Some(ids.channel)),
+                    false,
+                )
+                .field(
+                    "Author",
+                    utils::serenity::format_mentionable(ids.author),
+                    false,
+                )
+                .field(
+                    "Previous content",
+                    utils::truncate(prev_content, 1024),
+                    false,
+                )
+                .field("New content", utils::truncate(new_content, 1024), false)
+                .color(0xffd43b)
+                .timestamp(serenity::Timestamp::from(*timestamp));
+
+            if !attachments.is_empty() {
+                embed = embed.field(
+                    "Attachments",
+                    utils::serenity::format_attachments(attachments),
+                    false,
+                );
             }
 
-            if let Some(logs_channel) = guild_config.message_logs_channel {
-                let mut embed_author = serenity::CreateEmbedAuthor::new("Message Edited");
-                if let Some(author) = ids.author {
-                    if let Ok(user) = author.to_user(&ctx).await {
-                        embed_author = embed_author.icon_url(user.face());
-                    }
-                }
-
-                let mut embed = serenity::CreateEmbed::default()
-                    .author(embed_author)
-                    .field(
-                        "Channel",
-                        utils::serenity::format_mentionable(Some(ids.channel)),
-                        false,
-                    )
-                    .field(
-                        "Author",
-                        utils::serenity::format_mentionable(ids.author),
-                        false,
-                    )
-                    .field(
-                        "Previous content",
-                        utils::truncate(prev_content, 1024),
-                        false,
-                    )
-                    .field("New content", utils::truncate(new_content, 1024), false)
-                    .color(0xffd43b)
-                    .timestamp(serenity::Timestamp::from(*timestamp));
-
-                if !attachments.is_empty() {
-                    embed = embed.field(
-                        "Attachments",
-                        utils::serenity::format_attachments(attachments),
-                        false,
-                    );
-                }
-
-                logs_channel
-                    .send_message(
-                        &ctx.http,
-                        serenity::CreateMessage::default()
-                            .embed(embed)
-                            .components(make_link_components(ids.link(), "Jump")),
-                    )
-                    .await?;
-            }
+            logs_channel
+                .send_message(
+                    &ctx.http,
+                    serenity::CreateMessage::default()
+                        .embed(embed)
+                        .components(make_link_components(ids.link(), "Jump")),
+                )
+                .await?;
         }
     }
 
@@ -169,8 +168,8 @@ pub async fn delete(
     log: &MessageLog,
     timestamp: &chrono::DateTime<chrono::Utc>,
 ) -> Result<()> {
-    if let Some(guild_id) = ids.guild {
-        if let Some(storage) = &ctx.data::<crate::Data>().storage {
+    if let Some(guild_id) = ids.guild
+        && let Some(storage) = &ctx.data::<crate::Data>().storage {
             let guild_config = storage.get_config(guild_id).await?;
 
             if is_excluded_message(ctx, &guild_config, ids).await {
@@ -179,11 +178,10 @@ pub async fn delete(
 
             if let Some(logs_channel) = guild_config.message_logs_channel {
                 let mut embed_author = serenity::CreateEmbedAuthor::new("Message Deleted");
-                if let Some(author) = ids.author {
-                    if let Ok(user) = author.to_user(&ctx).await {
+                if let Some(author) = ids.author
+                    && let Ok(user) = author.to_user(&ctx).await {
                         embed_author = embed_author.icon_url(user.face());
                     }
-                }
 
                 let mut embed = serenity::CreateEmbed::default()
                     .author(embed_author)
@@ -219,7 +217,6 @@ pub async fn delete(
                     .await?;
             }
         }
-    }
 
     Ok(())
 }

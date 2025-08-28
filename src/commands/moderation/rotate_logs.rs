@@ -97,32 +97,26 @@ pub async fn rotate_logs(
         let mut guild_config = storage.get_config(guild_id).await?;
         let mut new_channels = Vec::new();
 
-        if kind.is_none_or(|k| k == RotateLogsKind::Moderation) {
-            if let Some(channel) = guild_config.moderation_logs_channel {
-                if let Some(ch) = recreate(ctx, channel, guild_id, actor).await? {
+        if kind.is_none_or(|k| k == RotateLogsKind::Moderation)
+            && let Some(channel) = guild_config.moderation_logs_channel
+                && let Some(ch) = recreate(ctx, channel, guild_id, actor).await? {
                     new_channels.push(ch);
                     guild_config.moderation_logs_channel = Some(ch);
                 }
-            }
-        }
 
-        if kind.is_none_or(|k| k == RotateLogsKind::Message) {
-            if let Some(channel) = guild_config.message_logs_channel {
-                if let Some(ch) = recreate(ctx, channel, guild_id, actor).await? {
+        if kind.is_none_or(|k| k == RotateLogsKind::Message)
+            && let Some(channel) = guild_config.message_logs_channel
+                && let Some(ch) = recreate(ctx, channel, guild_id, actor).await? {
                     new_channels.push(ch);
                     guild_config.message_logs_channel = Some(ch);
                 }
-            }
-        }
 
-        if kind.is_none_or(|k| k == RotateLogsKind::Member) {
-            if let Some(channel) = guild_config.member_logs_channel {
-                if let Some(ch) = recreate(ctx, channel, guild_id, actor).await? {
+        if kind.is_none_or(|k| k == RotateLogsKind::Member)
+            && let Some(channel) = guild_config.member_logs_channel
+                && let Some(ch) = recreate(ctx, channel, guild_id, actor).await? {
                     new_channels.push(ch);
                     guild_config.member_logs_channel = Some(ch);
                 }
-            }
-        }
 
         storage.set_config(guild_id, &guild_config).await?;
 

@@ -254,14 +254,13 @@ impl SafeBrowsing {
                 .matches
                 .into_par_iter()
                 .filter_map(|m| {
-                    if let Ok(raw_threat_hash) = BASE64.decode(&m.threat.hash) {
-                        if let Some((url, _)) = url_hashes
+                    if let Ok(raw_threat_hash) = BASE64.decode(&m.threat.hash)
+                        && let Some((url, _)) = url_hashes
                             .par_iter()
                             .find_any(|(_, h)| h.contains(&raw_threat_hash))
                         {
                             return Some((url.to_owned(), m));
                         }
-                    }
 
                     None
                 })

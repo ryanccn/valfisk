@@ -88,8 +88,8 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
         return Ok(());
     }
 
-    if let Some(key) = &CONFIG.openrouter_api_key {
-        if let Ok(member) = message.member(&ctx).await {
+    if let Some(key) = &CONFIG.openrouter_api_key
+        && let Ok(member) = message.member(&ctx).await {
             let self_mention = ctx.cache.current_user().mention().to_string();
 
             if !CONFIG
@@ -161,7 +161,6 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                 }
             }
         }
-    }
 
     Ok(())
 }

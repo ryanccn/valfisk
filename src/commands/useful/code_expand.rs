@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 use eyre::Result;
-use poise::CreateReply;
+use poise::{CreateReply, serenity_prelude as serenity};
 
 use crate::{Context, handlers::code_expansion};
 
@@ -19,16 +19,17 @@ pub async fn code_expand(
     ctx: Context<'_>,
     #[description = "A link, or multiple links"] content: String,
 ) -> Result<()> {
-    let embeds = code_expansion::resolve(&content).await?;
+    let components = code_expansion::resolve(&content).await?;
 
-    if embeds.is_empty() {
+    if components.is_empty() {
         ctx.say("No supported code links detected!").await?;
     } else {
-        let mut reply = CreateReply::new();
-        for embed in embeds {
-            reply = reply.embed(embed);
-        }
-        ctx.send(reply).await?;
+        ctx.send(
+            CreateReply::new()
+                .components(components)
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
+        )
+        .await?;
     }
 
     Ok(())

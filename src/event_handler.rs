@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use poise::serenity_prelude as serenity;
+use poise::serenity_prelude::{self as serenity};
 
 use crate::{commands, config::CONFIG, handlers, storage::log::MessageLog};
 
@@ -103,7 +103,7 @@ impl serenity::EventHandler for EventHandler {
                     use poise::builtins::{register_globally, register_in_guild};
 
                     tracing::info!(
-                        user = data_about_bot.user.tag(),
+                        user = data_about_bot.user.tag().as_ref(),
                         app = data_about_bot.application.id.get(),
                         "connected to Discord"
                     );
@@ -150,6 +150,12 @@ impl serenity::EventHandler for EventHandler {
 
                     commands::restore::presence(ctx).await?;
                     commands::restore::reminders(ctx).await?;
+                }
+
+                FullEvent::InteractionCreate { interaction, .. } => {
+                    if let Some(interaction) = interaction.as_message_component() {
+                        handlers::config::handle(ctx, interaction).await?;
+                    }
                 }
 
                 FullEvent::Message { new_message, .. } => {
@@ -218,25 +224,24 @@ impl serenity::EventHandler for EventHandler {
 
                     let timestamp = chrono::Utc::now();
 
-                    if let Some(storage) = &ctx.data::<crate::Data>().storage {
-                        if let Some(logged_data) =
+                    if let Some(storage) = &ctx.data::<crate::Data>().storage
+                        && let Some(logged_data) =
                             storage.get_message_log(*deleted_message_id).await?
-                        {
-                            handlers::log::delete(
-                                ctx,
-                                handlers::log::LogMessageIds {
-                                    message: *deleted_message_id,
-                                    channel: *channel_id,
-                                    guild: *guild_id,
-                                    author: Some(logged_data.author),
-                                },
-                                &logged_data,
-                                &timestamp,
-                            )
-                            .await?;
+                    {
+                        handlers::log::delete(
+                            ctx,
+                            handlers::log::LogMessageIds {
+                                message: *deleted_message_id,
+                                channel: *channel_id,
+                                guild: *guild_id,
+                                author: Some(logged_data.author),
+                            },
+                            &logged_data,
+                            &timestamp,
+                        )
+                        .await?;
 
-                            storage.del_message_log(*deleted_message_id).await?;
-                        }
+                        storage.del_message_log(*deleted_message_id).await?;
                     }
 
                     handlers::starboard::handle_deletion(

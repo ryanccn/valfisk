@@ -53,12 +53,11 @@ pub async fn presence(
 
 #[tracing::instrument(skip_all)]
 pub async fn restore(ctx: &serenity::Context) -> Result<()> {
-    if let Some(storage) = &ctx.data::<crate::Data>().storage {
-        if let Some(presence) = storage.get_presence().await? {
+    if let Some(storage) = &ctx.data::<crate::Data>().storage
+        && let Some(presence) = storage.get_presence().await? {
             ctx.set_presence(presence.to_activity(), serenity::OnlineStatus::Online);
             tracing::info!(?presence, "restored presence from storage");
         }
-    }
 
     Ok(())
 }

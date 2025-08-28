@@ -7,6 +7,7 @@ use poise::serenity_prelude as serenity;
 
 mod autoreply;
 pub mod code_expansion;
+pub mod config;
 mod dm;
 mod error;
 mod intelligence;

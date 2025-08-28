@@ -161,8 +161,8 @@ fn serialize_reactions(
 }
 
 async fn make_message_embed<'a>(
-    ctx: &serenity::Context,
-    message: &serenity::Message,
+    ctx: &'a serenity::Context,
+    message: &'a serenity::Message,
 ) -> serenity::CreateEmbed<'a> {
     let content = message.content.to_string();
     let mut builder = serenity::CreateEmbed::default()
@@ -176,15 +176,14 @@ async fn make_message_embed<'a>(
         )
         .timestamp(message.timestamp);
 
-    if let Some(reference) = &message.message_reference {
-        if let Some(message_id) = reference.message_id {
+    if let Some(reference) = &message.message_reference
+        && let Some(message_id) = reference.message_id {
             builder = builder.field(
                 "Replying to",
                 message_id.link(reference.channel_id, reference.guild_id),
                 false,
             );
         }
-    }
 
     if let Some(image_attachment) = message.attachments.iter().find(|att| {
         att.content_type
@@ -201,9 +200,8 @@ async fn make_message_embed<'a>(
         .await
         .ok()
         .map(|ch| ch.base.guild_id)
-    {
-        if let Ok(member) = guild_id.member(&ctx, message.author.id).await {
-            if let Some(mut roles) = member.roles(&ctx.cache) {
+        && let Ok(member) = guild_id.member(&ctx, message.author.id).await
+            && let Some(mut roles) = member.roles(&ctx.cache) {
                 roles.retain(|r| r.colour.0 != 0);
                 roles.sort_unstable_by_key(|r| r.position);
 
@@ -211,8 +209,6 @@ async fn make_message_embed<'a>(
                     builder = builder.color(role.colour);
                 }
             }
-        }
-    }
 
     builder
 }
@@ -223,8 +219,8 @@ pub async fn handle(
     guild_id: Option<serenity::GuildId>,
     message: &serenity::Message,
 ) -> Result<()> {
-    if let Some(guild_id) = guild_id {
-        if let Some(storage) = &ctx.data::<crate::Data>().storage {
+    if let Some(guild_id) = guild_id
+        && let Some(storage) = &ctx.data::<crate::Data>().storage {
             let guild_config = storage.get_config(guild_id).await?;
 
             if let Some(starboard) =
@@ -284,7 +280,7 @@ pub async fn handle(
                             serenity::CreateMessage::default()
                                 .content(content)
                                 .embed(embed)
-                                .components(vec![row]),
+                                .components(vec![serenity::CreateComponent::ActionRow(row)]),
                         )
                         .await?;
 
@@ -300,7 +296,6 @@ pub async fn handle(
                 }
             }
         }
-    }
 
     Ok(())
 }
@@ -312,14 +307,13 @@ pub async fn handle_deletion(
     channel_id: serenity::GenericChannelId,
     guild_id: Option<serenity::GuildId>,
 ) -> Result<()> {
-    if let Some(guild_id) = guild_id {
-        if let Some(storage) = &ctx.data::<crate::Data>().storage {
+    if let Some(guild_id) = guild_id
+        && let Some(storage) = &ctx.data::<crate::Data>().storage {
             let guild_config = storage.get_config(guild_id).await?;
 
             if let Some(starboard_channel) =
                 get_starboard_channel(ctx, &guild_config, channel_id, Some(guild_id)).await?
-            {
-                if let Some(starboard_id) = storage.get_starboard(deleted_message_id).await? {
+                && let Some(starboard_id) = storage.get_starboard(deleted_message_id).await? {
                     storage.del_starboard(deleted_message_id).await?;
 
                     let _ = ctx
@@ -333,9 +327,7 @@ pub async fn handle_deletion(
                         "deleted starboard message (source deleted)",
                     );
                 }
-            }
         }
-    }
 
     Ok(())
 }

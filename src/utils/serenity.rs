@@ -93,8 +93,8 @@ pub async fn interaction_confirm<'a>(
     let cancel_button_id = utils::nanoid(16);
 
     let handle = ctx
-        .send(poise::CreateReply::default().embed(embed).components(
-            vec![serenity::CreateActionRow::Buttons(
+        .send(poise::CreateReply::default().embed(embed).components(vec![
+                serenity::CreateComponent::ActionRow(serenity::CreateActionRow::Buttons(
                     vec![
                         serenity::CreateButton::new(&confirm_button_id)
                             .label("Confirm")
@@ -104,8 +104,7 @@ pub async fn interaction_confirm<'a>(
                             .style(serenity::ButtonStyle::Secondary),
                     ]
                     .into(),
-                )],
-        ))
+                ))]))
         .await?;
 
     let interaction = timeout(

@@ -76,7 +76,7 @@ impl Template {
 }
 
 impl Template {
-    pub fn to_messages(&self) -> Vec<CreateMessage> {
+    pub fn to_messages(&self) -> Vec<CreateMessage<'_>> {
         self.components
             .iter()
             .map(|component| match component {

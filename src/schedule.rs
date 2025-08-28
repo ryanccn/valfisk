@@ -129,11 +129,10 @@ pub async fn run(http: Arc<Http>, data: Arc<Data>) -> Result<()> {
 
                         time::sleep((next - now).to_std()?).await;
 
-                        if let Some(safe_browsing) = &data.safe_browsing {
-                            if let Err(err) = safe_browsing.update().await {
+                        if let Some(safe_browsing) = &data.safe_browsing
+                            && let Err(err) = safe_browsing.update().await {
                                 tracing::error!("{err:?}");
                             }
-                        }
 
                         time::sleep(Duration::from_secs(1)).await;
                     }

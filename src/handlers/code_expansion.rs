@@ -45,7 +45,7 @@ static GITHUB: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 #[tracing::instrument]
-async fn github(captures: regex::Captures<'_>) -> Result<serenity::CreateEmbed<'static>> {
+async fn github(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateComponent<'static>>> {
     tracing::debug!(link = &captures[0], "handling GitHub link");
 
     let repo = &captures["repo"];
@@ -79,22 +79,24 @@ async fn github(captures: regex::Captures<'_>) -> Result<serenity::CreateEmbed<'
         bail!("out of bounds line indexes");
     };
 
-    let embed = serenity::CreateEmbed::default()
-        .title(format!(
-            "{repo} {file} L{start}{}",
+    Ok(vec![
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+            "### {repo} {file} L{start}{}",
             end.map(|end| format!("-{end}")).unwrap_or_default()
-        ))
-        .description(
+        ))),
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
             "```".to_owned()
                 + language
                 + "\n"
                 + &truncate(&dedent(&selected_lines), 2048)
                 + "\n```",
-        )
-        .footer(serenity::CreateEmbedFooter::new("GitHub"))
-        .timestamp(serenity::Timestamp::now());
-
-    Ok(embed)
+        )),
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+            "-# GitHub · <t:{}:F>",
+            chrono::Utc::now().timestamp()
+        ))),
+        serenity::CreateComponent::Separator(serenity::CreateSeparator::new(true)),
+    ])
 }
 
 static CODEBERG: LazyLock<Regex> = LazyLock::new(|| {
@@ -102,7 +104,9 @@ static CODEBERG: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 #[tracing::instrument]
-async fn codeberg(captures: regex::Captures<'_>) -> Result<serenity::CreateEmbed<'static>> {
+async fn codeberg(
+    captures: regex::Captures<'_>,
+) -> Result<Vec<serenity::CreateComponent<'static>>> {
     tracing::debug!(link = &captures[0], "handling Codeberg link");
 
     let repo = &captures["repo"];
@@ -137,22 +141,24 @@ async fn codeberg(captures: regex::Captures<'_>) -> Result<serenity::CreateEmbed
         bail!("out of bounds line indexes");
     };
 
-    let embed = serenity::CreateEmbed::default()
-        .title(format!(
-            "{repo} {file} L{start}{}",
+    Ok(vec![
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+            "### {repo} {file} L{start}{}",
             end.map(|end| format!("-{end}")).unwrap_or_default()
-        ))
-        .description(
+        ))),
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
             "```".to_owned()
                 + language
                 + "\n"
                 + &truncate(&dedent(&selected_lines), 2048)
                 + "\n```",
-        )
-        .footer(serenity::CreateEmbedFooter::new("Codeberg"))
-        .timestamp(serenity::Timestamp::now());
-
-    Ok(embed)
+        )),
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+            "-# Codeburger · <t:{}:F>",
+            chrono::Utc::now().timestamp()
+        ))),
+        serenity::CreateComponent::Separator(serenity::CreateSeparator::new(true)),
+    ])
 }
 
 static GITLAB: LazyLock<Regex> = LazyLock::new(|| {
@@ -160,7 +166,7 @@ static GITLAB: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 #[tracing::instrument]
-async fn gitlab(captures: regex::Captures<'_>) -> Result<serenity::CreateEmbed<'static>> {
+async fn gitlab(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateComponent<'static>>> {
     tracing::debug!(link = &captures[0], "handling GitLab link");
 
     let repo = &captures["repo"];
@@ -192,22 +198,24 @@ async fn gitlab(captures: regex::Captures<'_>) -> Result<serenity::CreateEmbed<'
         bail!("out of bounds line indexes");
     };
 
-    let embed = serenity::CreateEmbed::default()
-        .title(format!(
-            "{repo} {file} L{start}{}",
+    Ok(vec![
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+            "### {repo} {file} L{start}{}",
             end.map(|end| format!("-{end}")).unwrap_or_default()
-        ))
-        .description(
+        ))),
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
             "```".to_owned()
                 + language
                 + "\n"
                 + &truncate(&dedent(&selected_lines), 2048)
                 + "\n```",
-        )
-        .footer(serenity::CreateEmbedFooter::new("GitLab"))
-        .timestamp(serenity::Timestamp::now());
-
-    Ok(embed)
+        )),
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+            "-# GitLab · <t:{}:F>",
+            chrono::Utc::now().timestamp()
+        ))),
+        serenity::CreateComponent::Separator(serenity::CreateSeparator::new(true)),
+    ])
 }
 
 static RUST_PLAYGROUND: LazyLock<Regex> = LazyLock::new(|| {
@@ -215,7 +223,9 @@ static RUST_PLAYGROUND: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 #[tracing::instrument]
-async fn rust_playground(captures: regex::Captures<'_>) -> Result<serenity::CreateEmbed<'static>> {
+async fn rust_playground(
+    captures: regex::Captures<'_>,
+) -> Result<Vec<serenity::CreateComponent<'static>>> {
     tracing::debug!(link = &captures[0], "handling Rust playground link");
 
     let gist_id = &captures["gist"];
@@ -230,21 +240,28 @@ async fn rust_playground(captures: regex::Captures<'_>) -> Result<serenity::Crea
         .text()
         .await?;
 
-    let embed = serenity::CreateEmbed::default()
-        .title(gist_id.to_owned())
-        .description("```rust\n".to_owned() + &truncate(&dedent(&gist), 2048) + "\n```")
-        .footer(serenity::CreateEmbedFooter::new("play.rust-lang.org"))
-        .timestamp(serenity::Timestamp::now())
-        .color(0xdea584);
-
-    Ok(embed)
+    Ok(vec![
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+            "### {gist_id}",
+        ))),
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
+            "```rust\n".to_owned() + &truncate(&dedent(&gist), 2048) + "\n```",
+        )),
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+            "-# play.rust-lang.org · <t:{}:F>",
+            chrono::Utc::now().timestamp()
+        ))),
+        serenity::CreateComponent::Separator(serenity::CreateSeparator::new(true)),
+    ])
 }
 
 static GO_PLAYGROUND: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"https://go\.dev/play/p/(?P<id>[\w-]+)").unwrap());
 
 #[tracing::instrument]
-async fn go_playground(captures: regex::Captures<'_>) -> Result<serenity::CreateEmbed<'static>> {
+async fn go_playground(
+    captures: regex::Captures<'_>,
+) -> Result<Vec<serenity::CreateComponent<'static>>> {
     tracing::debug!(link = &captures[0], "handling Go playground link");
 
     let id = &captures["id"];
@@ -258,42 +275,50 @@ async fn go_playground(captures: regex::Captures<'_>) -> Result<serenity::Create
         .text()
         .await?;
 
-    let embed = serenity::CreateEmbed::default()
-        .title(id.to_owned())
-        .description("```go\n".to_owned() + &truncate(&dedent(&code), 2048) + "\n```")
-        .footer(serenity::CreateEmbedFooter::new("go.dev/play"))
-        .timestamp(serenity::Timestamp::now())
-        .color(0x00b7e7);
-
-    Ok(embed)
+    Ok(vec![
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+            "### {id}",
+        ))),
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
+            "```go\n".to_owned() + &truncate(&dedent(&code), 2048) + "\n```",
+        )),
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+            "-# go.dev/play · <t:{}:F>",
+            chrono::Utc::now().timestamp()
+        ))),
+        serenity::CreateComponent::Separator(serenity::CreateSeparator::new(true)),
+    ])
 }
 
-pub async fn resolve(content: &str) -> Result<Vec<serenity::CreateEmbed>> {
-    let mut embeds_tasks: Vec<
-        Pin<Box<dyn Future<Output = Result<serenity::CreateEmbed>> + Send + Sync>>,
+#[expect(clippy::type_complexity)]
+pub async fn resolve(content: &str) -> Result<Vec<serenity::CreateComponent<'static>>> {
+    let mut components_tasks: Vec<
+        Pin<
+            Box<dyn Future<Output = Result<Vec<serenity::CreateComponent<'static>>>> + Send + Sync>,
+        >,
     > = Vec::new();
 
     for captures in GITHUB.captures_iter(content) {
-        embeds_tasks.push(Box::pin(async move { github(captures).await }));
+        components_tasks.push(Box::pin(async move { github(captures).await }));
     }
 
     for captures in CODEBERG.captures_iter(content) {
-        embeds_tasks.push(Box::pin(async move { codeberg(captures).await }));
+        components_tasks.push(Box::pin(async move { codeberg(captures).await }));
     }
 
     for captures in GITLAB.captures_iter(content) {
-        embeds_tasks.push(Box::pin(async move { gitlab(captures).await }));
+        components_tasks.push(Box::pin(async move { gitlab(captures).await }));
     }
 
     for captures in RUST_PLAYGROUND.captures_iter(content) {
-        embeds_tasks.push(Box::pin(async move { rust_playground(captures).await }));
+        components_tasks.push(Box::pin(async move { rust_playground(captures).await }));
     }
 
     for captures in GO_PLAYGROUND.captures_iter(content) {
-        embeds_tasks.push(Box::pin(async move { go_playground(captures).await }));
+        components_tasks.push(Box::pin(async move { go_playground(captures).await }));
     }
 
-    let embeds = futures_util::future::join_all(embeds_tasks)
+    let mut components = futures_util::future::join_all(components_tasks)
         .await
         .into_iter()
         .filter_map(|r| match r {
@@ -303,9 +328,12 @@ pub async fn resolve(content: &str) -> Result<Vec<serenity::CreateEmbed>> {
                 None
             }
         })
+        .flatten()
         .collect::<Vec<_>>();
 
-    Ok(embeds)
+    components.pop();
+
+    Ok(components)
 }
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
@@ -321,9 +349,9 @@ pub async fn handle_message(ctx: &serenity::Context, message: &serenity::Message
         return Ok(());
     }
 
-    let embeds = resolve(&message.content).await?;
+    let components = resolve(&message.content).await?;
 
-    if !embeds.is_empty() {
+    if !components.is_empty() {
         suppress_embeds(ctx, message).await?;
 
         message
@@ -331,7 +359,8 @@ pub async fn handle_message(ctx: &serenity::Context, message: &serenity::Message
             .send_message(
                 &ctx.http,
                 serenity::CreateMessage::default()
-                    .embeds(embeds)
+                    .components(components)
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
                     .allowed_mentions(
                         serenity::CreateAllowedMentions::default().replied_user(false),
                     )

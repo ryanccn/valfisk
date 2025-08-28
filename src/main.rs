@@ -80,11 +80,10 @@ async fn shutdown() {
         task::spawn({
             let shutdown_tx = shutdown_tx.clone();
             async move {
-                if let Ok(mut sigterm_signal) = signal(SignalKind::terminate()) {
-                    if sigterm_signal.recv().await.is_some() {
+                if let Ok(mut sigterm_signal) = signal(SignalKind::terminate())
+                    && sigterm_signal.recv().await.is_some() {
                         let _ = shutdown_tx.send(()).await;
                     }
-                }
             }
         });
     }

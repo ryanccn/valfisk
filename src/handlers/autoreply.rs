@@ -13,8 +13,8 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
         return Ok(());
     }
 
-    if let Some(guild_id) = message.guild_id {
-        if let Some(storage) = &ctx.data::<crate::Data>().storage {
+    if let Some(guild_id) = message.guild_id
+        && let Some(storage) = &ctx.data::<crate::Data>().storage {
             let data = storage.scan_autoreply(guild_id).await?;
 
             let responses = data
@@ -44,7 +44,6 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                 message.reply(&ctx.http, reply).await?;
             }
         }
-    }
 
     Ok(())
 }

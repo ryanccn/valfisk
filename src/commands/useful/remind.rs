@@ -72,9 +72,9 @@ pub async fn remind(
             .ok()
             .map(|ch| ch.id.widen());
 
-        if let Some(member) = ctx.author_member().await {
-            if let Some(guild_channel) = ctx.channel().await.and_then(|ch| ch.guild()) {
-                if !private
+        if let Some(member) = ctx.author_member().await
+            && let Some(guild_channel) = ctx.channel().await.and_then(|ch| ch.guild())
+                && !private
                     && ctx.partial_guild().await.is_some_and(|guild| {
                         guild
                             .user_permissions_in(&guild_channel, &member)
@@ -83,8 +83,6 @@ pub async fn remind(
                 {
                     channel = Some(ctx.channel_id());
                 }
-            }
-        }
 
         if let Some(channel) = channel {
             let reminder = ReminderData {

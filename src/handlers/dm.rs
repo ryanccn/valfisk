@@ -14,8 +14,8 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
         return Ok(());
     }
 
-    if message.channel(&ctx).await?.private().is_some() {
-        if let Some(logs_channel) = CONFIG.dm_logs_channel {
+    if message.channel(&ctx).await?.private().is_some()
+        && let Some(logs_channel) = CONFIG.dm_logs_channel {
             let mut embed = serenity::CreateEmbed::default()
                 .description(message.content.clone())
                 .author(
@@ -37,7 +37,6 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                 .send_message(&ctx.http, serenity::CreateMessage::default().embed(embed))
                 .await?;
         }
-    }
 
     Ok(())
 }
