@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 # Privacy
 
-Last updated: May 30, 2025
+Last updated: Aug 28, 2025
 
 ## Data we collect
 
@@ -15,6 +15,8 @@ We automatically collect data for moderation purposes. All messages sent have th
 Guild-level configurations, such as those set using the `/config` and `/autoreply` commands, are stored indefinitely and associated with the guild ID.
 
 When users set reminders, the content of the reminder and the user's ID are stored until the reminder is completed (i.e. sent to the user after the specified duration has elapsed).
+
+When you interact with Valfisk's intelligence features, your messages and generated responses to your messages will be stored temporarily within a window of **5 minutes** in order to construct a continuous conversational context.
 
 ## Data we share with third parties
 

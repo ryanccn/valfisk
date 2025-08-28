@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use crate::config::GuildConfig;
+use crate::{config::GuildConfig, handlers::intelligence::IntelligenceMessages};
 
 use super::{log::MessageLog, presence::PresenceData, reminder::ReminderData};
 
@@ -43,4 +43,10 @@ macro_rules! impl_redis_serde {
     };
 }
 
-impl_redis_serde!(PresenceData, ReminderData, MessageLog, GuildConfig);
+impl_redis_serde!(
+    PresenceData,
+    ReminderData,
+    MessageLog,
+    GuildConfig,
+    IntelligenceMessages
+);

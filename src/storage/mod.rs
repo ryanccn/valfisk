@@ -12,7 +12,7 @@ use std::{fmt, time::Duration};
 use log::MessageLog;
 use reminder::ReminderData;
 
-use crate::config::GuildConfig;
+use crate::{config::GuildConfig, handlers::intelligence::IntelligenceMessages};
 
 pub mod log;
 pub mod presence;
@@ -126,6 +126,7 @@ mod keys {
     pub const REMINDERS: StorageKey = StorageKey::new("reminders-v1");
     pub const AUTOREPLY: StorageKey = StorageKey::new("autoreply-v2");
     pub const INTELLIGENCE_CONSENT: StorageKey = StorageKey::new("intelligence-consent-v1");
+    pub const INTELLIGENCE_CONTEXT: StorageKey = StorageKey::new("intelligence-context-v1");
 }
 
 impl Storage {
@@ -307,6 +308,36 @@ impl Storage {
     pub async fn add_intelligence_consent(&self, user_id: UserId) -> RedisResult<()> {
         let mut conn = self.conn.clone();
         let _: () = conn.sadd(keys::INTELLIGENCE_CONSENT, user_id.get()).await?;
+
+        Ok(())
+    }
+}
+
+impl Storage {
+    pub async fn get_intelligence_context(
+        &self,
+        user: UserId,
+    ) -> RedisResult<Option<IntelligenceMessages>> {
+        let mut conn = self.conn.clone();
+        let value: Option<IntelligenceMessages> =
+            conn.get(keys::INTELLIGENCE_CONTEXT.user(user)).await?;
+
+        Ok(value)
+    }
+
+    pub async fn set_intelligence_context(
+        &self,
+        user: UserId,
+        context: &IntelligenceMessages,
+    ) -> RedisResult<()> {
+        let mut conn = self.conn.clone();
+        let _: () = conn
+            .set_options(
+                keys::INTELLIGENCE_CONTEXT.user(user),
+                context,
+                redis::SetOptions::default().with_expiration(redis::SetExpiry::EX(300)),
+            )
+            .await?;
 
         Ok(())
     }

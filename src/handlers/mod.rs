@@ -10,7 +10,7 @@ pub mod code_expansion;
 pub mod config;
 mod dm;
 mod error;
-mod intelligence;
+pub mod intelligence;
 pub mod log;
 mod safe_browsing;
 pub mod starboard;
