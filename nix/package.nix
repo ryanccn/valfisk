@@ -31,8 +31,8 @@ rustPlatform.buildRustPackage (finalAttrs: {
   cargoLock = {
     lockFile = ../Cargo.lock;
     outputHashes = {
-      "poise-0.6.1" = "sha256-hp5+EDvWJxO3H/bj4eAnMQxz6AecXFadpbSw4a4Ywc4=";
-      "serenity-0.12.4" = "sha256-8JvBh9GdPu4fqiWQoK9mlJxbatdU6fTuE5WSjLnyPUk=";
+      "poise-0.6.1" = "sha256-4iPnHD+m+MSX4x3TyTXfoAzTCcLhvo4qDPXafvU7mAc=";
+      "serenity-0.12.4" = "sha256-3inkGsZ389jbSR5DhTkkvgSbbLdYI7TesVWY8iI/fOQ=";
     };
   };
 
