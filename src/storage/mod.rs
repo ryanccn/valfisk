@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use poise::serenity_prelude::{GuildId, MessageId, UserId};
+use poise::serenity_prelude::{GenericChannelId, GuildId, MessageId, UserId};
 use redis::{
     AsyncCommands as _, RedisResult,
     aio::{ConnectionManager, ConnectionManagerConfig},
@@ -63,7 +63,6 @@ mod keys {
         parts: Option<Vec<String>>,
     }
 
-    #[expect(dead_code)]
     impl StorageKey {
         pub const fn new(base: &'static str) -> Self {
             Self { base, parts: None }
@@ -126,7 +125,7 @@ mod keys {
     pub const REMINDERS: StorageKey = StorageKey::new("reminders-v1");
     pub const AUTOREPLY: StorageKey = StorageKey::new("autoreply-v2");
     pub const INTELLIGENCE_CONSENT: StorageKey = StorageKey::new("intelligence-consent-v1");
-    pub const INTELLIGENCE_CONTEXT: StorageKey = StorageKey::new("intelligence-context-v1");
+    pub const INTELLIGENCE_CONTEXT: StorageKey = StorageKey::new("intelligence-context-v2");
 }
 
 impl Storage {
@@ -317,10 +316,12 @@ impl Storage {
     pub async fn get_intelligence_context(
         &self,
         user: UserId,
+        channel: GenericChannelId,
     ) -> RedisResult<Option<IntelligenceMessages>> {
         let mut conn = self.conn.clone();
-        let value: Option<IntelligenceMessages> =
-            conn.get(keys::INTELLIGENCE_CONTEXT.user(user)).await?;
+        let value: Option<IntelligenceMessages> = conn
+            .get(keys::INTELLIGENCE_CONTEXT.user(user).channel(channel))
+            .await?;
 
         Ok(value)
     }
@@ -328,12 +329,13 @@ impl Storage {
     pub async fn set_intelligence_context(
         &self,
         user: UserId,
+        channel: GenericChannelId,
         context: &IntelligenceMessages,
     ) -> RedisResult<()> {
         let mut conn = self.conn.clone();
         let _: () = conn
             .set_options(
-                keys::INTELLIGENCE_CONTEXT.user(user),
+                keys::INTELLIGENCE_CONTEXT.user(user).channel(channel),
                 context,
                 redis::SetOptions::default().with_expiration(redis::SetExpiry::EX(300)),
             )

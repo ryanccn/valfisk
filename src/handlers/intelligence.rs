@@ -146,7 +146,7 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                 }
 
                 let context = storage
-                    .get_intelligence_context(message.author.id)
+                    .get_intelligence_context(message.author.id, message.channel_id)
                     .await?
                     .map(|v| v.0)
                     .unwrap_or_default();
@@ -195,6 +195,7 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                     storage
                         .set_intelligence_context(
                             message.author.id,
+                            message.channel_id,
                             &IntelligenceMessages(messages),
                         )
                         .await?;
