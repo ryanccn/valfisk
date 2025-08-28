@@ -89,78 +89,79 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
     }
 
     if let Some(key) = &CONFIG.openrouter_api_key
-        && let Ok(member) = message.member(&ctx).await {
-            let self_mention = ctx.cache.current_user().mention().to_string();
+        && let Ok(member) = message.member(&ctx).await
+    {
+        let self_mention = ctx.cache.current_user().mention().to_string();
 
-            if !CONFIG
-                .intelligence_allowed_roles
-                .as_ref()
-                .is_none_or(|h| member.roles.iter().any(|r| h.contains(r)))
-                || message
-                    .flags
-                    .is_some_and(|f| f.contains(serenity::MessageFlags::SUPPRESS_NOTIFICATIONS))
-            {
-                return Ok(());
+        if !CONFIG
+            .intelligence_allowed_roles
+            .as_ref()
+            .is_none_or(|h| member.roles.iter().any(|r| h.contains(r)))
+            || message
+                .flags
+                .is_some_and(|f| f.contains(serenity::MessageFlags::SUPPRESS_NOTIFICATIONS))
+        {
+            return Ok(());
+        }
+
+        if let Some(content) = message
+            .content
+            .strip_prefix(&self_mention)
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+        {
+            if let Some(storage) = &ctx.data::<crate::Data>().storage {
+                let consented = storage.get_intelligence_consent(message.author.id).await?;
+                if !consented {
+                    let answer = request_consent(ctx, message).await?;
+                    if answer {
+                        storage.add_intelligence_consent(message.author.id).await?;
+                    } else {
+                        return Ok(());
+                    }
+                }
             }
 
-            if let Some(content) = message
-                .content
-                .strip_prefix(&self_mention)
-                .map(|s| s.trim())
-                .filter(|s| !s.is_empty())
-            {
-                if let Some(storage) = &ctx.data::<crate::Data>().storage {
-                    let consented = storage.get_intelligence_consent(message.author.id).await?;
-                    if !consented {
-                        let answer = request_consent(ctx, message).await?;
-                        if answer {
-                            storage.add_intelligence_consent(message.author.id).await?;
-                        } else {
-                            return Ok(());
-                        }
+            message.channel_id.broadcast_typing(&ctx.http).await?;
+
+            let system_prompt =
+                SYSTEM_PROMPT.replace("{{currentDateTime}}", &chrono::Utc::now().to_rfc3339());
+
+            let body = serde_json::json!({
+                "model": "anthropic/claude-sonnet-4",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": system_prompt,
+                    },
+                    {
+                        "role": "user",
+                        "content": &content,
                     }
+                ],
+                "provider": {
+                    "allow_fallbacks": false,
+                    "data_collection": "deny",
+                    "order": ["anthropic"],
+                    "only": ["anthropic"]
                 }
+            });
 
-                message.channel_id.broadcast_typing(&ctx.http).await?;
+            let data: OpenRouterResponse = HTTP
+                .post("https://openrouter.ai/api/v1/chat/completions")
+                .bearer_auth(key)
+                .json(&body)
+                .send()
+                .await?
+                .error_for_status()?
+                .json()
+                .await?;
 
-                let system_prompt =
-                    SYSTEM_PROMPT.replace("{{currentDateTime}}", &chrono::Utc::now().to_rfc3339());
-
-                let body = serde_json::json!({
-                    "model": "anthropic/claude-sonnet-4",
-                    "messages": [
-                        {
-                            "role": "system",
-                            "content": system_prompt,
-                        },
-                        {
-                            "role": "user",
-                            "content": &content,
-                        }
-                    ],
-                    "provider": {
-                        "allow_fallbacks": false,
-                        "data_collection": "deny",
-                        "order": ["anthropic"],
-                        "only": ["anthropic"]
-                    }
-                });
-
-                let data: OpenRouterResponse = HTTP
-                    .post("https://openrouter.ai/api/v1/chat/completions")
-                    .bearer_auth(key)
-                    .json(&body)
-                    .send()
-                    .await?
-                    .error_for_status()?
-                    .json()
-                    .await?;
-
-                if let Some(choice) = data.choices.first() {
-                    message.reply(&ctx.http, &choice.message.content).await?;
-                }
+            if let Some(choice) = data.choices.first() {
+                message.reply(&ctx.http, &choice.message.content).await?;
             }
         }
+    }
 
     Ok(())
 }

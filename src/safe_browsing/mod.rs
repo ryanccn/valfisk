@@ -258,9 +258,9 @@ impl SafeBrowsing {
                         && let Some((url, _)) = url_hashes
                             .par_iter()
                             .find_any(|(_, h)| h.contains(&raw_threat_hash))
-                        {
-                            return Some((url.to_owned(), m));
-                        }
+                    {
+                        return Some((url.to_owned(), m));
+                    }
 
                     None
                 })

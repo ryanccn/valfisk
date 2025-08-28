@@ -74,15 +74,15 @@ pub async fn remind(
 
         if let Some(member) = ctx.author_member().await
             && let Some(guild_channel) = ctx.channel().await.and_then(|ch| ch.guild())
-                && !private
-                    && ctx.partial_guild().await.is_some_and(|guild| {
-                        guild
-                            .user_permissions_in(&guild_channel, &member)
-                            .send_messages()
-                    })
-                {
-                    channel = Some(ctx.channel_id());
-                }
+            && !private
+            && ctx.partial_guild().await.is_some_and(|guild| {
+                guild
+                    .user_permissions_in(&guild_channel, &member)
+                    .send_messages()
+            })
+        {
+            channel = Some(ctx.channel_id());
+        }
 
         if let Some(channel) = channel {
             let reminder = ReminderData {

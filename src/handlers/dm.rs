@@ -15,28 +15,29 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
     }
 
     if message.channel(&ctx).await?.private().is_some()
-        && let Some(logs_channel) = CONFIG.dm_logs_channel {
-            let mut embed = serenity::CreateEmbed::default()
-                .description(message.content.clone())
-                .author(
-                    serenity::CreateEmbedAuthor::new(message.author.tag())
-                        .icon_url(message.author.face()),
-                )
-                .color(0x9775fa)
-                .timestamp(message.timestamp);
+        && let Some(logs_channel) = CONFIG.dm_logs_channel
+    {
+        let mut embed = serenity::CreateEmbed::default()
+            .description(message.content.clone())
+            .author(
+                serenity::CreateEmbedAuthor::new(message.author.tag())
+                    .icon_url(message.author.face()),
+            )
+            .color(0x9775fa)
+            .timestamp(message.timestamp);
 
-            if !message.attachments.is_empty() {
-                embed = embed.field(
-                    "Attachments",
-                    utils::serenity::format_attachments(&message.attachments),
-                    false,
-                );
-            }
-
-            logs_channel
-                .send_message(&ctx.http, serenity::CreateMessage::default().embed(embed))
-                .await?;
+        if !message.attachments.is_empty() {
+            embed = embed.field(
+                "Attachments",
+                utils::serenity::format_attachments(&message.attachments),
+                false,
+            );
         }
+
+        logs_channel
+            .send_message(&ctx.http, serenity::CreateMessage::default().embed(embed))
+            .await?;
+    }
 
     Ok(())
 }

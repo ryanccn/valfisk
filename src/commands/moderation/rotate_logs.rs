@@ -99,24 +99,27 @@ pub async fn rotate_logs(
 
         if kind.is_none_or(|k| k == RotateLogsKind::Moderation)
             && let Some(channel) = guild_config.moderation_logs_channel
-                && let Some(ch) = recreate(ctx, channel, guild_id, actor).await? {
-                    new_channels.push(ch);
-                    guild_config.moderation_logs_channel = Some(ch);
-                }
+            && let Some(ch) = recreate(ctx, channel, guild_id, actor).await?
+        {
+            new_channels.push(ch);
+            guild_config.moderation_logs_channel = Some(ch);
+        }
 
         if kind.is_none_or(|k| k == RotateLogsKind::Message)
             && let Some(channel) = guild_config.message_logs_channel
-                && let Some(ch) = recreate(ctx, channel, guild_id, actor).await? {
-                    new_channels.push(ch);
-                    guild_config.message_logs_channel = Some(ch);
-                }
+            && let Some(ch) = recreate(ctx, channel, guild_id, actor).await?
+        {
+            new_channels.push(ch);
+            guild_config.message_logs_channel = Some(ch);
+        }
 
         if kind.is_none_or(|k| k == RotateLogsKind::Member)
             && let Some(channel) = guild_config.member_logs_channel
-                && let Some(ch) = recreate(ctx, channel, guild_id, actor).await? {
-                    new_channels.push(ch);
-                    guild_config.member_logs_channel = Some(ch);
-                }
+            && let Some(ch) = recreate(ctx, channel, guild_id, actor).await?
+        {
+            new_channels.push(ch);
+            guild_config.member_logs_channel = Some(ch);
+        }
 
         storage.set_config(guild_id, &guild_config).await?;
 
