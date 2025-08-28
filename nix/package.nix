@@ -36,20 +36,19 @@ rustPlatform.buildRustPackage (finalAttrs: {
     };
   };
 
-  env =
-    {
-      METADATA_REVISION = self.rev or self.dirtyRev or null;
-    }
-    // lib.optionalAttrs enableLTO {
-      CARGO_PROFILE_RELEASE_LTO = "fat";
-      CARGO_PROFILE_RELEASE_CODEGEN_UNITS = "1";
-    }
-    // lib.optionalAttrs enableOptimizeSize {
-      CARGO_PROFILE_RELEASE_OPT_LEVEL = "z";
-      CARGO_PROFILE_RELEASE_PANIC = "abort";
-      CARGO_PROFILE_RELEASE_CODEGEN_UNITS = "1";
-      CARGO_PROFILE_RELEASE_STRIP = "symbols";
-    };
+  env = {
+    METADATA_REVISION = self.rev or self.dirtyRev or null;
+  }
+  // lib.optionalAttrs enableLTO {
+    CARGO_PROFILE_RELEASE_LTO = "fat";
+    CARGO_PROFILE_RELEASE_CODEGEN_UNITS = "1";
+  }
+  // lib.optionalAttrs enableOptimizeSize {
+    CARGO_PROFILE_RELEASE_OPT_LEVEL = "z";
+    CARGO_PROFILE_RELEASE_PANIC = "abort";
+    CARGO_PROFILE_RELEASE_CODEGEN_UNITS = "1";
+    CARGO_PROFILE_RELEASE_STRIP = "symbols";
+  };
 
   passthru = {
     cargoToml = lib.importTOML ../Cargo.toml;
