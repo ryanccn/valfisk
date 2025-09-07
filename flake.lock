@@ -1,12 +1,27 @@
 {
   "nodes": {
+    "ferrix": {
+      "locked": {
+        "lastModified": 1757258811,
+        "narHash": "sha256-a4znpSj1wcRgRKlPYIqOhmeTfgokGMeTKNzj4T0TKQs=",
+        "owner": "ryanccn",
+        "repo": "ferrix",
+        "rev": "10a6f8eaa5a97a8420f2bce9773c671a489c4365",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ryanccn",
+        "repo": "ferrix",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1756288264,
-        "narHash": "sha256-Om8adB1lfkU7D33VpR+/haZ2gI5r3Q+ZbIPzE5sYnwE=",
+        "lastModified": 1757034884,
+        "narHash": "sha256-PgLSZDBEWUHpfTRfFyklmiiLBE1i1aGCtz4eRA3POao=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "ddd1826f294a0ee5fdc198ab72c8306a0ea73aa9",
+        "rev": "ca77296380960cd497a765102eeb1356eb80fed0",
         "type": "github"
       },
       "original": {
@@ -16,30 +31,10 @@
         "type": "github"
       }
     },
-    "parts": {
-      "inputs": {
-        "nixpkgs-lib": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1754487366,
-        "narHash": "sha256-pHYj8gUBapuUzKV/kN/tR3Zvqc7o6gdFB9XKXIp1SQ8=",
-        "owner": "hercules-ci",
-        "repo": "flake-parts",
-        "rev": "af66ad14b28a127c5c0f3bbb298218fc63528a18",
-        "type": "github"
-      },
-      "original": {
-        "owner": "hercules-ci",
-        "repo": "flake-parts",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
-        "nixpkgs": "nixpkgs",
-        "parts": "parts"
+        "ferrix": "ferrix",
+        "nixpkgs": "nixpkgs"
       }
     }
   },

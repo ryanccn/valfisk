@@ -33,19 +33,19 @@ jobs:
           persist-credentials: false
 
       - name: Install Nix
-        uses: cachix/install-nix-action@c134e4c9e34bac6cab09cf239815f9339aaaf84e # ratchet:cachix/install-nix-action@v31
+        uses: cachix/install-nix-action@56a7bb7b56d9a92d4fd1bc05758de7eea4a370a8 # ratchet:cachix/install-nix-action@v31
 
       - name: Build Docker image
         id: image
         run: |
-          nix build -L .#container-${{ matrix.arch }}
+          nix build -L .#docker-image-${{ matrix.arch }}
           [ ! -L result ] && exit 1
           echo "path=$(realpath result)" >> "$GITHUB_OUTPUT"
 
       - name: Upload image
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # ratchet:actions/upload-artifact@v4
         with:
-          name: container-${{ matrix.arch }}
+          name: docker-image-${{ matrix.arch }}
           path: ${{ steps.image.outputs.path }}
           if-no-files-found: error
           retention-days: 1
@@ -83,7 +83,7 @@ jobs:
 
           architectures=("x86_64" "aarch64")
           for arch in "${architectures[@]}"; do
-            docker load < images/container-"$arch"/*.tar.gz
+            docker load < images/docker-image-"$arch"/*.tar.gz
             docker tag "valfisk:latest-$arch" "$DOCKER_TAG-$arch"
             docker push "$DOCKER_TAG-$arch"
           done
