@@ -41,7 +41,7 @@ fn dedent(source: &str) -> String {
 }
 
 fn escape_backticks(source: &str) -> String {
-    source.replace("```", "`\u{200B}``")
+    source.replace("```", "`\u{200D}``")
 }
 
 static GITHUB: LazyLock<Regex> = LazyLock::new(|| {
