@@ -22,6 +22,7 @@ Valfisk is a next-generation general purpose Discord app, built with [Poise](htt
 - Show front page posts from [Hacker News](https://news.ycombinator.com/) and [Lobsters](https://lobste.rs/)
 - Retrieve public information about a Discord user
 - Render [Typst](https://typst.app/) documents into raster images
+- Show comprehensive data on Unicode character(s) from the [Unicode Character Database](https://www.unicode.org/ucd/)
 
 ### Server-only
 
