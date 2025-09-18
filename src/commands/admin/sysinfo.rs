@@ -6,7 +6,10 @@ use eyre::Result;
 use std::time::Duration;
 use tokio::time::sleep;
 
-use poise::{CreateReply, serenity_prelude::CreateEmbed};
+use poise::{
+    CreateReply,
+    serenity_prelude::{CreateComponent, CreateContainer, CreateTextDisplay, MessageFlags},
+};
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, Pid, ProcessRefreshKind, RefreshKind, System};
 
 use crate::{Context, utils};
@@ -37,62 +40,53 @@ pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
     sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL).await;
     sys.refresh_specifics(refresh_kind);
 
-    let mut embed = CreateEmbed::default()
-        .title("System information")
-        .color(0xa78bfa);
+    let mut container = CreateContainer::new(vec![CreateComponent::TextDisplay(
+        CreateTextDisplay::new("### System information"),
+    )])
+    .accent_color(0xa78bfa);
 
-    embed = embed
-        .field(
-            "CPU",
-            format!(
-                "**{}** ({} cores)",
-                sys.cpus().first().map_or("Unknown", |cpu| cpu.brand()),
-                System::physical_core_count().unwrap_or_default()
-            ),
-            true,
-        )
-        .field("CPU usage", format!("{:.2}%", sys.global_cpu_usage()), true)
-        .field(
-            "Memory",
-            format!(
-                "{}/{} ({:.2}%)",
-                utils::format_bytes(sys.used_memory()),
-                utils::format_bytes(sys.total_memory()),
-                (sys.used_memory() as f64) / (sys.total_memory() as f64) * 100.
-            ),
-            true,
-        )
-        .field(
-            "Operating system",
-            format!(
-                "**{}** {} ({})",
-                System::name().unwrap_or_else(|| "Unknown".into()),
-                System::os_version().unwrap_or_else(|| "Unknown".into()),
-                System::cpu_arch(),
-            ),
-            true,
-        );
+    container = container.add_component(CreateComponent::TextDisplay(CreateTextDisplay::new(
+        format!(
+            r"**CPU**: {} ({} cores)
+**CPU usage**: {:.2}%
+**Memory**: {}/{} ({:.2}%)
+**Operating system**: {} ({})",
+            sys.cpus().first().map_or("Unknown", |cpu| cpu.brand()),
+            System::physical_core_count().unwrap_or_default(),
+            sys.global_cpu_usage(),
+            utils::format_bytes(sys.used_memory()),
+            utils::format_bytes(sys.total_memory()),
+            (sys.used_memory() as f64) / (sys.total_memory() as f64) * 100.,
+            System::long_os_version().unwrap_or_else(|| "Unknown".into()),
+            System::cpu_arch(),
+        ),
+    )));
 
     if let Some(proc) = sys.process(Pid::from_u32(std::process::id())) {
-        embed = embed
-            .field(
-                "Process CPU usage",
-                format!("{:.2}%", proc.cpu_usage()),
-                true,
-            )
-            .field("Process memory", utils::format_bytes(proc.memory()), true)
-            .field(
-                "Process uptime",
-                humantime::format_duration(Duration::from_secs(proc.run_time())).to_string(),
-                true,
-            );
+        container = container.add_component(CreateComponent::TextDisplay(CreateTextDisplay::new(
+            format!(
+                r"**Process CPU usage**: {:.2}%
+**Process memory**: {}
+**Process uptime**: {}",
+                proc.cpu_usage(),
+                utils::format_bytes(proc.memory()),
+                humantime::format_duration(Duration::from_secs(proc.run_time()))
+            ),
+        )));
     }
 
     if let Some(storage) = &ctx.data().storage {
-        embed = embed.field("KV keys", format!("{}", storage.size().await?), true);
+        container = container.add_component(CreateComponent::TextDisplay(CreateTextDisplay::new(
+            format!("**KV keys**\n{:.2}%", storage.size().await?),
+        )));
     }
 
-    ctx.send(CreateReply::default().embed(embed)).await?;
+    ctx.send(
+        CreateReply::default()
+            .flags(MessageFlags::IS_COMPONENTS_V2)
+            .components(&[CreateComponent::Container(container)]),
+    )
+    .await?;
 
     Ok(())
 }

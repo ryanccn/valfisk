@@ -5,7 +5,10 @@
 use eyre::Result;
 use poise::{
     CreateReply,
-    serenity_prelude::{CreateEmbed, GenericChannelId, Mentionable as _, futures::StreamExt},
+    serenity_prelude::{
+        CreateComponent, CreateContainer, CreateTextDisplay, GenericChannelId, Mentionable as _,
+        MessageFlags, futures::StreamExt as _,
+    },
 };
 
 use crate::{Context, http::HTTP, template_channel::Template};
@@ -57,14 +60,21 @@ pub async fn template_channel(
     }
 
     ctx.send(
-        CreateReply::default().embed(
-            CreateEmbed::default()
-                .title("Applied channel template")
-                .field("URL", format!("`{url}`"), false)
-                .field("Channel", channel.mention().to_string(), false)
-                .field("Components", data.components.len().to_string(), false)
-                .color(0x22d3ee),
-        ),
+        CreateReply::default()
+            .flags(MessageFlags::IS_COMPONENTS_V2)
+            .components(&[CreateComponent::Container(
+                CreateContainer::new(&[
+                    CreateComponent::TextDisplay(CreateTextDisplay::new(
+                        "### Applied channel template",
+                    )),
+                    CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                        "`{url}` → {} (*{} components*)",
+                        channel.mention(),
+                        data.components.len()
+                    ))),
+                ])
+                .accent_color(0x22d3ee),
+            )]),
     )
     .await?;
 

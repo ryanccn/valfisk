@@ -60,13 +60,17 @@ pub async fn lighthouse(
     if let Some(key) = &CONFIG.pagespeed_api_key {
         let reply_handle = ctx
             .send(
-                CreateReply::default().embed(
-                    serenity::CreateEmbed::new()
-                        .title("Lighthouse audit in progress")
-                        .description("This could take around a minute.")
-                        .color(0x66d9e8)
-                        .timestamp(serenity::Timestamp::now()),
-                ),
+                CreateReply::default()
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                    .components(&[serenity::CreateComponent::Container(
+                        serenity::CreateContainer::new(&[serenity::CreateComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(
+                                r"### Lighthouse audit in progress
+This could take around a minute.",
+                            ),
+                        )])
+                        .accent_color(0x66d9e8),
+                    )]),
             )
             .await?;
 
@@ -88,32 +92,48 @@ pub async fn lighthouse(
             .json()
             .await?;
 
-        let mut report_embed = serenity::CreateEmbed::new()
-            .title("Lighthouse report")
-            .description(url)
-            .color(0x74c0fc)
-            .timestamp(serenity::Timestamp::now());
+        let mut report_components = vec![serenity::CreateComponent::TextDisplay(
+            serenity::CreateTextDisplay::new(format!(
+                "### Lighthouse report\n{url}\n-# {}\n",
+                serenity::FormattedTimestamp::now()
+            )),
+        )];
 
         for key in ["performance", "accessibility", "best-practices", "seo"] {
             if let Some(value) = data.lighthouse_result.categories.get(key) {
-                report_embed =
-                    report_embed.field(&value.title, format!("{:.0}", value.score * 100.0), false);
+                report_components.push(serenity::CreateComponent::TextDisplay(
+                    serenity::CreateTextDisplay::new(format!(
+                        "**{}**\n{:.0}",
+                        value.title,
+                        value.score * 100.
+                    )),
+                ));
             }
         }
 
         reply_handle
-            .edit(ctx, CreateReply::default().embed(report_embed))
+            .edit(
+                ctx,
+                CreateReply::default()
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                    .components(&[serenity::CreateComponent::Container(
+                        serenity::CreateContainer::new(report_components).accent_color(0x74c0fc),
+                    )]),
+            )
             .await?;
     } else {
         ctx.send(
-            CreateReply::default().embed(
-                serenity::CreateEmbed::new()
-                    .title("PageSpeed API not configured!")
-                    .description(
-                        "Contact the owner of this app if this command is supposed to be working.",
-                    )
-                    .color(0xff6b6b),
-            ),
+            CreateReply::default()
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                .components(&[serenity::CreateComponent::Container(
+                    serenity::CreateContainer::new(&[serenity::CreateComponent::TextDisplay(
+                        serenity::CreateTextDisplay::new(
+                            r"### PageSpeed API not configured!
+Contact the owner of this app if this command is supposed to be working.",
+                        ),
+                    )])
+                    .accent_color(0xff6b6b),
+                )]),
         )
         .await?;
     }

@@ -96,8 +96,8 @@ async fn github(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateCom
                 + "\n```",
         )),
         serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "-# GitHub · <t:{}:F>",
-            chrono::Utc::now().timestamp()
+            "-# GitHub · {}",
+            serenity::FormattedTimestamp::now()
         ))),
         serenity::CreateComponent::Separator(serenity::CreateSeparator::new(true)),
     ])
@@ -158,8 +158,8 @@ async fn codeberg(
                 + "\n```",
         )),
         serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "-# Codeburger · <t:{}:F>",
-            chrono::Utc::now().timestamp()
+            "-# Codeburger · {}",
+            serenity::FormattedTimestamp::now()
         ))),
         serenity::CreateComponent::Separator(serenity::CreateSeparator::new(true)),
     ])
@@ -215,8 +215,8 @@ async fn gitlab(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateCom
                 + "\n```",
         )),
         serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "-# GitLab · <t:{}:F>",
-            chrono::Utc::now().timestamp()
+            "-# GitLab · {}",
+            serenity::FormattedTimestamp::now()
         ))),
         serenity::CreateComponent::Separator(serenity::CreateSeparator::new(true)),
     ])
@@ -252,8 +252,8 @@ async fn rust_playground(
             "```rust\n".to_owned() + &truncate(&escape_backticks(&dedent(&gist)), 2048) + "\n```",
         )),
         serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "-# play.rust-lang.org · <t:{}:F>",
-            chrono::Utc::now().timestamp()
+            "-# play.rust-lang.org · {}",
+            serenity::FormattedTimestamp::now()
         ))),
         serenity::CreateComponent::Separator(serenity::CreateSeparator::new(true)),
     ])
@@ -287,8 +287,8 @@ async fn go_playground(
             "```go\n".to_owned() + &truncate(&escape_backticks(&dedent(&code)), 2048) + "\n```",
         )),
         serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "-# go.dev/play · <t:{}:F>",
-            chrono::Utc::now().timestamp()
+            "-# go.dev/play · {}",
+            serenity::FormattedTimestamp::now()
         ))),
         serenity::CreateComponent::Separator(serenity::CreateSeparator::new(true)),
     ])
@@ -363,8 +363,8 @@ pub async fn handle_message(ctx: &serenity::Context, message: &serenity::Message
             .send_message(
                 &ctx.http,
                 serenity::CreateMessage::default()
-                    .components(components)
                     .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                    .components(components)
                     .allowed_mentions(
                         serenity::CreateAllowedMentions::default().replied_user(false),
                     )

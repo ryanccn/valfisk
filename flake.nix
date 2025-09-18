@@ -55,8 +55,6 @@
                   ID=valfisk
                   VERSION_ID=${version}
                   PRETTY_NAME="Valfisk Linux v${version}"
-                  HOME_URL="https://github.com/ryanccn/valfisk"
-                  BUG_REPORT_URL="https://github.com/ryanccn/valfisk/issues"
                 '';
               destination = "/etc/os-release";
             };

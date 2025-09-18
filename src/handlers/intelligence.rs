@@ -56,7 +56,7 @@ async fn request_consent(ctx: &serenity::Context, message: &serenity::Message) -
         .channel_id
         .send_message(
             &ctx.http,
-            serenity::CreateMessage::new()
+            serenity::CreateMessage::default()
                 .content(CONFIRM_MESSAGE)
                 .button(
                     serenity::CreateButton::new(&agree_button_id)

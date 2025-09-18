@@ -25,9 +25,9 @@ pub async fn code_expand(
         ctx.say("No supported code links detected!").await?;
     } else {
         ctx.send(
-            CreateReply::new()
-                .components(components)
-                .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
+            CreateReply::default()
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                .components(components),
         )
         .await?;
     }

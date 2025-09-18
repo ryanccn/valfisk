@@ -6,8 +6,8 @@ use eyre::{Result, eyre};
 use poise::{
     CreateReply,
     serenity_prelude::{
-        ChannelType, CreateActionRow, CreateComponent, CreateEmbed, CreateSelectMenu,
-        CreateSelectMenuKind, CreateTextDisplay, MessageFlags, Timestamp,
+        ChannelType, CreateActionRow, CreateComponent, CreateContainer, CreateSelectMenu,
+        CreateSelectMenuKind, CreateTextDisplay, MessageFlags,
     },
 };
 
@@ -64,8 +64,9 @@ async fn edit(ctx: Context<'_>) -> Result<()> {
     let data = storage.get_config(guild_id).await?;
 
     ctx.send(
-        CreateReply::new()
-            .components(vec![
+        CreateReply::default()
+            .flags(MessageFlags::IS_COMPONENTS_V2)
+            .components(&[
                 CreateComponent::TextDisplay(CreateTextDisplay::new(
                     "**Starboard channel**\n-# Starboard channel to use for channels viewable by @everyone",
                 )),
@@ -237,8 +238,7 @@ async fn edit(ctx: Context<'_>) -> Result<()> {
                     .min_values(0)
                     .max_values(10)
                 )),
-            ])
-            .flags(MessageFlags::IS_COMPONENTS_V2),
+            ]),
     )
     .await?;
 
@@ -294,16 +294,18 @@ async fn starboard(
     storage.set_config(guild_id, &data).await?;
 
     ctx.send(
-        CreateReply::default().embed(
-            CreateEmbed::default()
-                .title("Configuration")
-                .description(format!(
-                    "```json\n{}\n```",
-                    serde_json::to_string_pretty(&data)?
-                ))
-                .timestamp(Timestamp::now())
-                .color(0x63e6be),
-        ),
+        CreateReply::default()
+            .flags(MessageFlags::IS_COMPONENTS_V2)
+            .components(&[CreateComponent::Container(
+                CreateContainer::new(&[
+                    CreateComponent::TextDisplay(CreateTextDisplay::new("### Configuration")),
+                    CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                        "```json\n{}\n```",
+                        serde_json::to_string_pretty(&data)?
+                    ))),
+                ])
+                .accent_color(0x63e6be),
+            )]),
     )
     .await?;
 
@@ -335,16 +337,18 @@ async fn raw(ctx: Context<'_>) -> Result<()> {
     let data = storage.get_config(guild_id).await?;
 
     ctx.send(
-        CreateReply::default().embed(
-            CreateEmbed::default()
-                .title("Configuration")
-                .description(format!(
-                    "```json\n{}\n```",
-                    serde_json::to_string_pretty(&data)?
-                ))
-                .timestamp(Timestamp::now())
-                .color(0x63e6be),
-        ),
+        CreateReply::default()
+            .flags(MessageFlags::IS_COMPONENTS_V2)
+            .components(&[CreateComponent::Container(
+                CreateContainer::new(&[
+                    CreateComponent::TextDisplay(CreateTextDisplay::new("### Configuration")),
+                    CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                        "```json\n{}\n```",
+                        serde_json::to_string_pretty(&data)?
+                    ))),
+                ])
+                .accent_color(0x63e6be),
+            )]),
     )
     .await?;
 
@@ -376,12 +380,14 @@ async fn reset(ctx: Context<'_>) -> Result<()> {
     storage.del_config(guild_id).await?;
 
     ctx.send(
-        CreateReply::default().embed(
-            CreateEmbed::default()
-                .title("Reset configuration")
-                .timestamp(Timestamp::now())
-                .color(0x63e6be),
-        ),
+        CreateReply::default()
+            .flags(MessageFlags::IS_COMPONENTS_V2)
+            .components(&[CreateComponent::Container(
+                CreateContainer::new(&[CreateComponent::TextDisplay(CreateTextDisplay::new(
+                    "### Reset configuration",
+                ))])
+                .accent_color(0x63e6be),
+            )]),
     )
     .await?;
 

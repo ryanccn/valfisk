@@ -38,18 +38,21 @@ pub async fn rotate_color_roles(
     };
 
     ctx.send(
-        CreateReply::default().embed(
-            serenity::CreateEmbed::default()
-                .title("Rotated color roles")
-                .description(
-                    roles
-                        .iter()
-                        .map(|r| r.mention().to_string())
-                        .collect::<Vec<_>>()
-                        .join(" "),
-                )
-                .color(0x69db7c),
-        ),
+        CreateReply::default()
+            .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+            .components(&[serenity::CreateComponent::Container(
+                serenity::CreateContainer::new(&[serenity::CreateComponent::TextDisplay(
+                    serenity::CreateTextDisplay::new(format!(
+                        "### Rotated color roles\n{}",
+                        roles
+                            .iter()
+                            .map(|r| r.mention().to_string())
+                            .collect::<Vec<_>>()
+                            .join(" "),
+                    )),
+                )])
+                .accent_color(0x69db7c),
+            )]),
     )
     .await?;
 

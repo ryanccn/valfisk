@@ -126,9 +126,9 @@ pub async fn rotate_logs(
         reply
             .edit(
                 ctx,
-                CreateReply::new()
+                CreateReply::default()
                     .embed(
-                        serenity::CreateEmbed::new()
+                        serenity::CreateEmbed::default()
                             .title("Rotated logs")
                             .description(
                                 new_channels
@@ -146,7 +146,7 @@ pub async fn rotate_logs(
         reply
             .edit(
                 ctx,
-                poise::CreateReply::new()
+                poise::CreateReply::default()
                     .embed(
                         serenity::CreateEmbed::default()
                             .title("Log rotation cancelled")

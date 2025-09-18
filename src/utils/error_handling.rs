@@ -6,7 +6,10 @@ use std::fmt;
 
 use poise::{
     CreateReply,
-    serenity_prelude::{CreateEmbed, CreateEmbedFooter, CreateMessage, Timestamp},
+    serenity_prelude::{
+        CreateComponent, CreateContainer, CreateEmbed, CreateEmbedFooter, CreateMessage,
+        CreateTextDisplay, MessageFlags, Timestamp,
+    },
 };
 
 use crate::{Context, config::CONFIG, utils::nanoid};
@@ -72,14 +75,18 @@ impl ValfiskError<'_> {
         if let Err(err) = self
             .ctx
             .send(
-                CreateReply::default().embed(
-                    CreateEmbed::default()
-                        .title("An error occurred!")
-                        .description("You can contact the owner of this app with the error ID shown below if you need support.")
-                        .footer(CreateEmbedFooter::new(&self.error_id))
-                        .timestamp(Timestamp::now())
-                        .color(0xff6b6b),
-                ),
+                CreateReply::default()
+                    .flags(MessageFlags::IS_COMPONENTS_V2)
+                    .components(&[CreateComponent::Container(
+                        CreateContainer::new(&[CreateComponent::TextDisplay(
+                            CreateTextDisplay::new(format!(
+                                r"### An error occurred!
+You can contact the owner of this app with the error ID **`{}`** if you need support.",
+                                self.error_id
+                            )),
+                        )])
+                        .accent_color(0xff6b6b),
+                    )]),
             )
             .await
         {

@@ -5,7 +5,9 @@
 use eyre::{Result, eyre};
 use poise::{
     CreateReply,
-    serenity_prelude::{CreateEmbed, Timestamp},
+    serenity_prelude::{
+        CreateComponent, CreateContainer, CreateTextDisplay, FormattedTimestamp, MessageFlags,
+    },
 };
 
 use crate::Context;
@@ -49,18 +51,26 @@ async fn list(ctx: Context<'_>) -> Result<()> {
         .await?;
 
     ctx.send(
-        CreateReply::default().embed(
-            CreateEmbed::default()
-                .title("Autoreply")
-                .description(
-                    data.into_iter()
-                        .map(|(k, v)| format!("`{k}` → `{v}`"))
-                        .collect::<Vec<_>>()
-                        .join("\n"),
-                )
-                .timestamp(Timestamp::now())
-                .color(0x63e6be),
-        ),
+        CreateReply::default()
+            .flags(MessageFlags::IS_COMPONENTS_V2)
+            .components(&[CreateComponent::Container(
+                CreateContainer::new(&[
+                    CreateComponent::TextDisplay(CreateTextDisplay::new("### Autoreply")),
+                    CreateComponent::TextDisplay(CreateTextDisplay::new(if data.is_empty() {
+                        "*None*".to_owned()
+                    } else {
+                        data.into_iter()
+                            .map(|(k, v)| format!("`{k}` → `{v}`"))
+                            .collect::<Vec<_>>()
+                            .join("\n")
+                    })),
+                    CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                        "-# {}",
+                        FormattedTimestamp::now()
+                    ))),
+                ])
+                .accent_color(0x63e6be),
+            )]),
     )
     .await?;
 
@@ -95,13 +105,23 @@ async fn add(
         .await?;
 
     ctx.send(
-        CreateReply::default().embed(
-            CreateEmbed::default()
-                .title("Added autoreply keyword")
-                .description(format!("`{keyword}` → `{reply}`"))
-                .timestamp(Timestamp::now())
-                .color(0x63e6be),
-        ),
+        CreateReply::default()
+            .flags(MessageFlags::IS_COMPONENTS_V2)
+            .components(&[CreateComponent::Container(
+                CreateContainer::new(&[
+                    CreateComponent::TextDisplay(CreateTextDisplay::new(
+                        "### Added autoreply keyword",
+                    )),
+                    CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                        "`{keyword}` → `{reply}`"
+                    ))),
+                    CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                        "-# {}",
+                        FormattedTimestamp::now()
+                    ))),
+                ])
+                .accent_color(0x63e6be),
+            )]),
     )
     .await?;
 
@@ -135,13 +155,21 @@ async fn delete(
         .await?;
 
     ctx.send(
-        CreateReply::default().embed(
-            CreateEmbed::default()
-                .title("Deleted autoreply keyword")
-                .description(format!("`{keyword}`"))
-                .timestamp(Timestamp::now())
-                .color(0x63e6be),
-        ),
+        CreateReply::default()
+            .flags(MessageFlags::IS_COMPONENTS_V2)
+            .components(&[CreateComponent::Container(
+                CreateContainer::new(&[
+                    CreateComponent::TextDisplay(CreateTextDisplay::new(
+                        "### Deleted autoreply keyword",
+                    )),
+                    CreateComponent::TextDisplay(CreateTextDisplay::new(format!("`{keyword}`"))),
+                    CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                        "-# {}",
+                        FormattedTimestamp::now()
+                    ))),
+                ])
+                .accent_color(0x63e6be),
+            )]),
     )
     .await?;
 
@@ -173,12 +201,20 @@ async fn delete_all(ctx: Context<'_>) -> Result<()> {
         .await?;
 
     ctx.send(
-        CreateReply::default().embed(
-            CreateEmbed::default()
-                .title("Deleted all autoreply keywords")
-                .timestamp(Timestamp::now())
-                .color(0x63e6be),
-        ),
+        CreateReply::default()
+            .flags(MessageFlags::IS_COMPONENTS_V2)
+            .components(&[CreateComponent::Container(
+                CreateContainer::new(&[
+                    CreateComponent::TextDisplay(CreateTextDisplay::new(
+                        "### Deleted all autoreply keywords",
+                    )),
+                    CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                        "-# {}",
+                        FormattedTimestamp::now()
+                    ))),
+                ])
+                .accent_color(0x63e6be),
+            )]),
     )
     .await?;
 

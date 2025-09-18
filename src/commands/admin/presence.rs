@@ -30,13 +30,22 @@ pub async fn presence(
         .set_presence(data.to_activity(), serenity::OnlineStatus::Online);
 
     ctx.send(
-        CreateReply::default().embed(
-            serenity::CreateEmbed::default()
-                .title("Presence set")
-                .field("Type", data.r#type.to_string(), false)
-                .field("Content", &data.content, false)
-                .color(0x4ade80),
-        ),
+        CreateReply::default()
+            .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+            .components(&[serenity::CreateComponent::Container(
+                serenity::CreateContainer::new(&[
+                    serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                        "### Presence set",
+                    )),
+                    serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                        format!("**Type**\n{}", data.r#type),
+                    )),
+                    serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                        format!("**Content**\n{}", data.content),
+                    )),
+                ])
+                .accent_color(0x4ade80),
+            )]),
     )
     .await?;
 

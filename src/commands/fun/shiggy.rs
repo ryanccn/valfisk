@@ -28,13 +28,18 @@ pub async fn shiggy(
     #[description = "Whether to send the image URL only"]
     #[flag]
     raw: bool,
+
+    #[description = "Alternative tags to search for"] tags: Option<String>,
 ) -> Result<()> {
     ctx.defer().await?;
 
     let data: SafebooruResponse = HTTP
         .get("https://safebooru.donmai.us/posts/random.json")
         .query(&[
-            ("tags", "kemomimi-chan_(naga_u) naga_u"),
+            (
+                "tags",
+                tags.as_ref().map_or("kemomimi-chan_(naga_u) naga_u", |v| v),
+            ),
             ("only", "id,source,tag_string,file_url"),
         ])
         .send()
@@ -47,15 +52,27 @@ pub async fn shiggy(
         ctx.say(data.file_url).await?;
     } else {
         ctx.send(
-            CreateReply::default().embed(
-                serenity::CreateEmbed::default()
-                    .title(data.id.to_string())
-                    .field("Tags", data.tag_string.replace('_', "\\_"), false)
-                    .field("Source", &data.source, false)
-                    .url(format!("https://safebooru.donmai.us/posts/{}", data.id))
-                    .image(&data.file_url)
-                    .color(0xfef9c3),
-            ),
+            CreateReply::default()
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                .components(&[serenity::CreateComponent::Container(
+                    serenity::CreateContainer::new(&[
+                        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                            format!("## [{0}](https://safebooru.donmai.us/posts/{0})", data.id,),
+                        )),
+                        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                            data.tag_string.replace('_', "\\_"),
+                        )),
+                        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                            data.source,
+                        )),
+                        serenity::CreateComponent::Separator(serenity::CreateSeparator::new(false)),
+                        serenity::CreateComponent::MediaGallery(serenity::CreateMediaGallery::new(
+                            &[serenity::CreateMediaGalleryItem::new(
+                                serenity::CreateUnfurledMediaItem::new(data.file_url),
+                            )],
+                        )),
+                    ]),
+                )]),
         )
         .await?;
     }

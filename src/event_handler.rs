@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use poise::serenity_prelude::{self as serenity};
+use poise::serenity_prelude as serenity;
 
 use crate::{commands, config::CONFIG, handlers, storage::log::MessageLog};
 

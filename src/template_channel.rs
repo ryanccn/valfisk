@@ -5,12 +5,14 @@
 use eyre::Result;
 
 use indexmap::IndexMap;
-use poise::serenity_prelude::{CreateEmbed, CreateMessage};
+use poise::serenity_prelude::{
+    CreateComponent, CreateContainer, CreateMessage, CreateTextDisplay, MessageFlags,
+};
 use serde::Deserialize;
 
-const fn default_to_false() -> bool {
-    false
-}
+// const fn default_to_false() -> bool {
+//     false
+// }
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Template {
@@ -45,8 +47,8 @@ pub struct EmbedComponentEmbed {
 pub struct EmbedComponentEmbedField {
     name: String,
     value: String,
-    #[serde(default = "default_to_false")]
-    inline: bool,
+    // #[serde(default = "default_to_false")]
+    // inline: bool,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -79,65 +81,98 @@ impl Template {
     pub fn to_messages(&self) -> Vec<CreateMessage<'_>> {
         self.components
             .iter()
-            .map(|component| match component {
-                Component::Embed(data) => CreateMessage::default().embeds(
-                    data.embeds
-                        .iter()
-                        .map(|data| {
-                            let mut embed = CreateEmbed::default();
-
-                            if let Some(title) = &data.title {
-                                embed = embed.title(title);
-                            }
-                            if let Some(description) = &data.description {
-                                embed = embed.description(description);
-                            }
-                            if let Some(color) = &data.color {
-                                embed = embed.color(*color);
-                            }
-                            if let Some(fields) = &data.fields {
-                                embed = embed
-                                    .fields(fields.iter().map(|f| (&f.name, &f.value, f.inline)));
-                            }
-
-                            embed
-                        })
-                        .collect::<Vec<_>>(),
-                ),
-
-                Component::Links(data) => CreateMessage::default().embed({
-                    let mut embed = CreateEmbed::default().title(&data.title).description(
-                        data.links
+            .enumerate()
+            .map(|(idx, component)| match component {
+                Component::Embed(data) => CreateMessage::default()
+                    .flags(MessageFlags::IS_COMPONENTS_V2)
+                    .components(
+                        data.embeds
                             .iter()
-                            .map(|(title, href)| format!("» [{title}]({href})"))
-                            .collect::<Vec<_>>()
-                            .join("\n"),
-                    );
+                            .map(|data| {
+                                let mut container = CreateContainer::new(&[]);
 
-                    if let Some(color) = data.color {
-                        embed = embed.color(color);
-                    }
+                                if let Some(title) = &data.title {
+                                    container =
+                                        container.add_component(CreateComponent::TextDisplay(
+                                            CreateTextDisplay::new(format!(
+                                                "{} {title}",
+                                                if idx == 0 { "##" } else { "###" }
+                                            )),
+                                        ));
+                                }
 
-                    embed
-                }),
+                                if let Some(description) = &data.description {
+                                    container =
+                                        container.add_component(CreateComponent::TextDisplay(
+                                            CreateTextDisplay::new(description),
+                                        ));
+                                }
 
-                Component::Rules(data) => CreateMessage::default().embeds(
-                    data.rules
-                        .iter()
-                        .enumerate()
-                        .map(|(idx, (title, desc))| {
-                            let mut embed = CreateEmbed::default()
-                                .title(format!("{}. {}", idx + 1, title))
-                                .description(desc);
+                                if let Some(fields) = &data.fields {
+                                    for field in fields {
+                                        container = container.add_component(
+                                            CreateComponent::TextDisplay(CreateTextDisplay::new(
+                                                format!("**{}**\n{}", field.name, field.value),
+                                            )),
+                                        );
+                                    }
+                                }
 
-                            if let Some(color) = data.colors.get(idx % data.colors.len()) {
-                                embed = embed.color(*color);
-                            }
+                                if let Some(color) = &data.color {
+                                    container = container.accent_color(*color);
+                                }
 
-                            embed
-                        })
-                        .collect::<Vec<_>>(),
-                ),
+                                CreateComponent::Container(container)
+                            })
+                            .collect::<Vec<_>>(),
+                    ),
+
+                Component::Links(data) => CreateMessage::default()
+                    .flags(MessageFlags::IS_COMPONENTS_V2)
+                    .components({
+                        let mut container =
+                            CreateContainer::new(vec![CreateComponent::TextDisplay(
+                                CreateTextDisplay::new(format!(
+                                    "### {}\n{}",
+                                    data.title,
+                                    data.links
+                                        .iter()
+                                        .map(|(title, href)| format!("» [{title}]({href})"))
+                                        .collect::<Vec<_>>()
+                                        .join("\n")
+                                )),
+                            )]);
+
+                        if let Some(color) = data.color {
+                            container = container.accent_color(color);
+                        }
+
+                        vec![CreateComponent::Container(container)]
+                    }),
+
+                Component::Rules(data) => CreateMessage::default()
+                    .flags(MessageFlags::IS_COMPONENTS_V2)
+                    .components(
+                        data.rules
+                            .iter()
+                            .enumerate()
+                            .map(|(idx, (title, desc))| {
+                                let mut container =
+                                    CreateContainer::new(vec![CreateComponent::TextDisplay(
+                                        CreateTextDisplay::new(format!(
+                                            "### {}\u{200B}. {title}\n{desc}",
+                                            idx + 1,
+                                        )),
+                                    )]);
+
+                                if let Some(color) = data.colors.get(idx % data.colors.len()) {
+                                    container = container.accent_color(*color);
+                                }
+
+                                CreateComponent::Container(container)
+                            })
+                            .collect::<Vec<_>>(),
+                    ),
 
                 Component::Text(data) => CreateMessage::default().content(&data.text),
             })

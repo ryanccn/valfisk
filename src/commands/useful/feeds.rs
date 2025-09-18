@@ -43,18 +43,21 @@ async fn feed(ctx: Context<'_>, name: &str, color: u32, feed: &str) -> Result<()
     let data = titles.zip(links).skip(1).take(10).collect::<Vec<_>>();
 
     ctx.send(
-        CreateReply::new().embed(
-            serenity::CreateEmbed::new()
-                .title(name)
-                .color(color)
-                .timestamp(serenity::Timestamp::now())
-                .description(
-                    data.iter()
-                        .map(|(t, l)| format!("**{t}**\n{l}"))
-                        .collect::<Vec<_>>()
-                        .join("\n\n"),
-                ),
-        ),
+        CreateReply::default()
+            .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+            .components(&[serenity::CreateComponent::Container(
+                serenity::CreateContainer::new(&[serenity::CreateComponent::TextDisplay(
+                    serenity::CreateTextDisplay::new(format!(
+                        "## {name}\n{}\n\n{}",
+                        serenity::FormattedTimestamp::now(),
+                        data.iter()
+                            .map(|(t, l)| format!("**{t}**\n{l}"))
+                            .collect::<Vec<_>>()
+                            .join("\n\n"),
+                    )),
+                )])
+                .accent_color(color),
+            )]),
     )
     .await?;
 

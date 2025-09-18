@@ -46,15 +46,17 @@ pub async fn unicode(
             .join("\n");
 
         ctx.send(
-            CreateReply::new()
-                .components(&[CreateComponent::Container(CreateContainer::new(&[
-                    CreateComponent::TextDisplay(CreateTextDisplay::new(compact_info)),
-                    CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
-                        "-# Unicode {} \u{00B7} [Unicode and Internationalization Crates for Rust](https://docs.rs/unic/)",
-                        unic::UNICODE_VERSION
-                    )))
-                ]))])
-                .flags(MessageFlags::IS_COMPONENTS_V2),
+            CreateReply::default()
+                .flags(MessageFlags::IS_COMPONENTS_V2)
+                .components(&[
+                    CreateComponent::Container(CreateContainer::new(&[
+                        CreateComponent::TextDisplay(CreateTextDisplay::new(compact_info)),
+                        CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                            "-# Unicode {} \u{00B7} [Unicode and Internationalization Crates for Rust](https://docs.rs/unic/)",
+                            unic::UNICODE_VERSION
+                        ))),
+                    ])),
+                ]),
         )
         .await?;
     } else {
@@ -133,9 +135,9 @@ pub async fn unicode(
         }
 
         ctx.send(
-            CreateReply::new()
-                .components(components)
-                .flags(MessageFlags::IS_COMPONENTS_V2),
+            CreateReply::default()
+                .flags(MessageFlags::IS_COMPONENTS_V2)
+                .components(components),
         )
         .await?;
     }

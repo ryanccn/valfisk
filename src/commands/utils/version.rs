@@ -5,7 +5,10 @@
 use std::env::consts::{ARCH, OS};
 
 use eyre::Result;
-use poise::{CreateReply, serenity_prelude::CreateEmbed};
+use poise::{
+    CreateReply,
+    serenity_prelude::{CreateComponent, CreateContainer, CreateTextDisplay, MessageFlags},
+};
 
 use crate::Context;
 
@@ -21,8 +24,6 @@ pub async fn version(ctx: Context<'_>) -> Result<()> {
         .map(|v| format!(" v{v}"))
         .unwrap_or_default();
 
-    let description = option_env!("CARGO_PKG_DESCRIPTION").unwrap_or_default();
-
     let target = option_env!("METADATA_TARGET")
         .map_or_else(|| "*Unknown*".to_owned(), |target| format!("`{target}`"));
 
@@ -35,16 +36,17 @@ pub async fn version(ctx: Context<'_>) -> Result<()> {
     );
 
     ctx.send(
-        CreateReply::default().embed(
-            CreateEmbed::default()
-                .title(format!("Valfisk{version_suffix}"))
-                .description(description)
-                .field("Runtime OS", format!("{ARCH}-{OS}"), true)
-                .field("Target", &target, false)
-                .field("Build host", &host, false)
-                .field("Revision", &revision, false)
-                .color(0xf472b6),
-        ),
+        CreateReply::default()
+            .flags(MessageFlags::IS_COMPONENTS_V2)
+            .components(&[CreateComponent::Container(CreateContainer::new(&[
+                CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                    r"## Valfisk{version_suffix}
+**Runtime OS**: {ARCH}-{OS}
+**Build target**: {target}
+**Build host**: {host}
+**Revision**: {revision}"
+                ))),
+            ]))]),
     )
     .await?;
 

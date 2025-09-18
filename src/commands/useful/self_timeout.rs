@@ -77,7 +77,7 @@ pub async fn self_timeout(
             reply
                 .edit(
                     ctx,
-                    poise::CreateReply::new()
+                    poise::CreateReply::default()
                         .embed(info_embed.clone())
                         .components(vec![]),
                 )
@@ -86,7 +86,7 @@ pub async fn self_timeout(
             reply
                 .edit(
                     ctx,
-                    poise::CreateReply::new()
+                    poise::CreateReply::default()
                         .embed(
                             serenity::CreateEmbed::default()
                                 .title("Self-timeout cancelled")

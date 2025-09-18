@@ -4,7 +4,9 @@
 
 use poise::{
     ChoiceParameter, CreateReply,
-    serenity_prelude::{CreateEmbed, CreateEmbedFooter, Timestamp},
+    serenity_prelude::{
+        CreateComponent, CreateContainer, CreateTextDisplay, FormattedTimestamp, MessageFlags,
+    },
 };
 
 use hickory_resolver::{
@@ -214,20 +216,34 @@ pub async fn dig(
     match hickory.lookup(fqdn, r#type.as_record_type()).await {
         Ok(response) => {
             ctx.send(
-                CreateReply::default().embed(
-                    CreateEmbed::default()
-                        .title(format!("{type} records on {name}"))
-                        .description(
-                            response
-                                .record_iter()
-                                .map(|r| format!("`{} {} {}`", r.name(), r.record_type(), r.data()))
-                                .collect::<Vec<_>>()
-                                .join("\n"),
-                        )
-                        .color(0xffa94d)
-                        .footer(CreateEmbedFooter::new(resolver.domain()))
-                        .timestamp(Timestamp::now()),
-                ),
+                CreateReply::default()
+                    .flags(MessageFlags::IS_COMPONENTS_V2)
+                    .components(&[CreateComponent::Container(
+                        CreateContainer::new(&[
+                            CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                                "### {type} records on {name}"
+                            ))),
+                            CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                                "```\n{}\n```",
+                                response
+                                    .record_iter()
+                                    .map(|r| format!(
+                                        "{}  {}  {}",
+                                        r.name(),
+                                        r.record_type(),
+                                        r.data()
+                                    ))
+                                    .collect::<Vec<_>>()
+                                    .join("\n")
+                            ))),
+                            CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                                "-# {} \u{00B7} {}",
+                                resolver.domain(),
+                                FormattedTimestamp::now()
+                            ))),
+                        ])
+                        .accent_color(0xffa94d),
+                    )]),
             )
             .await?;
         }

@@ -119,7 +119,7 @@ pub async fn typst(
     {
         Ok(result) => {
             ctx.send(
-                CreateReply::new()
+                CreateReply::default()
                     .attachment(serenity::CreateAttachment::bytes(result??, "typst.png")),
             )
             .await?;

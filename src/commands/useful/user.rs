@@ -25,7 +25,7 @@ pub async fn user(ctx: Context<'_>, user: serenity::UserId) -> Result<()> {
 
     let user = user.to_user(&ctx).await?;
 
-    let mut embed = serenity::CreateEmbed::new()
+    let mut embed = serenity::CreateEmbed::default()
         .title(&user.name)
         .field("ID", user.id.to_string(), true)
         .field(
@@ -70,7 +70,7 @@ pub async fn user(ctx: Context<'_>, user: serenity::UserId) -> Result<()> {
         embed = embed.color(*color);
     }
 
-    ctx.send(poise::CreateReply::new().embed(embed)).await?;
+    ctx.send(poise::CreateReply::default().embed(embed)).await?;
 
     Ok(())
 }
