@@ -40,6 +40,10 @@ fn dedent(source: &str) -> String {
         .join("\n")
 }
 
+fn escape_backticks(source: &str) -> String {
+    source.replace("```", "`\u{200B}``")
+}
+
 static GITHUB: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"https?://github\.com/(?P<repo>[\w\-]+/[\w.\-]+)/blob/(?P<ref>\S+?)/(?P<file>[^\s?]+)(\?\S*)?#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
 });
@@ -88,7 +92,7 @@ async fn github(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateCom
             "```".to_owned()
                 + language
                 + "\n"
-                + &truncate(&dedent(&selected_lines), 2048)
+                + &truncate(&escape_backticks(&dedent(&selected_lines)), 2048)
                 + "\n```",
         )),
         serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
@@ -150,7 +154,7 @@ async fn codeberg(
             "```".to_owned()
                 + language
                 + "\n"
-                + &truncate(&dedent(&selected_lines), 2048)
+                + &truncate(&escape_backticks(&dedent(&selected_lines)), 2048)
                 + "\n```",
         )),
         serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
@@ -207,7 +211,7 @@ async fn gitlab(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateCom
             "```".to_owned()
                 + language
                 + "\n"
-                + &truncate(&dedent(&selected_lines), 2048)
+                + &truncate(&escape_backticks(&dedent(&selected_lines)), 2048)
                 + "\n```",
         )),
         serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
@@ -245,7 +249,7 @@ async fn rust_playground(
             "### {gist_id}",
         ))),
         serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
-            "```rust\n".to_owned() + &truncate(&dedent(&gist), 2048) + "\n```",
+            "```rust\n".to_owned() + &truncate(&escape_backticks(&dedent(&gist)), 2048) + "\n```",
         )),
         serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
             "-# play.rust-lang.org · <t:{}:F>",
@@ -280,7 +284,7 @@ async fn go_playground(
             "### {id}",
         ))),
         serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
-            "```go\n".to_owned() + &truncate(&dedent(&code), 2048) + "\n```",
+            "```go\n".to_owned() + &truncate(&escape_backticks(&dedent(&code)), 2048) + "\n```",
         )),
         serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
             "-# go.dev/play · <t:{}:F>",
