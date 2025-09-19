@@ -27,6 +27,7 @@ pub async fn code_expand(
         ctx.send(
             CreateReply::default()
                 .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                .allowed_mentions(serenity::CreateAllowedMentions::new())
                 .components(components),
         )
         .await?;

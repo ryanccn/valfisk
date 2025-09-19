@@ -10,7 +10,15 @@ use poise::serenity_prelude as serenity;
 use crate::Context;
 
 fn short_link<'a>(url: impl Into<Cow<'a, str>>) -> String {
-    format!("[View]({})", url.into())
+    let url: Cow<'a, str> = url.into();
+    format!(
+        "[{}]({})",
+        url::Url::parse(&url)
+            .ok()
+            .and_then(|u| u.domain().map(|s| s.to_owned()))
+            .unwrap_or_else(|| "view".to_owned()),
+        url
+    )
 }
 
 /// Show information about a user
@@ -25,52 +33,59 @@ pub async fn user(ctx: Context<'_>, user: serenity::UserId) -> Result<()> {
 
     let user = user.to_user(&ctx).await?;
 
-    let mut embed = serenity::CreateEmbed::default()
-        .title(&user.name)
-        .field("ID", user.id.to_string(), true)
-        .field(
-            "Global name",
-            user.global_name.as_ref().map_or("*None*", |s| s.as_str()),
-            true,
-        )
-        .field("Avatar", short_link(user.face()), true)
-        .field(
-            "Banner",
-            user.banner_url()
-                .map_or_else(|| "*None*".to_owned(), |u| short_link(&u)),
-            true,
-        )
-        .field(
-            "Accent color",
-            user.accent_colour
-                .map_or("*None*".to_owned(), |c| format!("#{}", c.hex())),
-            true,
-        )
-        .field(
-            "Flags",
-            if user.flags.is_empty() {
-                "*None*".to_owned()
-            } else {
-                user.flags
-                    .iter_names()
-                    .map(|(n, _)| format!("`{n}`"))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            },
-            false,
-        )
-        .field(
-            "Created at",
-            format!("<t:{0}:F> (<t:{0}:R>)", user.id.created_at().timestamp()),
-            false,
-        )
-        .thumbnail(user.face());
+    let mut container = serenity::CreateContainer::new(vec![serenity::CreateComponent::Section(
+        serenity::CreateSection::new(
+            vec![
+                serenity::CreateSectionComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                    format!("## {}", user.global_name.as_ref().unwrap_or(&user.name)),
+                )),
+                serenity::CreateSectionComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                    format!(
+                        "### @{}
+**ID**: {}
+**Avatar**: {}
+**Banner**: {}
+**Accent color**: {}
+**Flags**: {}
+**Created at**: <t:{}:F> (<t:{}:R>)",
+                        user.tag(),
+                        user.id,
+                        short_link(user.face()),
+                        user.banner_url()
+                            .map_or_else(|| "*None*".to_owned(), |u| short_link(&u)),
+                        user.accent_colour
+                            .map_or("*None*".to_owned(), |c| format!("#{}", c.hex())),
+                        if user.flags.is_empty() {
+                            "*None*".to_owned()
+                        } else {
+                            user.flags
+                                .iter_names()
+                                .map(|(n, _)| format!("`{n}`"))
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        },
+                        user.id.created_at().timestamp(),
+                        user.id.created_at().timestamp()
+                    ),
+                )),
+            ],
+            serenity::CreateSectionAccessory::Thumbnail(serenity::CreateThumbnail::new(
+                serenity::CreateUnfurledMediaItem::new(user.face()),
+            )),
+        ),
+    )]);
 
     if let Some(color) = &user.accent_colour {
-        embed = embed.color(*color);
+        container = container.accent_color(*color);
     }
 
-    ctx.send(poise::CreateReply::default().embed(embed)).await?;
+    ctx.send(
+        poise::CreateReply::default()
+            .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+            .allowed_mentions(serenity::CreateAllowedMentions::new())
+            .components(&[serenity::CreateComponent::Container(container)]),
+    )
+    .await?;
 
     Ok(())
 }

@@ -5,7 +5,8 @@
 use poise::{
     ChoiceParameter, CreateReply,
     serenity_prelude::{
-        CreateComponent, CreateContainer, CreateTextDisplay, FormattedTimestamp, MessageFlags,
+        CreateAllowedMentions, CreateComponent, CreateContainer, CreateTextDisplay,
+        FormattedTimestamp, MessageFlags,
     },
 };
 
@@ -218,6 +219,7 @@ pub async fn dig(
             ctx.send(
                 CreateReply::default()
                     .flags(MessageFlags::IS_COMPONENTS_V2)
+                    .allowed_mentions(CreateAllowedMentions::new())
                     .components(&[CreateComponent::Container(
                         CreateContainer::new(&[
                             CreateComponent::TextDisplay(CreateTextDisplay::new(format!(

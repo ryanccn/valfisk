@@ -23,19 +23,22 @@ async fn dispatch(
         .send_message(
             ctx.http(),
             serenity::CreateMessage::default()
-                .content(reminder.user.mention().to_string())
-                .embed(
-                    serenity::CreateEmbed::default()
-                        .title("Reminder")
-                        .description(
-                            reminder
-                                .content
-                                .clone()
-                                .unwrap_or_else(|| "*No content*".into()),
-                        )
-                        .author(serenity::CreateEmbedAuthor::new(user.tag()).icon_url(user.face()))
-                        .color(0x3bc9db),
-                ),
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                .allowed_mentions(serenity::CreateAllowedMentions::new().users(&[user.id]))
+                .components(&[
+                    serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                        user.mention().to_string(),
+                    )),
+                    serenity::CreateComponent::Container(
+                        serenity::CreateContainer::new(&[serenity::CreateComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(format!(
+                                "### Reminder\n{}",
+                                reminder.content.as_deref().unwrap_or("*No content*")
+                            )),
+                        )])
+                        .accent_color(0x3bc9db),
+                    ),
+                ]),
         )
         .await?;
 
@@ -106,25 +109,25 @@ pub async fn remind(
             });
 
             ctx.send(
-                poise::CreateReply::default().embed(
-                    serenity::CreateEmbed::default()
-                        .title("Reminder set")
-                        .field(
-                            "Time",
-                            format!("<t:{0}:F> (<t:{0}:R>)", timestamp.timestamp()),
-                            false,
-                        )
-                        .field(
-                            "Content",
-                            content.clone().unwrap_or_else(|| "*No content*".to_owned()),
-                            false,
-                        )
-                        .author(
-                            serenity::CreateEmbedAuthor::new(ctx.author().tag())
-                                .icon_url(ctx.author().face()),
-                        )
-                        .color(0x3bc9db),
-                ),
+                poise::CreateReply::default()
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                    .components(&[serenity::CreateComponent::Container(
+                        serenity::CreateContainer::new(&[
+                            serenity::CreateComponent::TextDisplay(
+                                serenity::CreateTextDisplay::new(format!(
+                                    "### Reminder set\n{}",
+                                    content.as_deref().unwrap_or("*No content*")
+                                )),
+                            ),
+                            serenity::CreateComponent::TextDisplay(
+                                serenity::CreateTextDisplay::new(format!(
+                                    "**Time**\n<t:{0}:F> (<t:{0}:R>)",
+                                    timestamp.timestamp(),
+                                )),
+                            ),
+                        ])
+                        .accent_color(0x3bc9db),
+                    )]),
             )
             .await?;
 

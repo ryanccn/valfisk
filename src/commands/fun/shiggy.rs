@@ -57,7 +57,7 @@ pub async fn shiggy(
                 .components(&[serenity::CreateComponent::Container(
                     serenity::CreateContainer::new(&[
                         serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                            format!("## [{0}](https://safebooru.donmai.us/posts/{0})", data.id,),
+                            format!("## [{0}](https://safebooru.donmai.us/posts/{0})", data.id),
                         )),
                         serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
                             data.tag_string.replace('_', "\\_"),

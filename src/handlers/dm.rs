@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use poise::serenity_prelude as serenity;
+use poise::serenity_prelude::{self as serenity, Mentionable as _};
 
 use eyre::Result;
 
@@ -17,25 +17,34 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
     if message.channel(&ctx).await?.private().is_some()
         && let Some(logs_channel) = CONFIG.dm_logs_channel
     {
-        let mut embed = serenity::CreateEmbed::default()
-            .description(message.content.clone())
-            .author(
-                serenity::CreateEmbedAuthor::new(message.author.tag())
-                    .icon_url(message.author.face()),
-            )
-            .color(0x9775fa)
-            .timestamp(message.timestamp);
+        let mut container =
+            serenity::CreateContainer::new(vec![serenity::CreateComponent::TextDisplay(
+                serenity::CreateTextDisplay::new(format!(
+                    "-# {} \u{00B7} {}\n{}",
+                    message.author.mention(),
+                    serenity::FormattedTimestamp::new(message.timestamp, None),
+                    message.content
+                )),
+            )])
+            .accent_color(0x9775fa);
 
         if !message.attachments.is_empty() {
-            embed = embed.field(
-                "Attachments",
-                utils::serenity::format_attachments(&message.attachments),
-                false,
-            );
+            container = container.add_component(serenity::CreateComponent::TextDisplay(
+                serenity::CreateTextDisplay::new(format!(
+                    "**Attachments**\n{}",
+                    utils::serenity::format_attachments(&message.attachments),
+                )),
+            ));
         }
 
         logs_channel
-            .send_message(&ctx.http, serenity::CreateMessage::default().embed(embed))
+            .send_message(
+                &ctx.http,
+                serenity::CreateMessage::default()
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                    .allowed_mentions(serenity::CreateAllowedMentions::new())
+                    .components(&[serenity::CreateComponent::Container(container)]),
+            )
             .await?;
     }
 

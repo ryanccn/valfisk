@@ -2,8 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use eyre::Result;
-use poise::serenity_prelude as serenity;
+use eyre::{Result, eyre};
+use poise::serenity_prelude::{self as serenity, Mentionable as _};
 
 use crate::{Context, utils};
 
@@ -31,6 +31,11 @@ pub async fn ban(
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
+    let partial_guild = ctx
+        .partial_guild()
+        .await
+        .ok_or_else(|| eyre!("failed to obtain partial guild"))?;
+
     member
         .ban(
             ctx.http(),
@@ -39,61 +44,86 @@ pub async fn ban(
         )
         .await?;
 
-    let mut dm_embed = serenity::CreateEmbed::default()
-        .title("Ban")
-        .field(
-            "User",
-            utils::serenity::format_mentionable(Some(member.user.id)),
-            false,
-        )
-        .color(0xda77f2)
-        .timestamp(serenity::Timestamp::now());
+    let mut container =
+        serenity::CreateContainer::new(vec![serenity::CreateComponent::TextDisplay(
+            serenity::CreateTextDisplay::new(format!(
+                "### Ban\n{}",
+                utils::serenity::format_mentionable(Some(member.user.id)),
+            )),
+        )])
+        .accent_color(0xda77f2);
 
     if let Some(reason) = &reason {
-        dm_embed = dm_embed.field("Reason", reason, false);
+        container = container.add_component(serenity::CreateComponent::TextDisplay(
+            serenity::CreateTextDisplay::new(format!("**Reason**\n{reason}")),
+        ));
     }
 
-    dm_embed = dm_embed.field(
-        "Days of messages deleted",
-        delete_message_days.unwrap_or(0).to_string(),
-        false,
-    );
-
     if dm.unwrap_or(true) {
-        if let Ok(dm) = member.user.create_dm_channel(ctx).await {
-            if dm
+        let dm_container = container
+            .clone()
+            .add_component(serenity::CreateComponent::TextDisplay(
+                serenity::CreateTextDisplay::new(format!(
+                    "-# {} \u{00B7} {}",
+                    partial_guild.name,
+                    serenity::FormattedTimestamp::now()
+                )),
+            ));
+
+        if let Ok(dm) = member.user.create_dm_channel(ctx).await
+            && dm
                 .id
                 .widen()
                 .send_message(
                     ctx.http(),
-                    serenity::CreateMessage::default().embed(dm_embed.clone()),
+                    serenity::CreateMessage::default()
+                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                        .allowed_mentions(serenity::CreateAllowedMentions::new())
+                        .components(vec![serenity::CreateComponent::Container(dm_container)]),
                 )
                 .await
                 .is_ok()
-            {
-                dm_embed = dm_embed.field("User notified", "Yes", false);
-            } else {
-                dm_embed = dm_embed.field("User notified", "Failed", false);
-            }
+        {
+            container = container.add_component(serenity::CreateComponent::TextDisplay(
+                serenity::CreateTextDisplay::new("**User notified**\nYes"),
+            ));
         } else {
-            dm_embed = dm_embed.field("User notified", "Failed", false);
+            container = container.add_component(serenity::CreateComponent::TextDisplay(
+                serenity::CreateTextDisplay::new("**User notified**\nFailed"),
+            ));
         }
     } else {
-        dm_embed = dm_embed.field("User notified", "No", false);
+        container = container.add_component(serenity::CreateComponent::TextDisplay(
+            serenity::CreateTextDisplay::new("**User notified**\nNo"),
+        ));
     }
 
     if let Some(storage) = &ctx.data().storage {
         let guild_config = storage.get_config(member.guild_id).await?;
 
         if let Some(logs_channel) = guild_config.moderation_logs_channel {
-            let server_embed = dm_embed.footer(
-                serenity::CreateEmbedFooter::new(ctx.author().tag()).icon_url(ctx.author().face()),
-            );
+            container = container
+                .add_component(serenity::CreateComponent::TextDisplay(
+                    serenity::CreateTextDisplay::new(format!(
+                        "**Days of messages deleted**\n{}",
+                        delete_message_days.unwrap_or(0)
+                    )),
+                ))
+                .add_component(serenity::CreateComponent::TextDisplay(
+                    serenity::CreateTextDisplay::new(format!(
+                        "-# {} \u{00B7} {}",
+                        ctx.author().mention(),
+                        serenity::FormattedTimestamp::now()
+                    )),
+                ));
 
             logs_channel
                 .send_message(
                     ctx.http(),
-                    serenity::CreateMessage::default().embed(server_embed),
+                    serenity::CreateMessage::default()
+                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                        .allowed_mentions(serenity::CreateAllowedMentions::new())
+                        .components(&[serenity::CreateComponent::Container(container)]),
                 )
                 .await?;
         }

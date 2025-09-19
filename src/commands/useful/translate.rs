@@ -80,6 +80,7 @@ There is no content to translate.",
         ctx.send(
             CreateReply::default()
                 .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                .allowed_mentions(serenity::CreateAllowedMentions::new())
                 .components(&[serenity::CreateComponent::Container(
                     serenity::CreateContainer::new(&[
                         serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
@@ -150,6 +151,7 @@ There is no content to translate.",
         ctx.send(
             CreateReply::default()
                 .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                .allowed_mentions(serenity::CreateAllowedMentions::new())
                 .components(&[serenity::CreateComponent::Container(
                     serenity::CreateContainer::new(&[
                         serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(

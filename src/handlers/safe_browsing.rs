@@ -56,47 +56,74 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                 let guild_config = storage.get_config(guild_id).await?;
 
                 if let Some(logs_channel) = guild_config.message_logs_channel {
-                    let embed = serenity::CreateEmbed::default()
-                        .title("Safe Browsing")
-                        .field(
-                            "Channel",
-                            utils::serenity::format_mentionable(Some(message.channel_id)),
-                            false,
-                        )
-                        .field(
-                            "Author",
-                            utils::serenity::format_mentionable(Some(message.author.id)),
-                            false,
-                        )
-                        .field(
-                            "Author timed out",
-                            if timed_out { "Yes" } else { "Failed" },
-                            false,
-                        )
-                        .field("Content", utils::truncate(&content, 1024), false)
-                        .field(
-                            "URLs",
-                            matches
-                                .iter()
-                                .map(|m| format!("`{}` → {}", m.0, m.1.threat_type))
-                                .collect::<Vec<_>>()
-                                .join("\n"),
-                            false,
-                        )
-                        .color(0xff6b6b)
-                        .timestamp(serenity::Timestamp::now());
+                    let mut components = vec![];
+
+                    if let Some(role) = guild_config.moderator_role {
+                        components.push(serenity::CreateComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(role.mention().to_string()),
+                        ));
+                    }
+
+                    components.push(serenity::CreateComponent::Container(
+                        serenity::CreateContainer::new(vec![
+                            serenity::CreateComponent::TextDisplay(
+                                serenity::CreateTextDisplay::new(format!(
+                                    "### Safe Browsing\n{}",
+                                    matches
+                                        .iter()
+                                        .map(|m| format!("`{}` → {}", m.0, m.1.threat_type))
+                                        .collect::<Vec<_>>()
+                                        .join("\n")
+                                )),
+                            ),
+                            serenity::CreateComponent::TextDisplay(
+                                serenity::CreateTextDisplay::new(format!(
+                                    "**Author**\n{} (*{}*)",
+                                    utils::serenity::format_mentionable(Some(message.author.id)),
+                                    if timed_out {
+                                        "timed out"
+                                    } else {
+                                        "timeout failed"
+                                    }
+                                )),
+                            ),
+                            serenity::CreateComponent::TextDisplay(
+                                serenity::CreateTextDisplay::new(format!(
+                                    "**Channel**\n{}",
+                                    utils::serenity::format_mentionable(Some(message.channel_id))
+                                )),
+                            ),
+                            serenity::CreateComponent::TextDisplay(
+                                serenity::CreateTextDisplay::new(format!(
+                                    "**Content**\n{}",
+                                    utils::truncate(&message.content, 1024)
+                                )),
+                            ),
+                            serenity::CreateComponent::TextDisplay(
+                                serenity::CreateTextDisplay::new(format!(
+                                    "-# {}",
+                                    serenity::FormattedTimestamp::now()
+                                )),
+                            ),
+                        ])
+                        .accent_color(0xff6b6b),
+                    ));
 
                     logs_channel
                         .send_message(
                             &ctx.http,
                             serenity::CreateMessage::default()
-                                .content(
-                                    guild_config
-                                        .moderator_role
-                                        .map(|r| r.mention().to_string())
-                                        .unwrap_or_default(),
+                                .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                                .allowed_mentions(
+                                    serenity::CreateAllowedMentions::new().roles(
+                                        guild_config
+                                            .moderator_role
+                                            .iter()
+                                            .copied()
+                                            .collect::<Vec<_>>(),
+                                    ),
                                 )
-                                .embed(embed),
+                                .components(&components),
                         )
                         .await?;
                 }

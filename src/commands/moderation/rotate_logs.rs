@@ -86,10 +86,12 @@ pub async fn rotate_logs(
 
     let (confirmed, reply) = utils::serenity::interaction_confirm(
         &ctx,
-        serenity::CreateEmbed::default()
-            .title("Rotate logs")
-            .description("Are you sure you want to rotate logs channels? This will delete the configured logs channels and create new ones.")
-            .color(0xffd43b),
+        serenity::CreateContainer::new(&[
+            serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                "### Rotate logs
+Are you sure you want to rotate logs channels? This will delete the configured logs channels and create new ones.",
+            )),
+        ]).accent_color(0xffd43b)
     )
     .await?;
 
@@ -127,32 +129,34 @@ pub async fn rotate_logs(
             .edit(
                 ctx,
                 CreateReply::default()
-                    .embed(
-                        serenity::CreateEmbed::default()
-                            .title("Rotated logs")
-                            .description(
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                    .components(&[serenity::CreateComponent::Container(
+                        serenity::CreateContainer::new(&[serenity::CreateComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(format!(
+                                "### Rotated logs\n{}",
                                 new_channels
                                     .iter()
                                     .map(|ch| ch.mention().to_string())
                                     .collect::<Vec<_>>()
-                                    .join("\n"),
-                            )
-                            .color(0x4ade80),
-                    )
-                    .components(vec![]),
+                                    .join(" ")
+                            )),
+                        )])
+                        .accent_color(0x4ade80),
+                    )]),
             )
             .await?;
     } else {
         reply
             .edit(
                 ctx,
-                poise::CreateReply::default()
-                    .embed(
-                        serenity::CreateEmbed::default()
-                            .title("Log rotation cancelled")
-                            .color(0xff6b6b),
-                    )
-                    .components(vec![]),
+                CreateReply::default()
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                    .components(&[serenity::CreateComponent::Container(
+                        serenity::CreateContainer::new(&[serenity::CreateComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new("### Log rotation cancelled"),
+                        )])
+                        .accent_color(0xff6b6b),
+                    )]),
             )
             .await?;
     }

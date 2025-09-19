@@ -7,8 +7,8 @@ use std::fmt;
 use poise::{
     CreateReply,
     serenity_prelude::{
-        CreateComponent, CreateContainer, CreateEmbed, CreateEmbedFooter, CreateMessage,
-        CreateTextDisplay, MessageFlags, Timestamp,
+        CreateAllowedMentions, CreateComponent, CreateContainer, CreateMessage, CreateTextDisplay,
+        FormattedTimestamp, MessageFlags,
     },
 };
 
@@ -81,7 +81,7 @@ impl ValfiskError<'_> {
                         CreateContainer::new(&[CreateComponent::TextDisplay(
                             CreateTextDisplay::new(format!(
                                 r"### An error occurred!
-You can contact the owner of this app with the error ID **`{}`** if you need support.",
+You can contact the owner of this app with the error ID `{}` if you need support.",
                                 self.error_id
                             )),
                         )])
@@ -114,43 +114,52 @@ You can contact the owner of this app with the error ID **`{}`** if you need sup
                 error_string = error_string.replace(data, "<redacted>");
             }
 
-            let mut embed = CreateEmbed::default()
-                .title("An error occurred!")
-                .description(format!("```\n{error_string}\n```"))
-                .footer(CreateEmbedFooter::new(&self.error_id))
-                .timestamp(Timestamp::now())
-                .color(0xff6b6b)
-                .field(
-                    "Command",
-                    format!("`{}`", self.ctx.invocation_string()),
-                    false,
-                )
-                .field(
-                    "Channel",
-                    format_mentionable(Some(self.ctx.channel_id())),
-                    false,
-                )
-                .field(
-                    "User",
-                    format_mentionable(Some(self.ctx.author().id)),
-                    false,
-                );
+            let mut container = CreateContainer::new(vec![
+                CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                    "### An error occurred!\n```\n{error_string}\n```",
+                ))),
+                CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                    "**Command**\n`{}`",
+                    self.ctx.invocation_string()
+                ))),
+                CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                    "**Channel**\n{}",
+                    format_mentionable(Some(self.ctx.channel_id()))
+                ))),
+                CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                    "**User**\n{}",
+                    format_mentionable(Some(self.ctx.author().id))
+                ))),
+            ])
+            .accent_color(0xff6b6b);
 
             if let Some(guild) = self.ctx.partial_guild().await {
-                embed = embed.field(
-                    "Guild",
-                    format!(
-                        "**{}** ({})\n*Owner*: {}",
+                container = container.add_component(CreateComponent::TextDisplay(
+                    CreateTextDisplay::new(format!(
+                        "**Guild**\n{} (`{}`)\n*Owner*: {}",
                         guild.name,
                         guild.id,
                         format_mentionable(Some(guild.owner_id)),
-                    ),
-                    false,
-                );
+                    )),
+                ));
             }
 
+            container = container.add_component(CreateComponent::TextDisplay(
+                CreateTextDisplay::new(format!(
+                    "-# `{}` \u{00B7} {}",
+                    self.error_id,
+                    FormattedTimestamp::now()
+                )),
+            ));
+
             if let Err(err) = channel
-                .send_message(self.ctx.http(), CreateMessage::default().embed(embed))
+                .send_message(
+                    self.ctx.http(),
+                    CreateMessage::default()
+                        .flags(MessageFlags::IS_COMPONENTS_V2)
+                        .allowed_mentions(CreateAllowedMentions::new())
+                        .components(&[CreateComponent::Container(container)]),
+                )
                 .await
             {
                 tracing::error!("{err:?}");

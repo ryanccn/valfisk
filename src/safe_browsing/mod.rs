@@ -183,12 +183,19 @@ impl SafeBrowsing {
 
         for url in urls {
             for url_prefix in Self::generate_url_prefixes(url)? {
-                let url_hash = Sha256::digest(&url_prefix).to_vec();
-
                 url_hashes
                     .entry((*url).to_string())
                     .or_default()
-                    .insert(url_hash);
+                    .insert(Sha256::digest(&url_prefix).to_vec());
+            }
+
+            if let Some(url_without_end_parens) = url.strip_suffix([')', ']']) {
+                for url_prefix in Self::generate_url_prefixes(url_without_end_parens)? {
+                    url_hashes
+                        .entry(url_without_end_parens.to_string())
+                        .or_default()
+                        .insert(Sha256::digest(&url_prefix).to_vec());
+                }
             }
         }
 

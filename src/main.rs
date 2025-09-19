@@ -130,6 +130,7 @@ async fn valfisk() -> Result<()> {
         commands: commands::all(),
         on_error: |err| Box::pin(handlers::error(err)),
         owners: CONFIG.owners.clone().unwrap_or_default(),
+        allowed_mentions: Some(serenity::CreateAllowedMentions::new().replied_user(true)),
         prefix_options: PrefixFrameworkOptions {
             mention_as_prefix: false,
             ..Default::default()

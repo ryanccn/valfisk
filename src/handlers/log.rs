@@ -79,15 +79,10 @@ pub async fn handle_message(ctx: &serenity::Context, message: &serenity::Message
     Ok(())
 }
 
-fn make_link_components<'a>(
-    link: impl Into<Cow<'a, str>>,
-    label: impl Into<Cow<'a, str>>,
-) -> Vec<serenity::CreateComponent<'a>> {
-    vec![serenity::CreateComponent::ActionRow(
-        serenity::CreateActionRow::Buttons(
-            vec![serenity::CreateButton::new_link(link).label(label)].into(),
-        ),
-    )]
+fn make_link_component<'a>(link: impl Into<Cow<'a, str>>) -> serenity::CreateComponent<'a> {
+    serenity::CreateComponent::ActionRow(serenity::CreateActionRow::Buttons(
+        vec![serenity::CreateButton::new_link(link).label("Message")].into(),
+    ))
 }
 
 #[tracing::instrument(skip_all, fields(id = ids.message.get()))]
@@ -113,48 +108,55 @@ pub async fn edit(
         }
 
         if let Some(logs_channel) = guild_config.message_logs_channel {
-            let mut embed_author = serenity::CreateEmbedAuthor::new("Message Edited");
-            if let Some(author) = ids.author
-                && let Ok(user) = author.to_user(&ctx).await
-            {
-                embed_author = embed_author.icon_url(user.face());
-            }
-
-            let mut embed = serenity::CreateEmbed::default()
-                .author(embed_author)
-                .field(
-                    "Channel",
-                    utils::serenity::format_mentionable(Some(ids.channel)),
-                    false,
-                )
-                .field(
-                    "Author",
-                    utils::serenity::format_mentionable(ids.author),
-                    false,
-                )
-                .field(
-                    "Previous content",
-                    utils::truncate(prev_content, 1024),
-                    false,
-                )
-                .field("New content", utils::truncate(new_content, 1024), false)
-                .color(0xffd43b)
-                .timestamp(serenity::Timestamp::from(*timestamp));
+            let mut container = serenity::CreateContainer::new(vec![
+                serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                    "### Message Edited",
+                )),
+                serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+                    "**Channel**\n{}",
+                    utils::serenity::format_mentionable(Some(ids.channel))
+                ))),
+                serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+                    "**Author**\n{}",
+                    utils::serenity::format_mentionable(ids.author)
+                ))),
+                serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+                    "**Previous content**\n{}",
+                    utils::truncate(prev_content, 1024)
+                ))),
+                serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+                    "**New content**\n{}",
+                    utils::truncate(new_content, 1024)
+                ))),
+            ])
+            .accent_color(0xffd43b);
 
             if !attachments.is_empty() {
-                embed = embed.field(
-                    "Attachments",
-                    utils::serenity::format_attachments(attachments),
-                    false,
-                );
+                container = container.add_component(serenity::CreateComponent::TextDisplay(
+                    serenity::CreateTextDisplay::new(format!(
+                        "**Attachments**\n{}",
+                        utils::serenity::format_attachments(attachments)
+                    )),
+                ));
             }
+
+            container = container.add_component(serenity::CreateComponent::TextDisplay(
+                serenity::CreateTextDisplay::new(format!(
+                    "-# {}",
+                    serenity::FormattedTimestamp::new((*timestamp).into(), None),
+                )),
+            ));
 
             logs_channel
                 .send_message(
                     &ctx.http,
                     serenity::CreateMessage::default()
-                        .embed(embed)
-                        .components(make_link_components(ids.link(), "Jump")),
+                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                        .allowed_mentions(serenity::CreateAllowedMentions::new())
+                        .components(&[
+                            serenity::CreateComponent::Container(container),
+                            make_link_component(ids.link()),
+                        ]),
                 )
                 .await?;
         }
@@ -180,43 +182,51 @@ pub async fn delete(
         }
 
         if let Some(logs_channel) = guild_config.message_logs_channel {
-            let mut embed_author = serenity::CreateEmbedAuthor::new("Message Deleted");
-            if let Some(author) = ids.author
-                && let Ok(user) = author.to_user(&ctx).await
-            {
-                embed_author = embed_author.icon_url(user.face());
-            }
-
-            let mut embed = serenity::CreateEmbed::default()
-                .author(embed_author)
-                .field(
-                    "Channel",
-                    utils::serenity::format_mentionable(Some(ids.channel)),
-                    false,
-                )
-                .field(
-                    "Author",
-                    utils::serenity::format_mentionable(ids.author),
-                    false,
-                )
-                .field("Content", &log.content, false)
-                .color(0xff6b6b)
-                .timestamp(serenity::Timestamp::from(*timestamp));
+            let mut container = serenity::CreateContainer::new(vec![
+                serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                    "### Message Deleted",
+                )),
+                serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+                    "**Channel**\n{}",
+                    utils::serenity::format_mentionable(Some(ids.channel))
+                ))),
+                serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+                    "**Author**\n{}",
+                    utils::serenity::format_mentionable(ids.author)
+                ))),
+                serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+                    "**Content**\n{}",
+                    utils::truncate(&log.content, 1024)
+                ))),
+            ])
+            .accent_color(0xff6b6b);
 
             if !log.attachments.is_empty() {
-                embed = embed.field(
-                    "Attachments",
-                    utils::serenity::format_attachments(&log.attachments),
-                    false,
-                );
+                container = container.add_component(serenity::CreateComponent::TextDisplay(
+                    serenity::CreateTextDisplay::new(format!(
+                        "**Attachments**\n{}",
+                        utils::serenity::format_attachments(&log.attachments)
+                    )),
+                ));
             }
+
+            container = container.add_component(serenity::CreateComponent::TextDisplay(
+                serenity::CreateTextDisplay::new(format!(
+                    "-# {}",
+                    serenity::FormattedTimestamp::new((*timestamp).into(), None),
+                )),
+            ));
 
             logs_channel
                 .send_message(
                     &ctx.http,
                     serenity::CreateMessage::default()
-                        .embed(embed)
-                        .components(make_link_components(ids.link(), "Jump")),
+                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                        .allowed_mentions(serenity::CreateAllowedMentions::new())
+                        .components(&[
+                            serenity::CreateComponent::Container(container),
+                            make_link_component(ids.link()),
+                        ]),
                 )
                 .await?;
         }
@@ -234,20 +244,21 @@ pub async fn member_join(ctx: &serenity::Context, member: &serenity::Member) -> 
             logs_channel
                 .send_message(
                     &ctx.http,
-                    serenity::CreateMessage::default().embed(
-                        serenity::CreateEmbed::default()
-                            .author(
-                                serenity::CreateEmbedAuthor::new(format!(
-                                    "@{} joined",
-                                    member.user.tag()
-                                ))
-                                .icon_url(member.user.face()),
-                            )
-                            .field("User", member.user.to_string(), false)
-                            .field("ID", format!("`{}`", member.user.id), false)
-                            .color(0x69db7c)
-                            .timestamp(serenity::Timestamp::now()),
-                    ),
+                    serenity::CreateMessage::default()
+                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                        .allowed_mentions(serenity::CreateAllowedMentions::new())
+                        .components(&[serenity::CreateComponent::Container(
+                            serenity::CreateContainer::new(vec![
+                                serenity::CreateComponent::TextDisplay(
+                                    serenity::CreateTextDisplay::new(format!(
+                                        "### Member joined\n{}\n-# {}",
+                                        utils::serenity::format_mentionable(Some(member.user.id)),
+                                        serenity::FormattedTimestamp::now()
+                                    )),
+                                ),
+                            ])
+                            .accent_color(0x69db7c),
+                        )]),
                 )
                 .await?;
         }
@@ -267,41 +278,52 @@ pub async fn member_leave(
         let guild_config = storage.get_config(guild_id).await?;
 
         if let Some(logs_channel) = guild_config.member_logs_channel {
-            let mut embed = serenity::CreateEmbed::default()
-                .author(
-                    serenity::CreateEmbedAuthor::new(format!("@{} left", user.tag()))
-                        .icon_url(user.face()),
-                )
-                .field("User", user.to_string(), false)
-                .field("ID", format!("`{}`", user.id), false)
-                .color(0xff6b6b)
-                .timestamp(serenity::Timestamp::now());
+            let mut container =
+                serenity::CreateContainer::new(vec![serenity::CreateComponent::TextDisplay(
+                    serenity::CreateTextDisplay::new(format!(
+                        "### Member left\n{}\n-# {}",
+                        utils::serenity::format_mentionable(Some(user.id)),
+                        serenity::FormattedTimestamp::now()
+                    )),
+                )])
+                .accent_color(0xff6b6b);
 
             if let Some(member) = member {
                 if let Some(roles) = member.roles(&ctx.cache) {
-                    embed = embed.field(
-                        "Roles",
-                        if roles.is_empty() {
-                            "*None*".to_owned()
-                        } else {
-                            roles
-                                .iter()
-                                .map(|r| r.to_string())
-                                .collect::<Vec<_>>()
-                                .join(" ")
-                        },
-                        false,
-                    );
+                    container = container.add_component(serenity::CreateComponent::TextDisplay(
+                        serenity::CreateTextDisplay::new(format!(
+                            "**Roles**\n{}",
+                            if roles.is_empty() {
+                                "*None*".to_owned()
+                            } else {
+                                roles
+                                    .iter()
+                                    .map(|r| r.to_string())
+                                    .collect::<Vec<_>>()
+                                    .join(" ")
+                            },
+                        )),
+                    ));
                 }
 
                 if let Some(joined_at) = member.joined_at {
-                    embed =
-                        embed.field("Joined", format!("<t:{}:F>", joined_at.timestamp()), false);
+                    container = container.add_component(serenity::CreateComponent::TextDisplay(
+                        serenity::CreateTextDisplay::new(format!(
+                            "**Joined at**\n{}",
+                            serenity::FormattedTimestamp::new(joined_at, None)
+                        )),
+                    ));
                 }
             }
 
             logs_channel
-                .send_message(&ctx.http, serenity::CreateMessage::default().embed(embed))
+                .send_message(
+                    &ctx.http,
+                    serenity::CreateMessage::default()
+                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                        .allowed_mentions(serenity::CreateAllowedMentions::new())
+                        .components(&[serenity::CreateComponent::Container(container)]),
+                )
                 .await?;
         }
     }

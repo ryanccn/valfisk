@@ -364,10 +364,10 @@ pub async fn handle_message(ctx: &serenity::Context, message: &serenity::Message
                 &ctx.http,
                 serenity::CreateMessage::default()
                     .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                    .components(components)
                     .allowed_mentions(
                         serenity::CreateAllowedMentions::default().replied_user(false),
                     )
+                    .components(components)
                     .reference_message(message),
             )
             .await?;

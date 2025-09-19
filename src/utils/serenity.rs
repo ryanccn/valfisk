@@ -85,7 +85,7 @@ pub fn format_attachments(attachments: &[serenity::Attachment]) -> String {
 
 pub async fn interaction_confirm<'a>(
     ctx: &crate::Context<'a>,
-    embed: serenity::CreateEmbed<'_>,
+    container: serenity::CreateContainer<'_>,
 ) -> Result<(bool, poise::ReplyHandle<'a>)> {
     use futures_util::StreamExt as _;
 
@@ -93,18 +93,29 @@ pub async fn interaction_confirm<'a>(
     let cancel_button_id = utils::nanoid(16);
 
     let handle = ctx
-        .send(poise::CreateReply::default().embed(embed).components(vec![
-                serenity::CreateComponent::ActionRow(serenity::CreateActionRow::Buttons(
-                    vec![
-                        serenity::CreateButton::new(&confirm_button_id)
-                            .label("Confirm")
-                            .style(serenity::ButtonStyle::Primary),
-                        serenity::CreateButton::new(&cancel_button_id)
-                            .label("Cancel")
-                            .style(serenity::ButtonStyle::Secondary),
-                    ]
-                    .into(),
-                ))]))
+        .send(
+            poise::CreateReply::default()
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                .components(vec![serenity::CreateComponent::Container(
+                    container
+                        .add_component(serenity::CreateComponent::Separator(
+                            serenity::CreateSeparator::new(false),
+                        ))
+                        .add_component(serenity::CreateComponent::ActionRow(
+                            serenity::CreateActionRow::Buttons(
+                                vec![
+                                    serenity::CreateButton::new(confirm_button_id.clone())
+                                        .label("Confirm")
+                                        .style(serenity::ButtonStyle::Primary),
+                                    serenity::CreateButton::new(cancel_button_id.clone())
+                                        .label("Cancel")
+                                        .style(serenity::ButtonStyle::Secondary),
+                                ]
+                                .into(),
+                            ),
+                        )),
+                )]),
+        )
         .await?;
 
     let interaction = timeout(

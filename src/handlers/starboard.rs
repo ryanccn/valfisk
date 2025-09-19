@@ -147,54 +147,70 @@ fn get_significant_reactions<'a>(
     collected_reactions
 }
 
-fn serialize_reactions(
-    channel: serenity::GenericChannelId,
-    reactions: &[(&serenity::ReactionType, u64)],
-) -> String {
+fn serialize_reactions(reactions: &[(&serenity::ReactionType, u64)]) -> String {
     let reaction_string = reactions
         .iter()
         .map(|r| format!("{} {}", r.0, r.1))
         .collect::<Vec<_>>()
-        .join(" ");
+        .join("  ");
 
-    format!("**{reaction_string}** in {}", channel.mention())
+    format!("**{reaction_string}**")
 }
 
-async fn make_message_embed<'a>(
+async fn make_message_container<'a>(
     ctx: &'a serenity::Context,
     message: &'a serenity::Message,
-) -> serenity::CreateEmbed<'a> {
+) -> serenity::CreateContainer<'a> {
     let content = message.content.to_string();
-    let mut builder = serenity::CreateEmbed::default()
-        .description(if content.is_empty() {
-            "*No content*".to_owned()
-        } else {
-            content
+
+    let mut container = serenity::CreateContainer::new(vec![
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+            "-# {} *in* {}",
+            message.author.mention(),
+            message.channel_id.mention(),
+        ))),
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
+            if content.is_empty() {
+                "*No content*".to_owned()
+            } else {
+                content
+            },
+        )),
+    ]);
+
+    let image_attachments = message
+        .attachments
+        .iter()
+        .filter(|att| {
+            att.content_type
+                .as_ref()
+                .is_some_and(|ct| ct.starts_with("image/"))
         })
-        .author(
-            serenity::CreateEmbedAuthor::new(message.author.tag()).icon_url(message.author.face()),
-        )
-        .timestamp(message.timestamp);
+        .take(10)
+        .collect::<Vec<_>>();
 
-    if let Some(reference) = &message.message_reference
-        && let Some(message_id) = reference.message_id
-    {
-        builder = builder.field(
-            "Replying to",
-            message_id.link(reference.channel_id, reference.guild_id),
-            false,
-        );
+    if !image_attachments.is_empty() {
+        container = container.add_component(serenity::CreateComponent::MediaGallery(
+            serenity::CreateMediaGallery::new(
+                image_attachments
+                    .iter()
+                    .map(|att| {
+                        serenity::CreateMediaGalleryItem::new(
+                            serenity::CreateUnfurledMediaItem::new(&att.url),
+                        )
+                    })
+                    .collect::<Vec<_>>(),
+            ),
+        ));
     }
 
-    if let Some(image_attachment) = message.attachments.iter().find(|att| {
-        att.content_type
-            .as_ref()
-            .is_some_and(|ct| ct.starts_with("image/"))
-    }) {
-        builder = builder.image(image_attachment.url.to_string());
-    }
-
-    builder = builder.color(0xffd43b);
+    container = container
+        .add_component(serenity::CreateComponent::TextDisplay(
+            serenity::CreateTextDisplay::new(
+                format!("-# {}", serenity::FormattedTimestamp::now(),),
+            ),
+        ))
+        .accent_color(0xffd43b);
 
     if let Some(guild_id) = message
         .guild_channel(&ctx)
@@ -208,11 +224,11 @@ async fn make_message_embed<'a>(
         roles.sort_unstable_by_key(|r| r.position);
 
         if let Some(role) = roles.last() {
-            builder = builder.color(role.colour);
+            container = container.accent_color(role.colour);
         }
     }
 
-    builder
+    container
 }
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
@@ -247,14 +263,29 @@ pub async fn handle(
                         "deleted starboard message"
                     );
                 } else {
+                    let content = serialize_reactions(&significant_reactions);
+                    let container = make_message_container(ctx, message).await;
+
+                    let row = serenity::CreateActionRow::Buttons(
+                        vec![
+                            serenity::CreateButton::new_link(message.link()).label("Go to message"),
+                        ]
+                        .into(),
+                    );
+
                     starboard
                         .edit_message(
                             &ctx.http,
                             existing_starboard_message,
-                            serenity::EditMessage::default().content(serialize_reactions(
-                                message.channel_id,
-                                &significant_reactions,
-                            )),
+                            serenity::EditMessage::default()
+                                .allowed_mentions(serenity::CreateAllowedMentions::new())
+                                .components(&[
+                                    serenity::CreateComponent::TextDisplay(
+                                        serenity::CreateTextDisplay::new(content),
+                                    ),
+                                    serenity::CreateComponent::Container(container),
+                                    serenity::CreateComponent::ActionRow(row),
+                                ]),
                         )
                         .await?;
 
@@ -265,11 +296,11 @@ pub async fn handle(
                     );
                 }
             } else if !significant_reactions.is_empty() {
-                let content = serialize_reactions(message.channel_id, &significant_reactions);
-                let embed = make_message_embed(ctx, message).await;
+                let content = serialize_reactions(&significant_reactions);
+                let container = make_message_container(ctx, message).await;
 
                 let row = serenity::CreateActionRow::Buttons(
-                    vec![serenity::CreateButton::new_link(message.link()).label("Jump to message")]
+                    vec![serenity::CreateButton::new_link(message.link()).label("Go to message")]
                         .into(),
                 );
 
@@ -277,9 +308,15 @@ pub async fn handle(
                     .send_message(
                         &ctx.http,
                         serenity::CreateMessage::default()
-                            .content(content)
-                            .embed(embed)
-                            .components(vec![serenity::CreateComponent::ActionRow(row)]),
+                            .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                            .allowed_mentions(serenity::CreateAllowedMentions::new())
+                            .components(&[
+                                serenity::CreateComponent::TextDisplay(
+                                    serenity::CreateTextDisplay::new(content),
+                                ),
+                                serenity::CreateComponent::Container(container),
+                                serenity::CreateComponent::ActionRow(row),
+                            ]),
                     )
                     .await?;
 

@@ -33,19 +33,23 @@ pub async fn self_timeout(
         let start = chrono::Utc::now();
         let end = start + duration;
 
-        let (confirmed, reply) = utils::serenity::interaction_confirm(
-            &ctx,
-            serenity::CreateEmbed::default()
-                .title("Requesting self-timeout")
-                .field("Start", format!("<t:{0}:F>", start.timestamp()), false)
-                .field(
-                    "End",
-                    format!("<t:{0}:F> (<t:{0}:R>)", end.timestamp()),
-                    false,
-                )
-                .color(0xffd43b),
-        )
-        .await?;
+        let (confirmed, reply) =
+            utils::serenity::interaction_confirm(
+                &ctx,
+                serenity::CreateContainer::new(&[
+                    serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                        "### Requesting self-timeout",
+                    )),
+                    serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                        format!("**Start**\n<t:{0}:F>", start.timestamp()),
+                    )),
+                    serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                        format!("**End**\n<t:{0}:F> (<t:{0}:R>)", end.timestamp()),
+                    )),
+                ])
+                .accent_color(0xffd43b),
+            )
+            .await?;
 
         if confirmed {
             member
@@ -64,22 +68,31 @@ pub async fn self_timeout(
                 )
                 .await?;
 
-            let info_embed = serenity::CreateEmbed::default()
-                .title("Self-timeout in effect")
-                .field("Start", format!("<t:{0}:F>", start.timestamp()), false)
-                .field(
-                    "End",
-                    format!("<t:{0}:F> (<t:{0}:R>)", end.timestamp()),
-                    false,
-                )
-                .color(0x4ade80);
-
             reply
                 .edit(
                     ctx,
                     poise::CreateReply::default()
-                        .embed(info_embed.clone())
-                        .components(vec![]),
+                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                        .components(&[serenity::CreateComponent::Container(
+                            serenity::CreateContainer::new(&[
+                                serenity::CreateComponent::TextDisplay(
+                                    serenity::CreateTextDisplay::new("### Self-timeout in effect"),
+                                ),
+                                serenity::CreateComponent::TextDisplay(
+                                    serenity::CreateTextDisplay::new(format!(
+                                        "**Start**\n<t:{0}:F>",
+                                        start.timestamp()
+                                    )),
+                                ),
+                                serenity::CreateComponent::TextDisplay(
+                                    serenity::CreateTextDisplay::new(format!(
+                                        "**End**\n<t:{0}:F> (<t:{0}:R>)",
+                                        end.timestamp()
+                                    )),
+                                ),
+                            ])
+                            .accent_color(0x4ade80),
+                        )]),
                 )
                 .await?;
         } else {
@@ -87,18 +100,27 @@ pub async fn self_timeout(
                 .edit(
                     ctx,
                     poise::CreateReply::default()
-                        .embed(
-                            serenity::CreateEmbed::default()
-                                .title("Self-timeout cancelled")
-                                .field("Start", format!("<t:{0}:F>", start.timestamp()), false)
-                                .field(
-                                    "End",
-                                    format!("<t:{0}:F> (<t:{0}:R>)", end.timestamp()),
-                                    false,
-                                )
-                                .color(0xff6b6b),
-                        )
-                        .components(vec![]),
+                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                        .components(&[serenity::CreateComponent::Container(
+                            serenity::CreateContainer::new(&[
+                                serenity::CreateComponent::TextDisplay(
+                                    serenity::CreateTextDisplay::new("### Self-timeout cancelled"),
+                                ),
+                                serenity::CreateComponent::TextDisplay(
+                                    serenity::CreateTextDisplay::new(format!(
+                                        "**Start**\n<t:{0}:F>",
+                                        start.timestamp()
+                                    )),
+                                ),
+                                serenity::CreateComponent::TextDisplay(
+                                    serenity::CreateTextDisplay::new(format!(
+                                        "**End**\n<t:{0}:F> (<t:{0}:R>)",
+                                        end.timestamp()
+                                    )),
+                                ),
+                            ])
+                            .accent_color(0xff6b6b),
+                        )]),
                 )
                 .await?;
         }

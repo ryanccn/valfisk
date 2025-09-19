@@ -6,7 +6,8 @@ use eyre::Result;
 use poise::{
     CreateReply,
     serenity_prelude::{
-        CreateComponent, CreateContainer, CreateSeparator, CreateTextDisplay, MessageFlags,
+        CreateAllowedMentions, CreateComponent, CreateContainer, CreateSeparator,
+        CreateTextDisplay, MessageFlags,
     },
 };
 
@@ -48,6 +49,7 @@ pub async fn unicode(
         ctx.send(
             CreateReply::default()
                 .flags(MessageFlags::IS_COMPONENTS_V2)
+                .allowed_mentions(CreateAllowedMentions::new())
                 .components(&[
                     CreateComponent::Container(CreateContainer::new(&[
                         CreateComponent::TextDisplay(CreateTextDisplay::new(compact_info)),
@@ -137,6 +139,7 @@ pub async fn unicode(
         ctx.send(
             CreateReply::default()
                 .flags(MessageFlags::IS_COMPONENTS_V2)
+                .allowed_mentions(CreateAllowedMentions::new())
                 .components(components),
         )
         .await?;
