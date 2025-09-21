@@ -206,9 +206,10 @@ async fn make_message_container<'a>(
 
     container = container
         .add_component(serenity::CreateComponent::TextDisplay(
-            serenity::CreateTextDisplay::new(
-                format!("-# {}", serenity::FormattedTimestamp::now(),),
-            ),
+            serenity::CreateTextDisplay::new(format!(
+                "-# {}",
+                serenity::FormattedTimestamp::new(message.timestamp, None),
+            )),
         ))
         .accent_color(0xffd43b);
 
