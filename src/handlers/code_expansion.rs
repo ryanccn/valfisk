@@ -4,6 +4,7 @@
 
 use poise::serenity_prelude as serenity;
 use regex::Regex;
+use reqwest::header;
 
 use eyre::{Result, bail};
 use std::{pin::Pin, sync::LazyLock};
@@ -97,6 +98,125 @@ async fn github(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateCom
         )),
         serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
             "-# GitHub · {}",
+            serenity::FormattedTimestamp::now()
+        ))),
+        serenity::CreateComponent::Separator(serenity::CreateSeparator::new(true)),
+    ])
+}
+
+static TANGLED: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"https?://tangled\.org/(?P<repo>@[\w.\-]+/[\w.\-]+)/blob/(?P<ref>\S+?)/(?P<file>[^\s?]+)(\?\S*)?#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
+});
+
+#[tracing::instrument]
+async fn tangled(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateComponent<'static>>> {
+    tracing::debug!(link = &captures[0], "handling Tangled link");
+
+    let repo = &captures["repo"];
+    let r#ref = &captures["ref"];
+    let file = &captures["file"];
+
+    let language = file.split('.').next_back().unwrap_or_default();
+
+    let start = captures["start"].parse::<usize>()?;
+    let end = captures
+        .name("end")
+        .and_then(|end| end.as_str().parse::<usize>().ok());
+
+    let lines: Vec<String> = HTTP
+        .get(format!("https://tangled.org/{repo}/raw/{ref}/{file}"))
+        .send()
+        .await?
+        .error_for_status()?
+        .text()
+        .await?
+        .lines()
+        .map(|s| s.to_owned())
+        .collect();
+
+    let Some(selected_lines) = lines
+        .get((start - 1)..(end.unwrap_or(start)))
+        .map(|l| l.join("\n"))
+    else {
+        bail!("out of bounds line indexes");
+    };
+
+    Ok(vec![
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+            "### {repo} {file} L{start}{}",
+            end.map(|end| format!("-{end}")).unwrap_or_default()
+        ))),
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
+            "```".to_owned()
+                + language
+                + "\n"
+                + &truncate(&escape_backticks(&dedent(&selected_lines)), 2048)
+                + "\n```",
+        )),
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+            "-# Tangled · {}",
+            serenity::FormattedTimestamp::now()
+        ))),
+        serenity::CreateComponent::Separator(serenity::CreateSeparator::new(true)),
+    ])
+}
+
+static TANGLED_STRINGS: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"https?://tangled\.org/strings/(?P<string>@?[\w.\-]+/\w+)(\?\S*)?#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
+});
+
+#[tracing::instrument]
+async fn tangled_strings(
+    captures: regex::Captures<'_>,
+) -> Result<Vec<serenity::CreateComponent<'static>>> {
+    tracing::debug!(link = &captures[0], "handling Tangled strings link");
+
+    let string = &captures["string"];
+
+    let start = captures["start"].parse::<usize>()?;
+    let end = captures
+        .name("end")
+        .and_then(|end| end.as_str().parse::<usize>().ok());
+
+    let resp = HTTP
+        .get(format!("https://tangled.org/strings/{string}/raw"))
+        .send()
+        .await?
+        .error_for_status()?;
+
+    let language = resp
+        .headers()
+        .get(header::CONTENT_DISPOSITION)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.strip_prefix("inline; filename=\""))
+        .and_then(|s| s.strip_suffix("\""))
+        .and_then(|s| s.split('.').next_back())
+        .map(|s| s.to_owned())
+        .unwrap_or_default();
+
+    let lines: Vec<String> = resp.text().await?.lines().map(|s| s.to_owned()).collect();
+
+    let Some(selected_lines) = lines
+        .get((start - 1)..(end.unwrap_or(start)))
+        .map(|l| l.join("\n"))
+    else {
+        bail!("out of bounds line indexes");
+    };
+
+    Ok(vec![
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+            "### {string} L{start}{}",
+            end.map(|end| format!("-{end}")).unwrap_or_default()
+        ))),
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
+            "```".to_owned()
+                + &language
+                + "\n"
+                + &truncate(&escape_backticks(&dedent(&selected_lines)), 2048)
+                + "\n```",
+        )),
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+            "-# Tangled Strings · {}",
             serenity::FormattedTimestamp::now()
         ))),
         serenity::CreateComponent::Separator(serenity::CreateSeparator::new(true)),
@@ -304,6 +424,14 @@ pub async fn resolve(content: &str) -> Result<Vec<serenity::CreateComponent<'sta
 
     for captures in GITHUB.captures_iter(content) {
         components_tasks.push(Box::pin(async move { github(captures).await }));
+    }
+
+    for captures in TANGLED.captures_iter(content) {
+        components_tasks.push(Box::pin(async move { tangled(captures).await }));
+    }
+
+    for captures in TANGLED_STRINGS.captures_iter(content) {
+        components_tasks.push(Box::pin(async move { tangled_strings(captures).await }));
     }
 
     for captures in CODEBERG.captures_iter(content) {

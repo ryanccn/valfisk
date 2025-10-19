@@ -77,7 +77,7 @@ pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
 
     if let Some(storage) = &ctx.data().storage {
         container = container.add_component(CreateComponent::TextDisplay(CreateTextDisplay::new(
-            format!("**KV keys**\n{:.2}%", storage.size().await?),
+            format!("**KV keys**\n{}", storage.size().await?),
         )));
     }
 
