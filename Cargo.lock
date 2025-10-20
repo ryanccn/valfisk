@@ -1417,7 +1417,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.5.10",
+ "socket2 0.6.1",
  "system-configuration",
  "tokio",
  "tower-service",
@@ -2075,7 +2075,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2362,7 +2362,7 @@ dependencies = [
 [[package]]
 name = "poise"
 version = "0.6.1"
-source = "git+https://github.com/serenity-rs/poise.git?branch=serenity-next#fe2f25097166e1e7fb56f341cbad9a2bc771a931"
+source = "git+https://github.com/serenity-rs/poise.git?branch=serenity-next#17fd1d760ea810ce7f9b1810281a556bea4b340b"
 dependencies = [
  "async-trait",
  "derivative",
@@ -2380,7 +2380,7 @@ dependencies = [
 [[package]]
 name = "poise_macros"
 version = "0.6.1"
-source = "git+https://github.com/serenity-rs/poise.git?branch=serenity-next#fe2f25097166e1e7fb56f341cbad9a2bc771a931"
+source = "git+https://github.com/serenity-rs/poise.git?branch=serenity-next#17fd1d760ea810ce7f9b1810281a556bea4b340b"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -2501,7 +2501,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash",
  "rustls",
- "socket2 0.5.10",
+ "socket2 0.6.1",
  "thiserror 2.0.17",
  "tokio",
  "tracing",
@@ -2538,9 +2538,9 @@ dependencies = [
  "cfg_aliases",
  "libc",
  "once_cell",
- "socket2 0.5.10",
+ "socket2 0.6.1",
  "tracing",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -3103,7 +3103,7 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.12.4"
-source = "git+https://github.com/serenity-rs/serenity?branch=next#5ffc96697025b4363995a158eb9f74e68024045c"
+source = "git+https://github.com/serenity-rs/serenity?branch=next#e801f3a4609d46c09f2c0a6124156a5994bb398a"
 dependencies = [
  "aformat",
  "arrayvec",
