@@ -42,7 +42,7 @@ toml = "0.9.8"
 tracing = "0.1.41"
 tracing-error = "0.2.1"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
-typst = "0.13.1"
+typst = "0.14.0"
 typst-assets = { version = "0.13.1", features = ["fonts"] }
 typst-render = "0.13.1"
 unic = "0.9.0"
