@@ -33,7 +33,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Nix
-        uses: cachix/install-nix-action@fd24c48048070c1be9acd18c9d369a83f0fe94d7 # ratchet:cachix/install-nix-action@v31
+        uses: cachix/install-nix-action@456688f15bc354bef6d396e4a35f4f89d40bf2b7 # ratchet:cachix/install-nix-action@v31
 
       - name: Build Docker image
         id: image
@@ -43,7 +43,7 @@ jobs:
           echo "path=$(realpath result)" >> "$GITHUB_OUTPUT"
 
       - name: Upload image
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # ratchet:actions/upload-artifact@v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # ratchet:actions/upload-artifact@v4
         with:
           name: docker-image-${{ matrix.arch }}
           path: ${{ steps.image.outputs.path }}
@@ -64,7 +64,7 @@ jobs:
     if: github.event_name == 'push'
 
     steps:
-      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # ratchet:actions/download-artifact@v5
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # ratchet:actions/download-artifact@v5
         with:
           path: images
 
