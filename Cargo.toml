@@ -13,9 +13,9 @@ license = "AGPL-3.0-only"
 publish = false
 
 [dependencies]
-axum = "0.8.6"
+axum = "0.8.7"
 base64 = "0.22.1"
-bytesize = "2.1.0"
+bytesize = "2.3.1"
 chrono = "0.4.42"
 color-eyre = "0.6.5"
 dotenvy = "0.15.7"
@@ -24,7 +24,7 @@ eyre = "0.6.12"
 futures-util = "0.3.31"
 hickory-resolver = { version = "0.25.2", features = ["https-ring", "dnssec-ring", "webpki-roots"] }
 humantime = "2.3.0"
-indexmap = { version = "2.12.0", features = ["serde"] }
+indexmap = { version = "2.12.1", features = ["serde"] }
 oxipng = { version = "9.1", features = ["parallel", "zopfli", "filetime"], default-features = false }
 percent-encoding = "2.3.2"
 poise = { git = "https://github.com/serenity-rs/poise.git", branch = "serenity-next" }
@@ -39,9 +39,9 @@ sha2 = "0.10.9"
 sysinfo = "0.37.2"
 tokio = { version = "1.48.0", features = ["full"] }
 toml = "0.9.8"
-tracing = "0.1.41"
+tracing = "0.1.43"
 tracing-error = "0.2.1"
-tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 typst = "0.13.1"
 typst-assets = { version = "0.13.1", features = ["fonts"] }
 typst-render = "0.13.1"
