@@ -4,13 +4,14 @@
 
 use std::fmt;
 
-use poise::serenity_prelude::ActivityData;
+use poise::{ChoiceParameter, serenity_prelude::ActivityData};
 
 use serde::{Deserialize, Serialize};
 
-#[derive(poise::ChoiceParameter, Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(ChoiceParameter, Serialize, Deserialize, Default, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum PresenceKind {
+    #[default]
     Custom,
     Playing,
     Watching,
@@ -26,12 +27,6 @@ impl PresenceKind {
             r#type: self,
             content: content.to_owned(),
         }
-    }
-}
-
-impl Default for PresenceKind {
-    fn default() -> Self {
-        Self::Custom
     }
 }
 

@@ -11,7 +11,7 @@ use tokio::{task, time::timeout};
 use poise::{CreateReply, serenity_prelude as serenity};
 
 use typst::{
-    Library,
+    Library, LibraryExt,
     diag::{FileError, FileResult},
     foundations::{Bytes, Datetime},
     layout::{Abs, PagedDocument},
@@ -45,7 +45,7 @@ impl ValfiskTypstWorld {
             source,
             book: LazyHash::new(FontBook::from_fonts(&fonts)),
             fonts,
-            library: LazyHash::new(Library::builder().build()),
+            library: LazyHash::new(Library::default()),
         }
     }
 }

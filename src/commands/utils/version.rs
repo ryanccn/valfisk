@@ -40,11 +40,19 @@ pub async fn version(ctx: Context<'_>) -> Result<()> {
             .flags(MessageFlags::IS_COMPONENTS_V2)
             .components(&[CreateComponent::Container(CreateContainer::new(&[
                 CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
-                    r"## Valfisk{version_suffix}
-**Runtime OS**: {ARCH}-{OS}
-**Build target**: {target}
-**Build host**: {host}
-**Revision**: {revision}"
+                    "## Valfisk{version_suffix}"
+                ))),
+                CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                    "**Runtime OS**\n{ARCH}-{OS}"
+                ))),
+                CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                    "**Build target**\n{target}"
+                ))),
+                CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                    "**Build host**\n{host}"
+                ))),
+                CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                    "**Revision**\n{revision}"
                 ))),
             ]))]),
     )
