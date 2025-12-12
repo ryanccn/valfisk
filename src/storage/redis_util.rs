@@ -10,23 +10,15 @@ macro_rules! impl_redis_serde {
     ($($t: ty),+ $(,)?) => {
         $(
         impl ::redis::FromRedisValue for $t {
-            fn from_redis_value(v: &::redis::Value) -> ::redis::RedisResult<Self> {
-                use ::redis::{ErrorKind, RedisError, Value};
+            fn from_redis_value(v: ::redis::Value) -> Result<Self, ::redis::ParsingError> {
+                use ::redis::{ParsingError, Value};
 
                 let Value::BulkString(bytes) = v else {
-                    return Err(RedisError::from((
-                        ErrorKind::TypeError,
-                        "Expected a string",
-                        format!("{v:?}"),
-                    )));
+                    return Err(ParsingError::from(format!("Expected a string: {v:?}")));
                 };
 
                 ::serde_json::from_slice(&bytes).map_err(|e| {
-                    RedisError::from((
-                        ErrorKind::TypeError,
-                        "Failed to deserialize JSON data",
-                        format!("{e:?}"),
-                    ))
+                    ParsingError::from(format!("Failed to deserialize JSON data: {e:?}"))
                 })
             }
         }
@@ -39,6 +31,8 @@ macro_rules! impl_redis_serde {
                 out.write_arg(&::serde_json::to_vec(self).unwrap());
             }
         }
+
+        impl ::redis::ToSingleRedisArg for $t {}
         )+
     };
 }

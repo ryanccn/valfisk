@@ -35,8 +35,8 @@ impl Storage {
         let conn = ConnectionManager::new_with_config(
             redis,
             ConnectionManagerConfig::new()
-                .set_connection_timeout(Duration::from_secs(10))
-                .set_response_timeout(Duration::from_secs(60))
+                .set_connection_timeout(Some(Duration::from_secs(10)))
+                .set_response_timeout(Some(Duration::from_secs(60)))
                 .set_number_of_retries(3),
         )
         .await?;
@@ -117,6 +117,8 @@ mod keys {
             out.write_arg(self.to_string().as_bytes());
         }
     }
+
+    impl redis::ToSingleRedisArg for StorageKey {}
 
     pub const GUILD_CONFIG: StorageKey = StorageKey::new("guild-config-v1");
     pub const PRESENCE: StorageKey = StorageKey::new("presence-v1");
@@ -237,7 +239,9 @@ impl Storage {
             .iter_async::<ReminderData>(&mut conn)
             .await?
             .collect::<Vec<_>>()
-            .await;
+            .await
+            .into_iter()
+            .collect::<RedisResult<Vec<_>>>()?;
 
         Ok(values)
     }
@@ -270,7 +274,9 @@ impl Storage {
             .hscan(keys::AUTOREPLY.guild(guild_id))
             .await?
             .collect::<Vec<_>>()
-            .await;
+            .await
+            .into_iter()
+            .collect::<RedisResult<Vec<_>>>()?;
 
         Ok(values)
     }
