@@ -59,6 +59,13 @@ async fn is_excluded_message(
         return true;
     }
 
+    if let (Some(guild), Some(author)) = (ids.guild, ids.author)
+        && let Ok(guild) = guild.to_partial_guild(&ctx).await
+        && guild.owner_id == author
+    {
+        return true;
+    }
+
     false
 }
 
