@@ -56,21 +56,28 @@ pub async fn shiggy(
                 .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
                 .components(&[serenity::CreateComponent::Container(
                     serenity::CreateContainer::new(&[
-                        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                            format!("## [{0}](https://safebooru.donmai.us/posts/{0})", data.id),
-                        )),
-                        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                            data.tag_string.replace('_', "\\_"),
-                        )),
-                        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                            data.source,
-                        )),
-                        serenity::CreateComponent::Separator(serenity::CreateSeparator::new(false)),
-                        serenity::CreateComponent::MediaGallery(serenity::CreateMediaGallery::new(
-                            &[serenity::CreateMediaGalleryItem::new(
-                                serenity::CreateUnfurledMediaItem::new(data.file_url),
-                            )],
-                        )),
+                        serenity::CreateContainerComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(format!(
+                                "## [{0}](https://safebooru.donmai.us/posts/{0})",
+                                data.id
+                            )),
+                        ),
+                        serenity::CreateContainerComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(data.tag_string.replace('_', "\\_")),
+                        ),
+                        serenity::CreateContainerComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(data.source),
+                        ),
+                        serenity::CreateContainerComponent::Separator(
+                            serenity::CreateSeparator::new(false),
+                        ),
+                        serenity::CreateContainerComponent::MediaGallery(
+                            serenity::CreateMediaGallery::new(&[
+                                serenity::CreateMediaGalleryItem::new(
+                                    serenity::CreateUnfurledMediaItem::new(data.file_url),
+                                ),
+                            ]),
+                        ),
                     ]),
                 )]),
         )

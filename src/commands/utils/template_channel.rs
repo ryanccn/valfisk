@@ -6,8 +6,8 @@ use eyre::Result;
 use poise::{
     CreateReply,
     serenity_prelude::{
-        CreateComponent, CreateContainer, CreateTextDisplay, GenericChannelId, Mentionable as _,
-        MessageFlags, futures::StreamExt as _,
+        CreateComponent, CreateContainer, CreateContainerComponent, CreateTextDisplay,
+        GenericChannelId, Mentionable as _, MessageFlags, futures::StreamExt as _,
     },
 };
 
@@ -64,10 +64,10 @@ pub async fn template_channel(
             .flags(MessageFlags::IS_COMPONENTS_V2)
             .components(&[CreateComponent::Container(
                 CreateContainer::new(&[
-                    CreateComponent::TextDisplay(CreateTextDisplay::new(
+                    CreateContainerComponent::TextDisplay(CreateTextDisplay::new(
                         "### Applied channel template",
                     )),
-                    CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                    CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                         "`{url}` → {} (*{} components*)",
                         channel.mention(),
                         data.components.len()

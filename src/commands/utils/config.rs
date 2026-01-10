@@ -6,8 +6,8 @@ use eyre::{Result, eyre};
 use poise::{
     CreateReply,
     serenity_prelude::{
-        ChannelType, CreateActionRow, CreateComponent, CreateContainer, CreateSelectMenu,
-        CreateSelectMenuKind, CreateTextDisplay, MessageFlags,
+        ChannelType, CreateActionRow, CreateComponent, CreateContainer, CreateContainerComponent,
+        CreateSelectMenu, CreateSelectMenuKind, CreateTextDisplay, MessageFlags,
     },
 };
 
@@ -298,8 +298,10 @@ async fn starboard(
             .flags(MessageFlags::IS_COMPONENTS_V2)
             .components(&[CreateComponent::Container(
                 CreateContainer::new(&[
-                    CreateComponent::TextDisplay(CreateTextDisplay::new("### Configuration")),
-                    CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                    CreateContainerComponent::TextDisplay(CreateTextDisplay::new(
+                        "### Configuration",
+                    )),
+                    CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                         "```json\n{}\n```",
                         serde_json::to_string_pretty(&data)?
                     ))),
@@ -341,8 +343,10 @@ async fn raw(ctx: Context<'_>) -> Result<()> {
             .flags(MessageFlags::IS_COMPONENTS_V2)
             .components(&[CreateComponent::Container(
                 CreateContainer::new(&[
-                    CreateComponent::TextDisplay(CreateTextDisplay::new("### Configuration")),
-                    CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                    CreateContainerComponent::TextDisplay(CreateTextDisplay::new(
+                        "### Configuration",
+                    )),
+                    CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                         "```json\n{}\n```",
                         serde_json::to_string_pretty(&data)?
                     ))),
@@ -383,9 +387,9 @@ async fn reset(ctx: Context<'_>) -> Result<()> {
         CreateReply::default()
             .flags(MessageFlags::IS_COMPONENTS_V2)
             .components(&[CreateComponent::Container(
-                CreateContainer::new(&[CreateComponent::TextDisplay(CreateTextDisplay::new(
-                    "### Reset configuration",
-                ))])
+                CreateContainer::new(&[CreateContainerComponent::TextDisplay(
+                    CreateTextDisplay::new("### Reset configuration"),
+                )])
                 .accent_color(0x63e6be),
             )]),
     )

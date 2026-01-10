@@ -125,8 +125,8 @@ async fn valfisk() -> Result<()> {
             | serenity::GatewayIntents::GUILD_MEMBERS
             | serenity::GatewayIntents::MESSAGE_CONTENT,
     )
-    .event_handler(EventHandler)
-    .framework(Framework::new(FrameworkOptions {
+    .event_handler(Arc::new(EventHandler))
+    .framework(Box::new(Framework::new(FrameworkOptions {
         commands: commands::all(),
         on_error: |err| Box::pin(handlers::error(err)),
         owners: CONFIG.owners.clone().unwrap_or_default(),
@@ -136,7 +136,7 @@ async fn valfisk() -> Result<()> {
             ..Default::default()
         },
         ..Default::default()
-    }))
+    })))
     .data(Arc::clone(&data))
     .await?;
 

@@ -6,7 +6,8 @@ use eyre::Result;
 
 use indexmap::IndexMap;
 use poise::serenity_prelude::{
-    CreateComponent, CreateContainer, CreateMessage, CreateTextDisplay, MessageFlags,
+    CreateComponent, CreateContainer, CreateContainerComponent, CreateMessage, CreateTextDisplay,
+    MessageFlags,
 };
 use serde::Deserialize;
 
@@ -92,28 +93,33 @@ impl Template {
                                 let mut container = CreateContainer::new(&[]);
 
                                 if let Some(title) = &data.title {
-                                    container =
-                                        container.add_component(CreateComponent::TextDisplay(
+                                    container = container.add_component(
+                                        CreateContainerComponent::TextDisplay(
                                             CreateTextDisplay::new(format!(
                                                 "{} {title}",
                                                 if idx == 0 { "##" } else { "###" }
                                             )),
-                                        ));
+                                        ),
+                                    );
                                 }
 
                                 if let Some(description) = &data.description {
-                                    container =
-                                        container.add_component(CreateComponent::TextDisplay(
+                                    container = container.add_component(
+                                        CreateContainerComponent::TextDisplay(
                                             CreateTextDisplay::new(description),
-                                        ));
+                                        ),
+                                    );
                                 }
 
                                 if let Some(fields) = &data.fields {
                                     for field in fields {
                                         container = container.add_component(
-                                            CreateComponent::TextDisplay(CreateTextDisplay::new(
-                                                format!("**{}**\n{}", field.name, field.value),
-                                            )),
+                                            CreateContainerComponent::TextDisplay(
+                                                CreateTextDisplay::new(format!(
+                                                    "**{}**\n{}",
+                                                    field.name, field.value
+                                                )),
+                                            ),
                                         );
                                     }
                                 }
@@ -131,7 +137,7 @@ impl Template {
                     .flags(MessageFlags::IS_COMPONENTS_V2)
                     .components({
                         let mut container =
-                            CreateContainer::new(vec![CreateComponent::TextDisplay(
+                            CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
                                 CreateTextDisplay::new(format!(
                                     "### {}\n{}",
                                     data.title,
@@ -157,13 +163,11 @@ impl Template {
                             .iter()
                             .enumerate()
                             .map(|(idx, (title, desc))| {
-                                let mut container =
-                                    CreateContainer::new(vec![CreateComponent::TextDisplay(
-                                        CreateTextDisplay::new(format!(
-                                            "### {}\u{200B}. {title}\n{desc}",
-                                            idx + 1,
-                                        )),
-                                    )]);
+                                let mut container = CreateContainer::new(vec![
+                                    CreateContainerComponent::TextDisplay(CreateTextDisplay::new(
+                                        format!("### {}\u{200B}. {title}\n{desc}", idx + 1,),
+                                    )),
+                                ]);
 
                                 if let Some(color) = data.colors.get(idx % data.colors.len()) {
                                     container = container.accent_color(*color);

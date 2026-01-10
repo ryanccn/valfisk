@@ -164,12 +164,12 @@ async fn make_message_container<'a>(
     let content = message.content.to_string();
 
     let mut container = serenity::CreateContainer::new(vec![
-        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+        serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
             "-# {} *in* {}",
             message.author.mention(),
             message.channel_id.mention(),
         ))),
-        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
+        serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
             if content.is_empty() {
                 "*No content*".to_owned()
             } else {
@@ -190,7 +190,7 @@ async fn make_message_container<'a>(
         .collect::<Vec<_>>();
 
     if !image_attachments.is_empty() {
-        container = container.add_component(serenity::CreateComponent::MediaGallery(
+        container = container.add_component(serenity::CreateContainerComponent::MediaGallery(
             serenity::CreateMediaGallery::new(
                 image_attachments
                     .iter()
@@ -205,7 +205,7 @@ async fn make_message_container<'a>(
     }
 
     container = container
-        .add_component(serenity::CreateComponent::TextDisplay(
+        .add_component(serenity::CreateContainerComponent::TextDisplay(
             serenity::CreateTextDisplay::new(format!(
                 "-# {}",
                 serenity::FormattedTimestamp::new(message.timestamp, None),
@@ -269,7 +269,8 @@ pub async fn handle(
 
                     let row = serenity::CreateActionRow::Buttons(
                         vec![
-                            serenity::CreateButton::new_link(message.link()).label("Go to message"),
+                            serenity::CreateButton::new_link(message.link().to_string())
+                                .label("Go to message"),
                         ]
                         .into(),
                     );
@@ -301,8 +302,11 @@ pub async fn handle(
                 let container = make_message_container(ctx, message).await;
 
                 let row = serenity::CreateActionRow::Buttons(
-                    vec![serenity::CreateButton::new_link(message.link()).label("Go to message")]
-                        .into(),
+                    vec![
+                        serenity::CreateButton::new_link(message.link().to_string())
+                            .label("Go to message"),
+                    ]
+                    .into(),
                 );
 
                 let starboard_message = starboard

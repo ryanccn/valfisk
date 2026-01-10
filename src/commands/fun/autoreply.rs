@@ -6,7 +6,8 @@ use eyre::{Result, eyre};
 use poise::{
     CreateReply,
     serenity_prelude::{
-        CreateComponent, CreateContainer, CreateTextDisplay, FormattedTimestamp, MessageFlags,
+        CreateComponent, CreateContainer, CreateContainerComponent, CreateTextDisplay,
+        FormattedTimestamp, MessageFlags,
     },
 };
 
@@ -55,16 +56,18 @@ async fn list(ctx: Context<'_>) -> Result<()> {
             .flags(MessageFlags::IS_COMPONENTS_V2)
             .components(&[CreateComponent::Container(
                 CreateContainer::new(&[
-                    CreateComponent::TextDisplay(CreateTextDisplay::new("### Autoreply")),
-                    CreateComponent::TextDisplay(CreateTextDisplay::new(if data.is_empty() {
-                        "*None*".to_owned()
-                    } else {
-                        data.into_iter()
-                            .map(|(k, v)| format!("`{k}` → `{v}`"))
-                            .collect::<Vec<_>>()
-                            .join("\n")
-                    })),
-                    CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                    CreateContainerComponent::TextDisplay(CreateTextDisplay::new("### Autoreply")),
+                    CreateContainerComponent::TextDisplay(CreateTextDisplay::new(
+                        if data.is_empty() {
+                            "*None*".to_owned()
+                        } else {
+                            data.into_iter()
+                                .map(|(k, v)| format!("`{k}` → `{v}`"))
+                                .collect::<Vec<_>>()
+                                .join("\n")
+                        },
+                    )),
+                    CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                         "-# {}",
                         FormattedTimestamp::now()
                     ))),
@@ -109,13 +112,13 @@ async fn add(
             .flags(MessageFlags::IS_COMPONENTS_V2)
             .components(&[CreateComponent::Container(
                 CreateContainer::new(&[
-                    CreateComponent::TextDisplay(CreateTextDisplay::new(
+                    CreateContainerComponent::TextDisplay(CreateTextDisplay::new(
                         "### Added autoreply keyword",
                     )),
-                    CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                    CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                         "`{keyword}` → `{reply}`"
                     ))),
-                    CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                    CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                         "-# {}",
                         FormattedTimestamp::now()
                     ))),
@@ -159,11 +162,13 @@ async fn delete(
             .flags(MessageFlags::IS_COMPONENTS_V2)
             .components(&[CreateComponent::Container(
                 CreateContainer::new(&[
-                    CreateComponent::TextDisplay(CreateTextDisplay::new(
+                    CreateContainerComponent::TextDisplay(CreateTextDisplay::new(
                         "### Deleted autoreply keyword",
                     )),
-                    CreateComponent::TextDisplay(CreateTextDisplay::new(format!("`{keyword}`"))),
-                    CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                    CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
+                        "`{keyword}`"
+                    ))),
+                    CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                         "-# {}",
                         FormattedTimestamp::now()
                     ))),
@@ -205,10 +210,10 @@ async fn delete_all(ctx: Context<'_>) -> Result<()> {
             .flags(MessageFlags::IS_COMPONENTS_V2)
             .components(&[CreateComponent::Container(
                 CreateContainer::new(&[
-                    CreateComponent::TextDisplay(CreateTextDisplay::new(
+                    CreateContainerComponent::TextDisplay(CreateTextDisplay::new(
                         "### Deleted all autoreply keywords",
                     )),
-                    CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                    CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                         "-# {}",
                         FormattedTimestamp::now()
                     ))),

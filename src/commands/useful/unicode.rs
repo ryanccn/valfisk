@@ -6,8 +6,8 @@ use eyre::Result;
 use poise::{
     CreateReply,
     serenity_prelude::{
-        CreateAllowedMentions, CreateComponent, CreateContainer, CreateSeparator,
-        CreateTextDisplay, MessageFlags,
+        CreateAllowedMentions, CreateComponent, CreateContainer, CreateContainerComponent,
+        CreateSeparator, CreateTextDisplay, MessageFlags,
     },
 };
 
@@ -52,8 +52,8 @@ pub async fn unicode(
                 .allowed_mentions(CreateAllowedMentions::new())
                 .components(&[
                     CreateComponent::Container(CreateContainer::new(&[
-                        CreateComponent::TextDisplay(CreateTextDisplay::new(compact_info)),
-                        CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                        CreateContainerComponent::TextDisplay(CreateTextDisplay::new(compact_info)),
+                        CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                             "-# Unicode {} \u{00B7} [Unicode and Internationalization Crates for Rust](https://docs.rs/unic/)",
                             unic::UNICODE_VERSION
                         ))),
@@ -66,7 +66,7 @@ pub async fn unicode(
 
         for character in input.chars() {
             let char_components = vec![
-                CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                     r"### {}{}
 ## {character}",
                     unic::char::basics::unicode_notation(character),
@@ -76,8 +76,8 @@ pub async fn unicode(
                         String::new()
                     },
                 ))),
-                CreateComponent::Separator(CreateSeparator::new(true)),
-                CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                CreateContainerComponent::Separator(CreateSeparator::new(true)),
+                CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                     r"**Block**: {}
 **General Category**: {}
 **Age**: {}",
@@ -91,8 +91,8 @@ pub async fn unicode(
                         None => "Unknown".to_owned(),
                     },
                 ))),
-                CreateComponent::Separator(CreateSeparator::new(true)),
-                CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                CreateContainerComponent::Separator(CreateSeparator::new(true)),
+                CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                     r"**Alphabetic**: {}
 **Bidirectionally mirrored**: {}
 **Case ignorable**: {}
@@ -112,8 +112,8 @@ pub async fn unicode(
                     yesno(unic::char::basics::is_private_use(character)),
                     yesno(unic::char::basics::is_noncharacter(character)),
                 ))),
-                CreateComponent::Separator(CreateSeparator::new(true)),
-                CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                CreateContainerComponent::Separator(CreateSeparator::new(true)),
+                CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                     r"**Emoji**: {}
 **Emoji component**: {}
 **Emoji modifier**: {}
@@ -125,7 +125,7 @@ pub async fn unicode(
                     yesno(unic::emoji::char::is_emoji_modifier_base(character)),
                     yesno(unic::emoji::char::is_emoji_presentation(character)),
                 ))),
-                CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                     "-# Unicode {} \u{00B7} [Unicode and Internationalization Crates for Rust](https://docs.rs/unic/)",
                     unic::UNICODE_VERSION
                 ))),

@@ -5,8 +5,8 @@
 use poise::{
     ChoiceParameter, CreateReply,
     serenity_prelude::{
-        CreateAllowedMentions, CreateComponent, CreateContainer, CreateTextDisplay,
-        FormattedTimestamp, MessageFlags,
+        CreateAllowedMentions, CreateComponent, CreateContainer, CreateContainerComponent,
+        CreateTextDisplay, FormattedTimestamp, MessageFlags,
     },
 };
 
@@ -222,10 +222,10 @@ pub async fn dig(
                     .allowed_mentions(CreateAllowedMentions::new())
                     .components(&[CreateComponent::Container(
                         CreateContainer::new(&[
-                            CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                            CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                                 "### {type} records on {name}"
                             ))),
-                            CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                            CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                                 "```\n{}\n```",
                                 response
                                     .record_iter()
@@ -238,7 +238,7 @@ pub async fn dig(
                                     .collect::<Vec<_>>()
                                     .join("\n")
                             ))),
-                            CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                            CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                                 "-# {} \u{00B7} {}",
                                 resolver.domain(),
                                 FormattedTimestamp::now()

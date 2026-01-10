@@ -8,7 +8,9 @@ use tokio::time::sleep;
 
 use poise::{
     CreateReply,
-    serenity_prelude::{CreateComponent, CreateContainer, CreateTextDisplay, MessageFlags},
+    serenity_prelude::{
+        CreateComponent, CreateContainer, CreateContainerComponent, CreateTextDisplay, MessageFlags,
+    },
 };
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, Pid, ProcessRefreshKind, RefreshKind, System};
 
@@ -40,13 +42,13 @@ pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
     sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL).await;
     sys.refresh_specifics(refresh_kind);
 
-    let mut container = CreateContainer::new(vec![CreateComponent::TextDisplay(
+    let mut container = CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
         CreateTextDisplay::new("### System information"),
     )])
     .accent_color(0xa78bfa);
 
-    container = container.add_component(CreateComponent::TextDisplay(CreateTextDisplay::new(
-        format!(
+    container = container.add_component(CreateContainerComponent::TextDisplay(
+        CreateTextDisplay::new(format!(
             r"**CPU**: {} ({} cores)
 **CPU usage**: {:.2}%
 **Memory**: {}/{} ({:.2}%)
@@ -59,26 +61,26 @@ pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
             (sys.used_memory() as f64) / (sys.total_memory() as f64) * 100.,
             System::long_os_version().unwrap_or_else(|| "Unknown".into()),
             System::cpu_arch(),
-        ),
-    )));
+        )),
+    ));
 
     if let Some(proc) = sys.process(Pid::from_u32(std::process::id())) {
-        container = container.add_component(CreateComponent::TextDisplay(CreateTextDisplay::new(
-            format!(
+        container = container.add_component(CreateContainerComponent::TextDisplay(
+            CreateTextDisplay::new(format!(
                 r"**Process CPU usage**: {:.2}%
 **Process memory**: {}
 **Process uptime**: {}",
                 proc.cpu_usage(),
                 utils::format_bytes(proc.memory()),
                 humantime::format_duration(Duration::from_secs(proc.run_time()))
-            ),
-        )));
+            )),
+        ));
     }
 
     if let Some(storage) = &ctx.data().storage {
-        container = container.add_component(CreateComponent::TextDisplay(CreateTextDisplay::new(
-            format!("**KV keys**\n{}", storage.size().await?),
-        )));
+        container = container.add_component(CreateContainerComponent::TextDisplay(
+            CreateTextDisplay::new(format!("**KV keys**\n{}", storage.size().await?)),
+        ));
     }
 
     ctx.send(

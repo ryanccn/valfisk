@@ -66,7 +66,7 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
 
                     components.push(serenity::CreateComponent::Container(
                         serenity::CreateContainer::new(vec![
-                            serenity::CreateComponent::TextDisplay(
+                            serenity::CreateContainerComponent::TextDisplay(
                                 serenity::CreateTextDisplay::new(format!(
                                     "### Safe Browsing\n{}",
                                     matches
@@ -76,7 +76,7 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                                         .join("\n")
                                 )),
                             ),
-                            serenity::CreateComponent::TextDisplay(
+                            serenity::CreateContainerComponent::TextDisplay(
                                 serenity::CreateTextDisplay::new(format!(
                                     "**Author**\n{} (*{}*)",
                                     utils::serenity::format_mentionable(Some(message.author.id)),
@@ -87,19 +87,19 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                                     }
                                 )),
                             ),
-                            serenity::CreateComponent::TextDisplay(
+                            serenity::CreateContainerComponent::TextDisplay(
                                 serenity::CreateTextDisplay::new(format!(
                                     "**Channel**\n{}",
                                     utils::serenity::format_mentionable(Some(message.channel_id))
                                 )),
                             ),
-                            serenity::CreateComponent::TextDisplay(
+                            serenity::CreateContainerComponent::TextDisplay(
                                 serenity::CreateTextDisplay::new(format!(
                                     "**Content**\n{}",
                                     utils::truncate(&message.content, 1024)
                                 )),
                             ),
-                            serenity::CreateComponent::TextDisplay(
+                            serenity::CreateContainerComponent::TextDisplay(
                                 serenity::CreateTextDisplay::new(format!(
                                     "-# {}",
                                     serenity::FormattedTimestamp::now()

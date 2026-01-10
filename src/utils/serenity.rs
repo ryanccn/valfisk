@@ -98,10 +98,10 @@ pub async fn interaction_confirm<'a>(
                 .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
                 .components(vec![serenity::CreateComponent::Container(
                     container
-                        .add_component(serenity::CreateComponent::Separator(
+                        .add_component(serenity::CreateContainerComponent::Separator(
                             serenity::CreateSeparator::new(false),
                         ))
-                        .add_component(serenity::CreateComponent::ActionRow(
+                        .add_component(serenity::CreateContainerComponent::ActionRow(
                             serenity::CreateActionRow::Buttons(
                                 vec![
                                     serenity::CreateButton::new(confirm_button_id.clone())

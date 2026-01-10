@@ -33,7 +33,7 @@ pub async fn kick(
     member.kick(ctx.http(), reason.as_deref()).await?;
 
     let mut container =
-        serenity::CreateContainer::new(vec![serenity::CreateComponent::TextDisplay(
+        serenity::CreateContainer::new(vec![serenity::CreateContainerComponent::TextDisplay(
             serenity::CreateTextDisplay::new(format!(
                 "### Kick\n{}",
                 utils::serenity::format_mentionable(Some(member.user.id)),
@@ -42,21 +42,22 @@ pub async fn kick(
         .accent_color(0xf783ac);
 
     if let Some(reason) = &reason {
-        container = container.add_component(serenity::CreateComponent::TextDisplay(
+        container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
             serenity::CreateTextDisplay::new(format!("**Reason**\n{reason}")),
         ));
     }
 
     if dm.unwrap_or(true) {
-        let dm_container = container
-            .clone()
-            .add_component(serenity::CreateComponent::TextDisplay(
-                serenity::CreateTextDisplay::new(format!(
-                    "-# {} \u{00B7} {}",
-                    partial_guild.name,
-                    serenity::FormattedTimestamp::now()
-                )),
-            ));
+        let dm_container =
+            container
+                .clone()
+                .add_component(serenity::CreateContainerComponent::TextDisplay(
+                    serenity::CreateTextDisplay::new(format!(
+                        "-# {} \u{00B7} {}",
+                        partial_guild.name,
+                        serenity::FormattedTimestamp::now()
+                    )),
+                ));
 
         if let Ok(dm) = member.user.create_dm_channel(ctx).await
             && dm
@@ -72,16 +73,16 @@ pub async fn kick(
                 .await
                 .is_ok()
         {
-            container = container.add_component(serenity::CreateComponent::TextDisplay(
+            container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
                 serenity::CreateTextDisplay::new("**User notified**\nYes"),
             ));
         } else {
-            container = container.add_component(serenity::CreateComponent::TextDisplay(
+            container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
                 serenity::CreateTextDisplay::new("**User notified**\nFailed"),
             ));
         }
     } else {
-        container = container.add_component(serenity::CreateComponent::TextDisplay(
+        container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
             serenity::CreateTextDisplay::new("**User notified**\nNo"),
         ));
     }
@@ -90,7 +91,7 @@ pub async fn kick(
         let guild_config = storage.get_config(member.guild_id).await?;
 
         if let Some(logs_channel) = guild_config.moderation_logs_channel {
-            container = container.add_component(serenity::CreateComponent::TextDisplay(
+            container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
                 serenity::CreateTextDisplay::new(format!(
                     "-# {} \u{00B7} {}",
                     ctx.author().mention(),

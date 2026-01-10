@@ -7,8 +7,8 @@ use std::fmt;
 use poise::{
     CreateReply,
     serenity_prelude::{
-        CreateAllowedMentions, CreateComponent, CreateContainer, CreateMessage, CreateTextDisplay,
-        FormattedTimestamp, MessageFlags,
+        CreateAllowedMentions, CreateComponent, CreateContainer, CreateContainerComponent,
+        CreateMessage, CreateTextDisplay, FormattedTimestamp, MessageFlags,
     },
 };
 
@@ -78,7 +78,7 @@ impl ValfiskError<'_> {
                 CreateReply::default()
                     .flags(MessageFlags::IS_COMPONENTS_V2)
                     .components(&[CreateComponent::Container(
-                        CreateContainer::new(&[CreateComponent::TextDisplay(
+                        CreateContainer::new(&[CreateContainerComponent::TextDisplay(
                             CreateTextDisplay::new(format!(
                                 r"### An error occurred!
 You can contact the owner of this app with the error ID `{}` if you need support.",
@@ -115,18 +115,18 @@ You can contact the owner of this app with the error ID `{}` if you need support
             }
 
             let mut container = CreateContainer::new(vec![
-                CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                     "### An error occurred!\n```\n{error_string}\n```",
                 ))),
-                CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                     "**Command**\n`{}`",
                     self.ctx.invocation_string()
                 ))),
-                CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                     "**Channel**\n{}",
                     format_mentionable(Some(self.ctx.channel_id()))
                 ))),
-                CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                     "**User**\n{}",
                     format_mentionable(Some(self.ctx.author().id))
                 ))),
@@ -134,7 +134,7 @@ You can contact the owner of this app with the error ID `{}` if you need support
             .accent_color(0xff6b6b);
 
             if let Some(guild) = self.ctx.partial_guild().await {
-                container = container.add_component(CreateComponent::TextDisplay(
+                container = container.add_component(CreateContainerComponent::TextDisplay(
                     CreateTextDisplay::new(format!(
                         "**Guild**\n{} (`{}`)\n*Owner*: {}",
                         guild.name,
@@ -144,7 +144,7 @@ You can contact the owner of this app with the error ID `{}` if you need support
                 ));
             }
 
-            container = container.add_component(CreateComponent::TextDisplay(
+            container = container.add_component(CreateContainerComponent::TextDisplay(
                 CreateTextDisplay::new(format!(
                     "-# `{}` \u{00B7} {}",
                     self.error_id,

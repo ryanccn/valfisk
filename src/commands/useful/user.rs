@@ -33,47 +33,51 @@ pub async fn user(ctx: Context<'_>, user: serenity::UserId) -> Result<()> {
 
     let user = user.to_user(&ctx).await?;
 
-    let mut container = serenity::CreateContainer::new(vec![serenity::CreateComponent::Section(
-        serenity::CreateSection::new(
-            vec![
-                serenity::CreateSectionComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                    format!("## {}", user.global_name.as_ref().unwrap_or(&user.name)),
-                )),
-                serenity::CreateSectionComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                    format!(
-                        "### @{}
+    let mut container =
+        serenity::CreateContainer::new(vec![serenity::CreateContainerComponent::Section(
+            serenity::CreateSection::new(
+                vec![
+                    serenity::CreateSectionComponent::TextDisplay(
+                        serenity::CreateTextDisplay::new(format!(
+                            "## {}",
+                            user.global_name.as_ref().unwrap_or(&user.name)
+                        )),
+                    ),
+                    serenity::CreateSectionComponent::TextDisplay(
+                        serenity::CreateTextDisplay::new(format!(
+                            "### @{}
 **ID**: {}
 **Avatar**: {}
 **Banner**: {}
 **Accent color**: {}
 **Flags**: {}
 **Created at**: <t:{}:F> (<t:{}:R>)",
-                        user.tag(),
-                        user.id,
-                        short_link(user.face()),
-                        user.banner_url()
-                            .map_or_else(|| "*None*".to_owned(), |u| short_link(&u)),
-                        user.accent_colour
-                            .map_or("*None*".to_owned(), |c| format!("#{}", c.hex())),
-                        if user.flags.is_empty() {
-                            "*None*".to_owned()
-                        } else {
-                            user.flags
-                                .iter_names()
-                                .map(|(n, _)| format!("`{n}`"))
-                                .collect::<Vec<_>>()
-                                .join(", ")
-                        },
-                        user.id.created_at().timestamp(),
-                        user.id.created_at().timestamp()
+                            user.tag(),
+                            user.id,
+                            short_link(user.face()),
+                            user.banner_url()
+                                .map_or_else(|| "*None*".to_owned(), |u| short_link(&u)),
+                            user.accent_colour
+                                .map_or("*None*".to_owned(), |c| format!("#{}", c.hex())),
+                            if user.flags.is_empty() {
+                                "*None*".to_owned()
+                            } else {
+                                user.flags
+                                    .iter_names()
+                                    .map(|(n, _)| format!("`{n}`"))
+                                    .collect::<Vec<_>>()
+                                    .join(", ")
+                            },
+                            user.id.created_at().timestamp(),
+                            user.id.created_at().timestamp()
+                        )),
                     ),
+                ],
+                serenity::CreateSectionAccessory::Thumbnail(serenity::CreateThumbnail::new(
+                    serenity::CreateUnfurledMediaItem::new(user.face()),
                 )),
-            ],
-            serenity::CreateSectionAccessory::Thumbnail(serenity::CreateThumbnail::new(
-                serenity::CreateUnfurledMediaItem::new(user.face()),
-            )),
-        ),
-    )]);
+            ),
+        )]);
 
     if let Some(color) = &user.accent_colour {
         container = container.accent_color(*color);

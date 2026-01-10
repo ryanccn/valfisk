@@ -63,12 +63,14 @@ pub async fn lighthouse(
                 CreateReply::default()
                     .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
                     .components(&[serenity::CreateComponent::Container(
-                        serenity::CreateContainer::new(&[serenity::CreateComponent::TextDisplay(
-                            serenity::CreateTextDisplay::new(
-                                r"### Lighthouse audit in progress
+                        serenity::CreateContainer::new(&[
+                            serenity::CreateContainerComponent::TextDisplay(
+                                serenity::CreateTextDisplay::new(
+                                    r"### Lighthouse audit in progress
 This could take around a minute.",
+                                ),
                             ),
-                        )])
+                        ])
                         .accent_color(0x66d9e8),
                     )]),
             )
@@ -92,7 +94,7 @@ This could take around a minute.",
             .json()
             .await?;
 
-        let mut report_components = vec![serenity::CreateComponent::TextDisplay(
+        let mut report_components = vec![serenity::CreateContainerComponent::TextDisplay(
             serenity::CreateTextDisplay::new(format!(
                 "### Lighthouse report\n{url}\n-# {}\n",
                 serenity::FormattedTimestamp::now()
@@ -101,7 +103,7 @@ This could take around a minute.",
 
         for key in ["performance", "accessibility", "best-practices", "seo"] {
             if let Some(value) = data.lighthouse_result.categories.get(key) {
-                report_components.push(serenity::CreateComponent::TextDisplay(
+                report_components.push(serenity::CreateContainerComponent::TextDisplay(
                     serenity::CreateTextDisplay::new(format!(
                         "**{}**\n{:.0}",
                         value.title,
@@ -126,12 +128,14 @@ This could take around a minute.",
             CreateReply::default()
                 .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
                 .components(&[serenity::CreateComponent::Container(
-                    serenity::CreateContainer::new(&[serenity::CreateComponent::TextDisplay(
-                        serenity::CreateTextDisplay::new(
-                            r"### PageSpeed API not configured!
+                    serenity::CreateContainer::new(&[
+                        serenity::CreateContainerComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(
+                                r"### PageSpeed API not configured!
 Contact the owner of this app if this command is supposed to be working.",
+                            ),
                         ),
-                    )])
+                    ])
                     .accent_color(0xff6b6b),
                 )]),
         )

@@ -60,12 +60,14 @@ pub async fn translate(ctx: Context<'_>, message: serenity::Message) -> Result<(
             CreateReply::default()
                 .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
                 .components(&[serenity::CreateComponent::Container(
-                    serenity::CreateContainer::new(&[serenity::CreateComponent::TextDisplay(
-                        serenity::CreateTextDisplay::new(
-                            r"### Translation unavailable!
+                    serenity::CreateContainer::new(&[
+                        serenity::CreateContainerComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(
+                                r"### Translation unavailable!
 There is no content to translate.",
+                            ),
                         ),
-                    )])
+                    ])
                     .accent_color(0xffd43b),
                 )]),
         )
@@ -83,12 +85,18 @@ There is no content to translate.",
                 .allowed_mentions(serenity::CreateAllowedMentions::new())
                 .components(&[serenity::CreateComponent::Container(
                     serenity::CreateContainer::new(&[
-                        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                            format!("### Translation\n{}", resp.translated_text),
-                        )),
-                        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                            format!("-# *{}* → en", resp.detected_source_language),
-                        )),
+                        serenity::CreateContainerComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(format!(
+                                "### Translation\n{}",
+                                resp.translated_text
+                            )),
+                        ),
+                        serenity::CreateContainerComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(format!(
+                                "-# *{}* → en",
+                                resp.detected_source_language
+                            )),
+                        ),
                     ])
                     .accent_color(0x34d399),
                 )]),
@@ -99,12 +107,14 @@ There is no content to translate.",
             CreateReply::default()
                 .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
                 .components(&[serenity::CreateComponent::Container(
-                    serenity::CreateContainer::new(&[serenity::CreateComponent::TextDisplay(
-                        serenity::CreateTextDisplay::new(
-                            r"### Cloud Translation API not configured!
+                    serenity::CreateContainer::new(&[
+                        serenity::CreateContainerComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(
+                                r"### Cloud Translation API not configured!
 Contact the owner of this app if this command is supposed to be working.",
+                            ),
                         ),
-                    )])
+                    ])
                     .accent_color(0xff6b6b),
                 )]),
         )
@@ -131,12 +141,14 @@ pub async fn translate_ephemeral(ctx: Context<'_>, message: serenity::Message) -
             CreateReply::default()
                 .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
                 .components(&[serenity::CreateComponent::Container(
-                    serenity::CreateContainer::new(&[serenity::CreateComponent::TextDisplay(
-                        serenity::CreateTextDisplay::new(
-                            r"### Translation unavailable!
+                    serenity::CreateContainer::new(&[
+                        serenity::CreateContainerComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(
+                                r"### Translation unavailable!
 There is no content to translate.",
+                            ),
                         ),
-                    )])
+                    ])
                     .accent_color(0xffd43b),
                 )]),
         )
@@ -154,12 +166,18 @@ There is no content to translate.",
                 .allowed_mentions(serenity::CreateAllowedMentions::new())
                 .components(&[serenity::CreateComponent::Container(
                     serenity::CreateContainer::new(&[
-                        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                            format!("### Translation\n{}", resp.translated_text),
-                        )),
-                        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                            format!("-# *{}* → en", resp.detected_source_language),
-                        )),
+                        serenity::CreateContainerComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(format!(
+                                "### Translation\n{}",
+                                resp.translated_text
+                            )),
+                        ),
+                        serenity::CreateContainerComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(format!(
+                                "-# *{}* → en",
+                                resp.detected_source_language
+                            )),
+                        ),
                     ])
                     .accent_color(0x34d399),
                 )]),
@@ -170,12 +188,14 @@ There is no content to translate.",
             CreateReply::default()
                 .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
                 .components(&[serenity::CreateComponent::Container(
-                    serenity::CreateContainer::new(&[serenity::CreateComponent::TextDisplay(
-                        serenity::CreateTextDisplay::new(
-                            r"### Cloud Translation API not configured!
+                    serenity::CreateContainer::new(&[
+                        serenity::CreateContainerComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(
+                                r"### Cloud Translation API not configured!
 Contact the owner of this app if this command is supposed to be working.",
+                            ),
                         ),
-                    )])
+                    ])
                     .accent_color(0xff6b6b),
                 )]),
         )

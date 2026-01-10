@@ -30,12 +30,14 @@ async fn dispatch(
                         user.mention().to_string(),
                     )),
                     serenity::CreateComponent::Container(
-                        serenity::CreateContainer::new(&[serenity::CreateComponent::TextDisplay(
-                            serenity::CreateTextDisplay::new(format!(
-                                "### Reminder\n{}",
-                                reminder.content.as_deref().unwrap_or("*No content*")
-                            )),
-                        )])
+                        serenity::CreateContainer::new(&[
+                            serenity::CreateContainerComponent::TextDisplay(
+                                serenity::CreateTextDisplay::new(format!(
+                                    "### Reminder\n{}",
+                                    reminder.content.as_deref().unwrap_or("*No content*")
+                                )),
+                            ),
+                        ])
                         .accent_color(0x3bc9db),
                     ),
                 ]),
@@ -113,13 +115,13 @@ pub async fn remind(
                     .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
                     .components(&[serenity::CreateComponent::Container(
                         serenity::CreateContainer::new(&[
-                            serenity::CreateComponent::TextDisplay(
+                            serenity::CreateContainerComponent::TextDisplay(
                                 serenity::CreateTextDisplay::new(format!(
                                     "### Reminder set\n{}",
                                     content.as_deref().unwrap_or("*No content*")
                                 )),
                             ),
-                            serenity::CreateComponent::TextDisplay(
+                            serenity::CreateContainerComponent::TextDisplay(
                                 serenity::CreateTextDisplay::new(format!(
                                     "**Time**\n<t:{0}:F> (<t:{0}:R>)",
                                     timestamp.timestamp(),

@@ -33,23 +33,22 @@ pub async fn self_timeout(
         let start = chrono::Utc::now();
         let end = start + duration;
 
-        let (confirmed, reply) =
-            utils::serenity::interaction_confirm(
-                &ctx,
-                serenity::CreateContainer::new(&[
-                    serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                        "### Requesting self-timeout",
-                    )),
-                    serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                        format!("**Start**\n<t:{0}:F>", start.timestamp()),
-                    )),
-                    serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                        format!("**End**\n<t:{0}:F> (<t:{0}:R>)", end.timestamp()),
-                    )),
-                ])
-                .accent_color(0xffd43b),
-            )
-            .await?;
+        let (confirmed, reply) = utils::serenity::interaction_confirm(
+            &ctx,
+            serenity::CreateContainer::new(&[
+                serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                    "### Requesting self-timeout",
+                )),
+                serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                    format!("**Start**\n<t:{0}:F>", start.timestamp()),
+                )),
+                serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                    format!("**End**\n<t:{0}:F> (<t:{0}:R>)", end.timestamp()),
+                )),
+            ])
+            .accent_color(0xffd43b),
+        )
+        .await?;
 
         if confirmed {
             member
@@ -75,16 +74,16 @@ pub async fn self_timeout(
                         .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
                         .components(&[serenity::CreateComponent::Container(
                             serenity::CreateContainer::new(&[
-                                serenity::CreateComponent::TextDisplay(
+                                serenity::CreateContainerComponent::TextDisplay(
                                     serenity::CreateTextDisplay::new("### Self-timeout in effect"),
                                 ),
-                                serenity::CreateComponent::TextDisplay(
+                                serenity::CreateContainerComponent::TextDisplay(
                                     serenity::CreateTextDisplay::new(format!(
                                         "**Start**\n<t:{0}:F>",
                                         start.timestamp()
                                     )),
                                 ),
-                                serenity::CreateComponent::TextDisplay(
+                                serenity::CreateContainerComponent::TextDisplay(
                                     serenity::CreateTextDisplay::new(format!(
                                         "**End**\n<t:{0}:F> (<t:{0}:R>)",
                                         end.timestamp()
@@ -103,16 +102,16 @@ pub async fn self_timeout(
                         .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
                         .components(&[serenity::CreateComponent::Container(
                             serenity::CreateContainer::new(&[
-                                serenity::CreateComponent::TextDisplay(
+                                serenity::CreateContainerComponent::TextDisplay(
                                     serenity::CreateTextDisplay::new("### Self-timeout cancelled"),
                                 ),
-                                serenity::CreateComponent::TextDisplay(
+                                serenity::CreateContainerComponent::TextDisplay(
                                     serenity::CreateTextDisplay::new(format!(
                                         "**Start**\n<t:{0}:F>",
                                         start.timestamp()
                                     )),
                                 ),
-                                serenity::CreateComponent::TextDisplay(
+                                serenity::CreateContainerComponent::TextDisplay(
                                     serenity::CreateTextDisplay::new(format!(
                                         "**End**\n<t:{0}:F> (<t:{0}:R>)",
                                         end.timestamp()

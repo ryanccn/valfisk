@@ -46,7 +46,7 @@ async fn feed(ctx: Context<'_>, name: &str, color: u32, feed: &str) -> Result<()
         CreateReply::default()
             .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
             .components(&[serenity::CreateComponent::Container(
-                serenity::CreateContainer::new(&[serenity::CreateComponent::TextDisplay(
+                serenity::CreateContainer::new(&[serenity::CreateContainerComponent::TextDisplay(
                     serenity::CreateTextDisplay::new(format!(
                         "## {name}\n{}\n\n{}",
                         serenity::FormattedTimestamp::now(),

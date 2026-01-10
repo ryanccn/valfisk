@@ -18,7 +18,7 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
         && let Some(logs_channel) = CONFIG.dm_logs_channel
     {
         let mut container =
-            serenity::CreateContainer::new(vec![serenity::CreateComponent::TextDisplay(
+            serenity::CreateContainer::new(vec![serenity::CreateContainerComponent::TextDisplay(
                 serenity::CreateTextDisplay::new(format!(
                     "-# {} \u{00B7} {}\n{}",
                     message.author.mention(),
@@ -29,7 +29,7 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
             .accent_color(0x9775fa);
 
         if !message.attachments.is_empty() {
-            container = container.add_component(serenity::CreateComponent::TextDisplay(
+            container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
                 serenity::CreateTextDisplay::new(format!(
                     "**Attachments**\n{}",
                     utils::serenity::format_attachments(&message.attachments),

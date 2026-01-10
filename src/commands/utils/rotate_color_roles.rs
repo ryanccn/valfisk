@@ -41,7 +41,7 @@ pub async fn rotate_color_roles(
         CreateReply::default()
             .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
             .components(&[serenity::CreateComponent::Container(
-                serenity::CreateContainer::new(&[serenity::CreateComponent::TextDisplay(
+                serenity::CreateContainer::new(&[serenity::CreateContainerComponent::TextDisplay(
                     serenity::CreateTextDisplay::new(format!(
                         "### Rotated color roles\n{}",
                         roles

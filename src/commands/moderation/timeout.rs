@@ -44,7 +44,7 @@ pub async fn timeout(
         member.edit(ctx.http(), edit_member).await?;
 
         let mut container =
-            serenity::CreateContainer::new(vec![serenity::CreateComponent::TextDisplay(
+            serenity::CreateContainer::new(vec![serenity::CreateContainerComponent::TextDisplay(
                 serenity::CreateTextDisplay::new(format!(
                     "### Timeout\n{}",
                     utils::serenity::format_mentionable(Some(member.user.id)),
@@ -53,12 +53,12 @@ pub async fn timeout(
             .accent_color(0x9775fa);
 
         if let Some(reason) = &reason {
-            container = container.add_component(serenity::CreateComponent::TextDisplay(
+            container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
                 serenity::CreateTextDisplay::new(format!("**Reason**\n{reason}")),
             ));
         }
 
-        container = container.add_component(serenity::CreateComponent::TextDisplay(
+        container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
             serenity::CreateTextDisplay::new(format!(
                 "**Duration**\n{}",
                 humantime::format_duration(duration)
@@ -69,7 +69,7 @@ pub async fn timeout(
             let dm_container =
                 container
                     .clone()
-                    .add_component(serenity::CreateComponent::TextDisplay(
+                    .add_component(serenity::CreateContainerComponent::TextDisplay(
                         serenity::CreateTextDisplay::new(format!(
                             "-# {} \u{00B7} {}",
                             partial_guild.name,
@@ -91,16 +91,18 @@ pub async fn timeout(
                     .await
                     .is_ok()
             {
-                container = container.add_component(serenity::CreateComponent::TextDisplay(
-                    serenity::CreateTextDisplay::new("**User notified**\nYes"),
-                ));
+                container =
+                    container.add_component(serenity::CreateContainerComponent::TextDisplay(
+                        serenity::CreateTextDisplay::new("**User notified**\nYes"),
+                    ));
             } else {
-                container = container.add_component(serenity::CreateComponent::TextDisplay(
-                    serenity::CreateTextDisplay::new("**User notified**\nFailed"),
-                ));
+                container =
+                    container.add_component(serenity::CreateContainerComponent::TextDisplay(
+                        serenity::CreateTextDisplay::new("**User notified**\nFailed"),
+                    ));
             }
         } else {
-            container = container.add_component(serenity::CreateComponent::TextDisplay(
+            container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
                 serenity::CreateTextDisplay::new("**User notified**\nNo"),
             ));
         }
@@ -109,13 +111,14 @@ pub async fn timeout(
             let guild_config = storage.get_config(member.guild_id).await?;
 
             if let Some(logs_channel) = guild_config.moderation_logs_channel {
-                container = container.add_component(serenity::CreateComponent::TextDisplay(
-                    serenity::CreateTextDisplay::new(format!(
-                        "-# {} \u{00B7} {}",
-                        ctx.author().mention(),
-                        serenity::FormattedTimestamp::now()
-                    )),
-                ));
+                container =
+                    container.add_component(serenity::CreateContainerComponent::TextDisplay(
+                        serenity::CreateTextDisplay::new(format!(
+                            "-# {} \u{00B7} {}",
+                            ctx.author().mention(),
+                            serenity::FormattedTimestamp::now()
+                        )),
+                    ));
 
                 logs_channel
                     .send_message(
