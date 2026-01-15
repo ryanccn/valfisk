@@ -5,44 +5,70 @@
 use eyre::{Result, eyre};
 use poise::{CreateReply, serenity_prelude as serenity};
 
-use crate::{Context, config::CONFIG, http::HTTP};
+use crate::{Context, config::CONFIG, openrouter};
 
 #[derive(serde::Deserialize, Debug)]
-struct GoogleTranslateResponse {
-    data: GoogleTranslateTranslations,
-}
-
-#[derive(serde::Deserialize, Debug)]
-struct GoogleTranslateTranslations {
-    translations: Vec<GoogleTranslateTranslation>,
-}
-
-#[derive(serde::Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-struct GoogleTranslateTranslation {
+struct TranslateResult {
     translated_text: String,
     detected_source_language: String,
 }
 
-async fn translate_call(src: &str, key: &str) -> Result<GoogleTranslateTranslation> {
-    let GoogleTranslateResponse { data } = HTTP
-        .get("https://translation.googleapis.com/language/translate/v2")
-        .query(&[
-            ("q", src),
-            ("target", "en"),
-            ("format", "text"),
-            ("key", key),
-        ])
-        .send()
-        .await?
-        .error_for_status()?
-        .json()
-        .await?;
+static TRANSLATE_SYSTEM_PROMPT: &str = "You are a highly skilled translator with expertise in many languages. Your task is to identify the language of the text I provide and accurately translate it into English while preserving the meaning, tone, and nuance of the original text. Please maintain proper grammar, spelling, and punctuation in the translated version.";
 
-    data.translations
-        .into_iter()
-        .next()
-        .ok_or_else(|| eyre!("did not receive translation from Google Cloud Translation API"))
+async fn translate_call(src: &str) -> Result<TranslateResult> {
+    let response = openrouter::chat(serde_json::json!({
+        "model": "anthropic/claude-sonnet-4.5",
+        "messages": [
+            {
+                "role": "system",
+                "content": TRANSLATE_SYSTEM_PROMPT,
+            },
+            {
+                "role": "user",
+                "content": src,
+            }
+        ],
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "translation",
+                "strict": true,
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "translated_text": {
+                            "type": "string",
+                            "description": "The translated text, in English"
+                        },
+                        "detected_source_language": {
+                            "type": "string",
+                            "description": "The name of the detected source language"
+                        },
+                    },
+                    "required": ["translated_text", "detected_source_language"],
+                    "additionalProperties": false,
+                },
+            },
+        },
+        "provider": {
+            "allow_fallbacks": false,
+            "data_collection": "deny",
+            "order": ["anthropic"],
+            "only": ["anthropic"]
+        }
+    }))
+    .await?;
+
+    let data: TranslateResult = serde_json::from_str(
+        &response
+            .choices
+            .first()
+            .ok_or_else(|| eyre!("translate response unavailable"))?
+            .message
+            .content,
+    )?;
+
+    Ok(data)
 }
 
 /// Translates a message
@@ -76,8 +102,8 @@ There is no content to translate.",
         return Ok(());
     }
 
-    if let Some(key) = &CONFIG.translation_api_key {
-        let resp = translate_call(&message.content, key).await?;
+    if CONFIG.openrouter_api_key.is_some() {
+        let resp = translate_call(&message.content).await?;
 
         ctx.send(
             CreateReply::default()
@@ -93,7 +119,7 @@ There is no content to translate.",
                         ),
                         serenity::CreateContainerComponent::TextDisplay(
                             serenity::CreateTextDisplay::new(format!(
-                                "-# *{}* → en",
+                                "-# *{}* → English",
                                 resp.detected_source_language
                             )),
                         ),
@@ -110,7 +136,7 @@ There is no content to translate.",
                     serenity::CreateContainer::new(&[
                         serenity::CreateContainerComponent::TextDisplay(
                             serenity::CreateTextDisplay::new(
-                                r"### Cloud Translation API not configured!
+                                r"### OpenRouter API not configured!
 Contact the owner of this app if this command is supposed to be working.",
                             ),
                         ),
@@ -157,8 +183,8 @@ There is no content to translate.",
         return Ok(());
     }
 
-    if let Some(key) = &CONFIG.translation_api_key {
-        let resp = translate_call(&message.content, key).await?;
+    if CONFIG.openrouter_api_key.is_some() {
+        let resp = translate_call(&message.content).await?;
 
         ctx.send(
             CreateReply::default()
@@ -174,7 +200,7 @@ There is no content to translate.",
                         ),
                         serenity::CreateContainerComponent::TextDisplay(
                             serenity::CreateTextDisplay::new(format!(
-                                "-# *{}* → en",
+                                "-# *{}* → English",
                                 resp.detected_source_language
                             )),
                         ),
@@ -191,7 +217,7 @@ There is no content to translate.",
                     serenity::CreateContainer::new(&[
                         serenity::CreateContainerComponent::TextDisplay(
                             serenity::CreateTextDisplay::new(
-                                r"### Cloud Translation API not configured!
+                                r"### OpenRouter API not configured!
 Contact the owner of this app if this command is supposed to be working.",
                             ),
                         ),

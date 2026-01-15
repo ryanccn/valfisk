@@ -16,7 +16,7 @@ publish = false
 axum = "0.8.8"
 base64 = "0.22.1"
 bytesize = "2.3.1"
-chrono = "0.4.42"
+chrono = "0.4.43"
 color-eyre = "0.6.5"
 dotenvy = "0.15.7"
 envy = "0.4.2"
@@ -33,6 +33,7 @@ rayon = "1.11.0"
 redis = { version = "1.0.2", features = ["tokio-rustls-comp", "tls-rustls-webpki-roots", "connection-manager"] }
 regex = "1.12.2"
 reqwest = { version = "0.13.1", features = ["webpki-roots", "query", "json", "deflate", "gzip", "brotli", "zstd"] }
+rustls = "0.23.36"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 sha2 = "0.10.9"
@@ -42,9 +43,6 @@ toml = "0.9.11"
 tracing = "0.1.44"
 tracing-error = "0.2.1"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
-typst = "0.14.2"
-typst-assets = { version = "0.14.2", features = ["fonts"] }
-typst-render = "0.14.2"
 unic = "0.9.0"
 url = "2.5.8"
 

@@ -9,22 +9,7 @@ use eyre::Result;
 use futures_util::StreamExt as _;
 use poise::serenity_prelude::{self as serenity, Mentionable as _};
 
-use crate::{config::CONFIG, http::HTTP, utils};
-
-#[derive(serde::Deserialize, Clone, Debug)]
-struct OpenRouterResponse {
-    choices: Vec<OpenRouterResponseChoice>,
-}
-
-#[derive(serde::Deserialize, Clone, Debug)]
-struct OpenRouterResponseChoice {
-    message: OpenRouterResponseMessage,
-}
-
-#[derive(serde::Deserialize, Clone, Debug)]
-struct OpenRouterResponseMessage {
-    content: String,
-}
+use crate::{config::CONFIG, openrouter, utils};
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 #[serde(rename_all = "lowercase")]
@@ -108,7 +93,7 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
         return Ok(());
     }
 
-    if let Some(key) = &CONFIG.openrouter_api_key
+    if CONFIG.openrouter_api_key.is_some()
         && let Ok(member) = message.member(&ctx).await
     {
         let self_mention = ctx.cache.current_user().mention().to_string();
@@ -163,7 +148,7 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
 
             message.channel_id.broadcast_typing(&ctx.http).await?;
 
-            let body = serde_json::json!({
+            let data = openrouter::chat(serde_json::json!({
                 "model": "anthropic/claude-sonnet-4.5",
                 "messages": messages,
                 "provider": {
@@ -172,17 +157,8 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                     "order": ["anthropic"],
                     "only": ["anthropic"]
                 }
-            });
-
-            let data: OpenRouterResponse = HTTP
-                .post("https://openrouter.ai/api/v1/chat/completions")
-                .bearer_auth(key)
-                .json(&body)
-                .send()
-                .await?
-                .error_for_status()?
-                .json()
-                .await?;
+            }))
+            .await?;
 
             if let Some(choice) = data.choices.first() {
                 message.reply(&ctx.http, &choice.message.content).await?;

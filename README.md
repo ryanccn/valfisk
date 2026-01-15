@@ -46,7 +46,7 @@ Valfisk reads its configuration from environment variables:
 - `REDIS_URL` is a URL to a Redis or Redis-compatible server; it is optional but highly recommended, since some features will not work well or at all without it.
 - `ADMIN_GUILD_ID` is a guild in which commands to manage Valfisk itself will be registered. `OWNERS` is a comma-separated list of user IDs that are allowed to run these commands; by default it is inferred from the Discord application's metadata.
 - `ERROR_LOGS_CHANNEL` is a channel where internal errors from Valfisk will be logged. `DM_LOGS_CHANNEL` is one where direct messages sent to Valfisk will be logged.
-- `PAGESPEED_API_KEY`, `SAFE_BROWSING_API_KEY`, `TRANSLATION_API_KEY` are [Google Cloud API keys](https://cloud.google.com/api-keys/docs/overview) for accessing the APIs required for certain features. (They can be set to the same key.)
+- `PAGESPEED_API_KEY` and `SAFE_BROWSING_API_KEY` are [Google Cloud API keys](https://cloud.google.com/api-keys/docs/overview) for accessing the APIs required for certain features. (They can be set to the same key.)
 - `HOST` and `PORT` form the address that the API server listens to. It defaults to `0.0.0.0:8080`.
 
 ## Privacy

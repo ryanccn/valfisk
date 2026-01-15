@@ -21,7 +21,6 @@ pub struct EnvConfig {
 
     pub pagespeed_api_key: Option<String>,
     pub safe_browsing_api_key: Option<String>,
-    pub translation_api_key: Option<String>,
 
     pub intelligence_allowed_roles: Option<HashSet<RoleId>>,
     pub openrouter_api_key: Option<String>,

@@ -20,6 +20,7 @@ mod config;
 mod event_handler;
 mod handlers;
 mod http;
+mod openrouter;
 mod safe_browsing;
 mod schedule;
 mod storage;
@@ -109,6 +110,10 @@ async fn valfisk() -> Result<()> {
             tracing::warn!(?path, "loaded environment variables");
         }
     }
+
+    rustls::crypto::aws_lc_rs::default_provider()
+        .install_default()
+        .unwrap();
 
     // Preload config from environment
     let _ = *CONFIG;
