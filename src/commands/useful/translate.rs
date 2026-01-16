@@ -81,7 +81,40 @@ async fn translate_call(src: &str) -> Result<TranslateResult> {
 pub async fn translate(ctx: Context<'_>, message: serenity::Message) -> Result<()> {
     ctx.defer().await?;
 
-    if message.content.is_empty() {
+    if CONFIG.openrouter_api_key.is_none() {
+        ctx.send(
+            CreateReply::default()
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                .components(&[serenity::CreateComponent::Container(
+                    serenity::CreateContainer::new(&[
+                        serenity::CreateContainerComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(
+                                r"### OpenRouter API not configured!
+Contact the owner of this app if this command is supposed to be working.",
+                            ),
+                        ),
+                    ])
+                    .accent_color(0xff6b6b),
+                )]),
+        )
+        .await?;
+
+        return Ok(());
+    }
+
+    let content = match message.content.as_str().trim() {
+        s if !s.is_empty() => Some(s),
+        _ => match message
+            .message_snapshots
+            .first()
+            .map(|ms| ms.content.as_str().trim())
+        {
+            Some(s) if !s.is_empty() => Some(s),
+            _ => None,
+        },
+    };
+
+    let Some(content) = content else {
         ctx.send(
             CreateReply::default()
                 .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
@@ -100,52 +133,33 @@ There is no content to translate.",
         .await?;
 
         return Ok(());
-    }
+    };
 
-    if CONFIG.openrouter_api_key.is_some() {
-        let resp = translate_call(&message.content).await?;
+    let resp = translate_call(content).await?;
 
-        ctx.send(
-            CreateReply::default()
-                .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                .allowed_mentions(serenity::CreateAllowedMentions::new())
-                .components(&[serenity::CreateComponent::Container(
-                    serenity::CreateContainer::new(&[
-                        serenity::CreateContainerComponent::TextDisplay(
-                            serenity::CreateTextDisplay::new(format!(
-                                "### Translation\n{}",
-                                resp.translated_text
-                            )),
-                        ),
-                        serenity::CreateContainerComponent::TextDisplay(
-                            serenity::CreateTextDisplay::new(format!(
-                                "-# *{}* → English",
-                                resp.detected_source_language
-                            )),
-                        ),
-                    ])
-                    .accent_color(0x34d399),
-                )]),
-        )
-        .await?;
-    } else {
-        ctx.send(
-            CreateReply::default()
-                .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                .components(&[serenity::CreateComponent::Container(
-                    serenity::CreateContainer::new(&[
-                        serenity::CreateContainerComponent::TextDisplay(
-                            serenity::CreateTextDisplay::new(
-                                r"### OpenRouter API not configured!
-Contact the owner of this app if this command is supposed to be working.",
-                            ),
-                        ),
-                    ])
-                    .accent_color(0xff6b6b),
-                )]),
-        )
-        .await?;
-    }
+    ctx.send(
+        CreateReply::default()
+            .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+            .allowed_mentions(serenity::CreateAllowedMentions::new())
+            .components(&[serenity::CreateComponent::Container(
+                serenity::CreateContainer::new(&[
+                    serenity::CreateContainerComponent::TextDisplay(
+                        serenity::CreateTextDisplay::new(format!(
+                            "### Translation\n{}",
+                            resp.translated_text
+                        )),
+                    ),
+                    serenity::CreateContainerComponent::TextDisplay(
+                        serenity::CreateTextDisplay::new(format!(
+                            "-# *{}* → English",
+                            resp.detected_source_language
+                        )),
+                    ),
+                ])
+                .accent_color(0x34d399),
+            )]),
+    )
+    .await?;
 
     Ok(())
 }
@@ -162,7 +176,40 @@ Contact the owner of this app if this command is supposed to be working.",
 pub async fn translate_ephemeral(ctx: Context<'_>, message: serenity::Message) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
-    if message.content.is_empty() {
+    if CONFIG.openrouter_api_key.is_none() {
+        ctx.send(
+            CreateReply::default()
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                .components(&[serenity::CreateComponent::Container(
+                    serenity::CreateContainer::new(&[
+                        serenity::CreateContainerComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(
+                                r"### OpenRouter API not configured!
+Contact the owner of this app if this command is supposed to be working.",
+                            ),
+                        ),
+                    ])
+                    .accent_color(0xff6b6b),
+                )]),
+        )
+        .await?;
+
+        return Ok(());
+    }
+
+    let content = match message.content.as_str().trim() {
+        s if !s.is_empty() => Some(s),
+        _ => match message
+            .message_snapshots
+            .first()
+            .map(|ms| ms.content.as_str().trim())
+        {
+            Some(s) if !s.is_empty() => Some(s),
+            _ => None,
+        },
+    };
+
+    let Some(content) = content else {
         ctx.send(
             CreateReply::default()
                 .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
@@ -181,52 +228,33 @@ There is no content to translate.",
         .await?;
 
         return Ok(());
-    }
+    };
 
-    if CONFIG.openrouter_api_key.is_some() {
-        let resp = translate_call(&message.content).await?;
+    let resp = translate_call(content).await?;
 
-        ctx.send(
-            CreateReply::default()
-                .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                .allowed_mentions(serenity::CreateAllowedMentions::new())
-                .components(&[serenity::CreateComponent::Container(
-                    serenity::CreateContainer::new(&[
-                        serenity::CreateContainerComponent::TextDisplay(
-                            serenity::CreateTextDisplay::new(format!(
-                                "### Translation\n{}",
-                                resp.translated_text
-                            )),
-                        ),
-                        serenity::CreateContainerComponent::TextDisplay(
-                            serenity::CreateTextDisplay::new(format!(
-                                "-# *{}* → English",
-                                resp.detected_source_language
-                            )),
-                        ),
-                    ])
-                    .accent_color(0x34d399),
-                )]),
-        )
-        .await?;
-    } else {
-        ctx.send(
-            CreateReply::default()
-                .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                .components(&[serenity::CreateComponent::Container(
-                    serenity::CreateContainer::new(&[
-                        serenity::CreateContainerComponent::TextDisplay(
-                            serenity::CreateTextDisplay::new(
-                                r"### OpenRouter API not configured!
-Contact the owner of this app if this command is supposed to be working.",
-                            ),
-                        ),
-                    ])
-                    .accent_color(0xff6b6b),
-                )]),
-        )
-        .await?;
-    }
+    ctx.send(
+        CreateReply::default()
+            .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+            .allowed_mentions(serenity::CreateAllowedMentions::new())
+            .components(&[serenity::CreateComponent::Container(
+                serenity::CreateContainer::new(&[
+                    serenity::CreateContainerComponent::TextDisplay(
+                        serenity::CreateTextDisplay::new(format!(
+                            "### Translation\n{}",
+                            resp.translated_text
+                        )),
+                    ),
+                    serenity::CreateContainerComponent::TextDisplay(
+                        serenity::CreateTextDisplay::new(format!(
+                            "-# *{}* → English",
+                            resp.detected_source_language
+                        )),
+                    ),
+                ])
+                .accent_color(0x34d399),
+            )]),
+    )
+    .await?;
 
     Ok(())
 }
