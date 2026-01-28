@@ -30,7 +30,7 @@ use crate::Context;
     guild_only,
     install_context = "Guild",
     interaction_context = "Guild",
-    subcommands("edit", "starboard", "raw", "reset"),
+    subcommands("edit", "starboard", "moderation", "raw", "reset"),
     subcommand_required,
     default_member_permissions = "MANAGE_GUILD"
 )]
