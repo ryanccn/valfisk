@@ -127,6 +127,7 @@ mod keys {
     pub const AUTOREPLY: StorageKey = StorageKey::new("autoreply-v2");
     pub const INTELLIGENCE_CONSENT: StorageKey = StorageKey::new("intelligence-consent-v1");
     pub const INTELLIGENCE_CONTEXT: StorageKey = StorageKey::new("intelligence-context-v2");
+    pub const WARN_COUNT: StorageKey = StorageKey::new("warn-count-v1");
 }
 
 impl Storage {
@@ -345,6 +346,24 @@ impl Storage {
                 redis::SetOptions::default().with_expiration(redis::SetExpiry::EX(300)),
             )
             .await?;
+
+        Ok(())
+    }
+}
+
+impl Storage {
+    pub async fn incr_warn_count(&self, user: UserId, guild: GuildId) -> RedisResult<u64> {
+        let mut conn = self.conn.clone();
+        let value: u64 = conn
+            .incr(keys::WARN_COUNT.user(user).guild(guild), 1)
+            .await?;
+
+        Ok(value)
+    }
+
+    pub async fn del_warn_count(&self, user: UserId, guild: GuildId) -> RedisResult<()> {
+        let mut conn = self.conn.clone();
+        () = conn.del(keys::WARN_COUNT.user(user).guild(guild)).await?;
 
         Ok(())
     }

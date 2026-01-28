@@ -44,6 +44,7 @@ pub fn all() -> Vec<poise::Command<Data, eyre::Report>> {
         command!(moderation, rotate_logs),
         command!(moderation, timeout),
         command!(moderation, warn),
+        command!(moderation, warn, warn_reset),
         command!(fun, autoreply),
         command!(fun, owo),
         command!(fun, shiggy),
