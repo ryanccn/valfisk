@@ -27,7 +27,7 @@ Valfisk is a next-generation general purpose Discord app, built with [Poise](htt
 ### Server-only
 
 - [Google Safe Browsing](https://safebrowsing.google.com/) protection (privacy-friendly)
-- Moderation commands (e.g. ban, kick, timeout)
+- Moderation commands (e.g. ban, kick, timeout, warn)
 - Auditing for message edits and deletions, and member joins and leaves
 - Rotate logs channels by recreating them
 - Configurable starboard

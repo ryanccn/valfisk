@@ -139,13 +139,13 @@ impl Storage {
 
     pub async fn set_config(&self, guild_id: GuildId, value: &GuildConfig) -> RedisResult<()> {
         let mut conn = self.conn.clone();
-        let _: () = conn.set(keys::GUILD_CONFIG.guild(guild_id), value).await?;
+        () = conn.set(keys::GUILD_CONFIG.guild(guild_id), value).await?;
         Ok(())
     }
 
     pub async fn del_config(&self, guild_id: GuildId) -> RedisResult<()> {
         let mut conn = self.conn.clone();
-        let _: () = conn.del(keys::GUILD_CONFIG.guild(guild_id)).await?;
+        () = conn.del(keys::GUILD_CONFIG.guild(guild_id)).await?;
         Ok(())
     }
 }
@@ -159,13 +159,13 @@ impl Storage {
 
     pub async fn set_presence(&self, value: &presence::PresenceData) -> RedisResult<()> {
         let mut conn = self.conn.clone();
-        let _: () = conn.set(keys::PRESENCE, value).await?;
+        () = conn.set(keys::PRESENCE, value).await?;
         Ok(())
     }
 
     pub async fn del_presence(&self) -> RedisResult<()> {
         let mut conn = self.conn.clone();
-        let _: () = conn.del(keys::PRESENCE).await?;
+        () = conn.del(keys::PRESENCE).await?;
         Ok(())
     }
 }
@@ -179,7 +179,7 @@ impl Storage {
 
     pub async fn set_starboard(&self, message_id: MessageId, value: &u64) -> RedisResult<()> {
         let mut conn = self.conn.clone();
-        let _: () = conn
+        () = conn
             .set_options(
                 keys::STARBOARD.message(message_id),
                 value,
@@ -191,7 +191,7 @@ impl Storage {
 
     pub async fn del_starboard(&self, message_id: MessageId) -> RedisResult<()> {
         let mut conn = self.conn.clone();
-        let _: () = conn.del(keys::STARBOARD.message(message_id)).await?;
+        () = conn.del(keys::STARBOARD.message(message_id)).await?;
         Ok(())
     }
 }
@@ -209,7 +209,7 @@ impl Storage {
         value: &MessageLog,
     ) -> RedisResult<()> {
         let mut conn = self.conn.clone();
-        let _: () = conn
+        () = conn
             .set_options(
                 keys::MESSAGE_LOG.message(message_id),
                 value,
@@ -221,7 +221,7 @@ impl Storage {
 
     pub async fn del_message_log(&self, message_id: MessageId) -> RedisResult<()> {
         let mut conn = self.conn.clone();
-        let _: () = conn.del(keys::MESSAGE_LOG.message(message_id)).await?;
+        () = conn.del(keys::MESSAGE_LOG.message(message_id)).await?;
         Ok(())
     }
 }
@@ -248,7 +248,7 @@ impl Storage {
 
     pub async fn add_reminders(&self, value: &ReminderData) -> RedisResult<()> {
         let mut conn = self.conn.clone();
-        let _: () = conn
+        () = conn
             .zadd(keys::REMINDERS, value, value.timestamp.timestamp())
             .await?;
 
@@ -257,7 +257,7 @@ impl Storage {
 
     pub async fn clean_reminders(&self) -> RedisResult<()> {
         let mut conn = self.conn.clone();
-        let _: () = conn
+        () = conn
             .zrembyscore(keys::REMINDERS, 0, chrono::Utc::now().timestamp() - 1)
             .await?;
 
@@ -283,19 +283,19 @@ impl Storage {
 
     pub async fn add_autoreply(&self, guild_id: GuildId, f: &str, v: &str) -> RedisResult<()> {
         let mut conn = self.conn.clone();
-        let _: () = conn.hset(keys::AUTOREPLY.guild(guild_id), f, v).await?;
+        () = conn.hset(keys::AUTOREPLY.guild(guild_id), f, v).await?;
         Ok(())
     }
 
     pub async fn del_autoreply(&self, guild_id: GuildId, f: &str) -> RedisResult<()> {
         let mut conn = self.conn.clone();
-        let _: () = conn.hdel(keys::AUTOREPLY.guild(guild_id), f).await?;
+        () = conn.hdel(keys::AUTOREPLY.guild(guild_id), f).await?;
         Ok(())
     }
 
     pub async fn delall_autoreply(&self, guild_id: GuildId) -> RedisResult<()> {
         let mut conn = self.conn.clone();
-        let _: () = conn.del(keys::AUTOREPLY.guild(guild_id)).await?;
+        () = conn.del(keys::AUTOREPLY.guild(guild_id)).await?;
         Ok(())
     }
 }
@@ -312,7 +312,7 @@ impl Storage {
 
     pub async fn add_intelligence_consent(&self, user_id: UserId) -> RedisResult<()> {
         let mut conn = self.conn.clone();
-        let _: () = conn.sadd(keys::INTELLIGENCE_CONSENT, user_id.get()).await?;
+        () = conn.sadd(keys::INTELLIGENCE_CONSENT, user_id.get()).await?;
 
         Ok(())
     }
@@ -339,7 +339,7 @@ impl Storage {
         context: &IntelligenceMessages,
     ) -> RedisResult<()> {
         let mut conn = self.conn.clone();
-        let _: () = conn
+        () = conn
             .set_options(
                 keys::INTELLIGENCE_CONTEXT.user(user).channel(channel),
                 context,

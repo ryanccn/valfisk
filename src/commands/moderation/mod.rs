@@ -6,3 +6,4 @@ pub mod ban;
 pub mod kick;
 pub mod rotate_logs;
 pub mod timeout;
+pub mod warn;
