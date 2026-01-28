@@ -39,8 +39,10 @@ pub struct GuildConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub private_starboard_channel: Option<GenericChannelId>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub starboard_channel: Option<GenericChannelId>,
+    pub private_starboard_threshold: Option<u64>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub starboard_channel: Option<GenericChannelId>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub starboard_emojis: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

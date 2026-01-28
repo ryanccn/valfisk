@@ -117,6 +117,7 @@ impl<'de> serde::Deserialize<'de> for StarboardEmojis {
 fn is_significant_reaction(
     guild_config: &GuildConfig,
     reaction: &serenity::MessageReaction,
+    threshold: u64,
 ) -> bool {
     guild_config
         .starboard_emojis
@@ -124,17 +125,18 @@ fn is_significant_reaction(
         .unwrap_or_default()
         .parse::<StarboardEmojis>()
         .is_ok_and(|r| r.allow(reaction))
-        && reaction.count >= guild_config.starboard_threshold.unwrap_or(3)
+        && reaction.count >= threshold
 }
 
 fn get_significant_reactions<'a>(
     guild_config: &GuildConfig,
     message: &'a serenity::Message,
+    threshold: u64,
 ) -> Vec<(&'a serenity::ReactionType, u64)> {
     let mut collected_reactions: Vec<(&serenity::ReactionType, u64)> = message
         .reactions
         .iter()
-        .filter(|r| is_significant_reaction(guild_config, r))
+        .filter(|r| is_significant_reaction(guild_config, r, threshold))
         .map(|r| (&r.reaction_type, r.count))
         .collect();
 
@@ -246,7 +248,17 @@ pub async fn handle(
         if let Some(starboard) =
             get_starboard_channel(ctx, &guild_config, message.channel_id, message.guild_id).await?
         {
-            let significant_reactions = get_significant_reactions(&guild_config, message);
+            let threshold = if Some(starboard) == guild_config.private_starboard_channel {
+                guild_config
+                    .private_starboard_threshold
+                    .or(guild_config.starboard_threshold)
+                    .unwrap_or(3)
+            } else {
+                guild_config.starboard_threshold.unwrap_or(3)
+            };
+
+            let significant_reactions =
+                get_significant_reactions(&guild_config, message, threshold);
 
             if let Some(existing_starboard_message) =
                 storage.get_starboard(message.id).await?.map(|s| s.into())

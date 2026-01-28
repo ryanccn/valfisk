@@ -240,6 +240,8 @@ async fn starboard(
     starboard_emojis: Option<String>,
     #[description = "Threshold of reactions for messages to be shown on the starboard"]
     starboard_threshold: Option<u64>,
+    #[description = "Threshold of reactions for messages to be shown on the private starboard"]
+    private_starboard_threshold: Option<u64>,
     #[description = "Clear both emoji and threshold configs"]
     #[flag]
     clear: bool,
@@ -261,12 +263,16 @@ async fn starboard(
     if clear {
         data.starboard_emojis = None;
         data.starboard_threshold = None;
+        data.private_starboard_threshold = None;
     } else {
         if let Some(emojis) = &starboard_emojis {
             data.starboard_emojis = Some(emojis.to_owned());
         }
         if let Some(threshold) = &starboard_threshold {
             data.starboard_threshold = Some(*threshold);
+        }
+        if let Some(threshold) = &private_starboard_threshold {
+            data.private_starboard_threshold = Some(*threshold);
         }
     }
 
