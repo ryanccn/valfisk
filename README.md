@@ -21,14 +21,15 @@ Valfisk is a next-generation general purpose Discord app, built with [Poise](htt
 - Translate messages using a context menu command
 - Show front page posts from [Hacker News](https://news.ycombinator.com/) and [Lobsters](https://lobste.rs/)
 - Retrieve public information about a Discord user
-- Render [Typst](https://typst.app/) documents into raster images
 - Show comprehensive data on Unicode character(s) from the [Unicode Character Database](https://www.unicode.org/ucd/)
+- Render [Typst](https://typst.app/) documents into raster images
 
 ### Server-only
 
 - [Google Safe Browsing](https://safebrowsing.google.com/) protection (privacy-friendly)
 - Moderation commands (e.g. ban, kick, timeout, warn)
 - Auditing for message edits and deletions, and member joins and leaves
+- Purge a number of messages from channels
 - Rotate logs channels by recreating them
 - Configurable starboard
 - Automatically reply to keyword triggers (supports regular expressions)
