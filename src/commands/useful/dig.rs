@@ -28,7 +28,7 @@ fn fqdn(name: &str) -> Result<Name> {
     Ok(name)
 }
 
-fn set_resolver_opts(options: &mut ResolverOpts, bootstrap: bool) {
+const fn set_resolver_opts(options: &mut ResolverOpts, bootstrap: bool) {
     options.attempts = 5;
     options.use_hosts_file = ResolveHosts::Never;
     options.validate = true;
@@ -142,7 +142,7 @@ enum ResolverChoice {
 }
 
 impl ResolverChoice {
-    fn domain(self) -> &'static str {
+    const fn domain(self) -> &'static str {
         match self {
             Self::Cloudflare => "cloudflare-dns.com",
             Self::CloudflareSecurity => "security.cloudflare-dns.com",

@@ -76,10 +76,7 @@ async fn edit(ctx: Context<'_>) -> Result<()> {
                         CreateSelectMenuKind::Channel {
                             channel_types: Some(vec![ChannelType::Text].into()),
                             default_channels: Some(
-                                match data.starboard_channel {
-                                    Some(c) => vec![c],
-                                    None => vec![],
-                                }
+                                data.starboard_channel.map_or_else(Vec::new, |c| vec![c])
                                 .into(),
                             ),
                         },
@@ -96,10 +93,7 @@ async fn edit(ctx: Context<'_>) -> Result<()> {
                         CreateSelectMenuKind::Channel {
                             channel_types: Some(vec![ChannelType::Category].into()),
                             default_channels: Some(
-                                match data.private_category {
-                                    Some(c) => vec![c],
-                                    None => vec![],
-                                }
+                                data.private_category.map_or_else(Vec::new, |c| vec![c])
                                 .into(),
                             ),
                         },
@@ -116,10 +110,7 @@ async fn edit(ctx: Context<'_>) -> Result<()> {
                         CreateSelectMenuKind::Channel {
                             channel_types: Some(vec![ChannelType::Text].into()),
                             default_channels: Some(
-                                match data.private_starboard_channel {
-                                    Some(c) => vec![c],
-                                    None => vec![],
-                                }
+                                data.private_starboard_channel.map_or_else(Vec::new, |c| vec![c])
                                 .into(),
                             ),
                         },
@@ -136,10 +127,7 @@ async fn edit(ctx: Context<'_>) -> Result<()> {
                         CreateSelectMenuKind::Channel {
                             channel_types: Some(vec![ChannelType::Text].into()),
                             default_channels: Some(
-                                match data.moderation_logs_channel {
-                                    Some(c) => vec![c],
-                                    None => vec![],
-                                }
+                                data.moderation_logs_channel.map_or_else(Vec::new, |c| vec![c])
                                 .into(),
                             ),
                         },
@@ -156,10 +144,7 @@ async fn edit(ctx: Context<'_>) -> Result<()> {
                         CreateSelectMenuKind::Channel {
                             channel_types: Some(vec![ChannelType::Text].into()),
                             default_channels: Some(
-                                match data.message_logs_channel {
-                                    Some(c) => vec![c],
-                                    None => vec![],
-                                }
+                                data.message_logs_channel.map_or_else(Vec::new, |c| vec![c])
                                 .into(),
                             ),
                         },
@@ -176,10 +161,7 @@ async fn edit(ctx: Context<'_>) -> Result<()> {
                         CreateSelectMenuKind::Channel {
                             channel_types: Some(vec![ChannelType::Text].into()),
                             default_channels: Some(
-                                match data.member_logs_channel {
-                                    Some(c) => vec![c],
-                                    None => vec![],
-                                }
+                                data.member_logs_channel.map_or_else(Vec::new, |c| vec![c])
                                 .into(),
                             ),
                         },
@@ -212,10 +194,7 @@ async fn edit(ctx: Context<'_>) -> Result<()> {
                         "cfg:moderator_role",
                         CreateSelectMenuKind::Role {
                             default_roles: Some(
-                                match data.moderator_role {
-                                    Some(c) => vec![c],
-                                    None => vec![],
-                                }
+                                data.moderator_role.map_or_else(Vec::new, |c| vec![c])
                                 .into(),
                             ),
                         },

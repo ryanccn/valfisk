@@ -13,7 +13,7 @@ use poise::{
 
 use crate::Context;
 
-fn yesno(value: bool) -> &'static str {
+const fn yesno(value: bool) -> &'static str {
     if value { "Yes" } else { "No" }
 }
 
@@ -36,11 +36,8 @@ pub async fn unicode(
                 format!(
                     "`{ch}` {}{}",
                     unic::char::basics::unicode_notation(ch),
-                    if let Some(name) = unic::ucd::Name::of(ch) {
-                        format!(" \u{2013} {name}")
-                    } else {
-                        String::new()
-                    },
+                    unic::ucd::Name::of(ch)
+                        .map_or_else(String::new, |name| format!(" \u{2013} {name}")),
                 )
             })
             .collect::<Vec<_>>()
@@ -70,26 +67,20 @@ pub async fn unicode(
                     r"### {}{}
 ## {character}",
                     unic::char::basics::unicode_notation(character),
-                    if let Some(name) = unic::ucd::Name::of(character) {
-                        format!(" \u{2013} {name}")
-                    } else {
-                        String::new()
-                    },
+                    unic::ucd::Name::of(character)
+                        .map_or_else(String::new, |name| format!(" \u{2013} {name}")),
                 ))),
                 CreateContainerComponent::Separator(CreateSeparator::new(true)),
                 CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                     r"**Block**: {}
 **General Category**: {}
 **Age**: {}",
-                    match unic::ucd::Block::of(character) {
-                        Some(block) => block.name,
-                        None => "None",
-                    },
+                    unic::ucd::Block::of(character).map_or("None", |block| block.name),
                     unic::ucd::GeneralCategory::of(character),
-                    match unic::ucd::Age::of(character) {
-                        Some(age) => format!("Unicode {}", age.actual()),
-                        None => "Unknown".to_owned(),
-                    },
+                    unic::ucd::Age::of(character).map_or_else(
+                        || "Unknown".to_owned(),
+                        |age| format!("Unicode {}", age.actual())
+                    ),
                 ))),
                 CreateContainerComponent::Separator(CreateSeparator::new(true)),
                 CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(

@@ -31,9 +31,9 @@ async fn feed(ctx: Context<'_>, name: &str, color: u32, feed: &str) -> Result<()
     let titles = RSS_TITLE_REGEX
         .captures_iter(&feed)
         .filter_map(|c| c.name("title").map(|m| m.as_str()))
-        .map(|s| match s.strip_prefix("<![CDATA[") {
-            Some(s) => s.strip_suffix("]]>").unwrap_or(s),
-            None => s,
+        .map(|s| {
+            s.strip_prefix("<![CDATA[")
+                .map_or(s, |s| s.strip_suffix("]]>").unwrap_or(s))
         });
 
     let links = RSS_LINK_REGEX

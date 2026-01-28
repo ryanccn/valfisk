@@ -70,24 +70,22 @@ pub async fn remind(
 
     if let Ok(duration) = humantime::parse_duration(&duration) {
         let timestamp = chrono::Utc::now() + duration;
-        let mut channel = ctx
-            .author()
-            .create_dm_channel(&ctx)
-            .await
-            .ok()
-            .map(|ch| ch.id.widen());
-
-        if let Some(member) = ctx.author_member().await
+        let channel = if let Some(member) = ctx.author_member().await
             && let Some(guild_channel) = ctx.channel().await.and_then(|ch| ch.guild())
             && !private
             && ctx.partial_guild().await.is_some_and(|guild| {
                 guild
                     .user_permissions_in(&guild_channel, &member)
                     .send_messages()
-            })
-        {
-            channel = Some(ctx.channel_id());
-        }
+            }) {
+            Some(ctx.channel_id())
+        } else {
+            ctx.author()
+                .create_dm_channel(&ctx)
+                .await
+                .ok()
+                .map(|ch| ch.id.widen())
+        };
 
         if let Some(channel) = channel {
             let reminder = ReminderData {

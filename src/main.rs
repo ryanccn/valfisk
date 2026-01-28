@@ -44,14 +44,15 @@ impl Data {
             None
         };
 
-        let safe_browsing = if let Some(key) = &CONFIG.safe_browsing_api_key {
-            Some(SafeBrowsing::new(key))
-        } else {
-            tracing::warn!(
-                "SAFE_BROWSING_API_KEY is not configured, Safe Browsing will be disabled"
-            );
-            None
-        };
+        let safe_browsing = CONFIG.safe_browsing_api_key.as_ref().map_or_else(
+            || {
+                tracing::warn!(
+                    "SAFE_BROWSING_API_KEY is not configured, Safe Browsing will be disabled"
+                );
+                None
+            },
+            |key| Some(SafeBrowsing::new(key)),
+        );
 
         Ok(Self {
             storage,
@@ -160,12 +161,13 @@ async fn valfisk() -> Result<()> {
 #[tokio::main]
 async fn main() -> ExitCode {
     if let Err(err) = valfisk().await {
-        if let Some(exit_code) = err.downcast_ref::<ExitCodeError>() {
-            exit_code.as_std()
-        } else {
-            eprintln!("Error: {err:?}");
-            ExitCode::FAILURE
-        }
+        err.downcast_ref::<ExitCodeError>().map_or_else(
+            || {
+                eprintln!("Error: {err:?}");
+                ExitCode::FAILURE
+            },
+            |exit_code| exit_code.as_std(),
+        )
     } else {
         ExitCode::SUCCESS
     }

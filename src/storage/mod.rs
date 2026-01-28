@@ -101,10 +101,9 @@ mod keys {
                 f,
                 "{}{}",
                 self.base,
-                match &self.parts {
-                    Some(parts) => format!(":{}", parts.join(":")),
-                    None => String::new(),
-                }
+                self.parts
+                    .as_ref()
+                    .map_or_else(String::new, |parts| format!(":{}", parts.join(":")))
             )
         }
     }

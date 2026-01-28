@@ -74,7 +74,7 @@ mod defaults {
         return "0.0.0.0".into();
     }
 
-    pub fn port() -> u16 {
+    pub const fn port() -> u16 {
         8080
     }
 }

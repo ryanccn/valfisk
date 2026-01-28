@@ -58,7 +58,7 @@ pub async fn user(ctx: Context<'_>, user: serenity::UserId) -> Result<()> {
                             user.banner_url()
                                 .map_or_else(|| "*None*".to_owned(), |u| short_link(&u)),
                             user.accent_colour
-                                .map_or("*None*".to_owned(), |c| format!("#{}", c.hex())),
+                                .map_or_else(|| "*None*".to_owned(), |c| format!("#{}", c.hex())),
                             if user.flags.is_empty() {
                                 "*None*".to_owned()
                             } else {
