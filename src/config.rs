@@ -60,6 +60,13 @@ pub struct GuildConfig {
 
     #[serde(skip_serializing_if = "HashSet::is_empty", default)]
     pub random_color_roles: HashSet<RoleId>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub moderation_extra_message_ban: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub moderation_extra_message_kick: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub moderation_extra_message_timeout: Option<String>,
 }
 
 pub static CONFIG: LazyLock<EnvConfig> =

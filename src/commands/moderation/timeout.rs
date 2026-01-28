@@ -31,6 +31,15 @@ pub async fn timeout(
         .await
         .ok_or_else(|| eyre!("failed to obtain partial guild"))?;
 
+    let extra_message = if let Some(storage) = &ctx.data().storage {
+        let guild_config = storage.get_config(partial_guild.id).await?;
+        guild_config.moderation_extra_message_timeout
+    } else {
+        None
+    };
+
+    let user_reason = utils::option_strings(reason.as_deref(), extra_message.as_deref());
+
     if let Ok(duration) = humantime::parse_duration(&duration) {
         let end = chrono::Utc::now() + duration;
 
@@ -52,9 +61,9 @@ pub async fn timeout(
             )])
             .accent_color(0x9775fa);
 
-        if let Some(reason) = &reason {
+        if let Some(user_reason) = &user_reason {
             container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
-                serenity::CreateTextDisplay::new(format!("**Reason**\n{reason}")),
+                serenity::CreateTextDisplay::new(format!("**Reason**\n{user_reason}")),
             ));
         }
 

@@ -293,6 +293,79 @@ async fn starboard(
     Ok(())
 }
 
+/// Manage additional moderation configs
+#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[poise::command(
+    slash_command,
+    guild_only,
+    install_context = "Guild",
+    interaction_context = "Guild",
+    default_member_permissions = "MANAGE_GUILD"
+)]
+async fn moderation(
+    ctx: Context<'_>,
+
+    #[description = "Extra message to add to bans"] extra_message_ban: Option<String>,
+    #[description = "Extra message to add to kicks"] extra_message_kick: Option<String>,
+    #[description = "Extra message to add to timeouts"] extra_message_timeout: Option<String>,
+
+    #[description = "Clear all extra messages"]
+    #[flag]
+    clear: bool,
+) -> Result<()> {
+    ctx.defer_ephemeral().await?;
+
+    let guild_id = ctx
+        .guild_id()
+        .ok_or_else(|| eyre!("could not obtain guild ID"))?;
+
+    let data = ctx.data();
+    let storage = data
+        .storage
+        .as_ref()
+        .ok_or_else(|| eyre!("storage is not available"))?;
+
+    let mut data = storage.get_config(guild_id).await?;
+
+    if clear {
+        data.moderation_extra_message_ban = None;
+        data.moderation_extra_message_kick = None;
+        data.moderation_extra_message_timeout = None;
+    } else {
+        if let Some(message) = &extra_message_ban {
+            data.moderation_extra_message_ban = Some(message.to_owned());
+        }
+        if let Some(message) = &extra_message_kick {
+            data.moderation_extra_message_kick = Some(message.to_owned());
+        }
+        if let Some(message) = &extra_message_timeout {
+            data.moderation_extra_message_timeout = Some(message.to_owned());
+        }
+    }
+
+    storage.set_config(guild_id, &data).await?;
+
+    ctx.send(
+        CreateReply::default()
+            .flags(MessageFlags::IS_COMPONENTS_V2)
+            .components(&[CreateComponent::Container(
+                CreateContainer::new(&[
+                    CreateContainerComponent::TextDisplay(CreateTextDisplay::new(
+                        "### Configuration",
+                    )),
+                    CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
+                        "```json\n{}\n```",
+                        serde_json::to_string_pretty(&data)?
+                    ))),
+                ])
+                .accent_color(0x63e6be),
+            )]),
+    )
+    .await?;
+
+    Ok(())
+}
+
 /// View the guild configuration in raw JSON
 #[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
 #[poise::command(

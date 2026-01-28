@@ -37,7 +37,7 @@ pub async fn warn(
                 utils::serenity::format_mentionable(Some(member.user.id)),
             )),
         )])
-        .accent_color(0xda77f2);
+        .accent_color(0xfacc15);
 
     if let Some(reason) = &reason {
         container = container.add_component(serenity::CreateContainerComponent::TextDisplay(

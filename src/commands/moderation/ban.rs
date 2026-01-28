@@ -36,6 +36,15 @@ pub async fn ban(
         .await
         .ok_or_else(|| eyre!("failed to obtain partial guild"))?;
 
+    let extra_message = if let Some(storage) = &ctx.data().storage {
+        let guild_config = storage.get_config(partial_guild.id).await?;
+        guild_config.moderation_extra_message_ban
+    } else {
+        None
+    };
+
+    let user_reason = utils::option_strings(reason.as_deref(), extra_message.as_deref());
+
     member
         .ban(
             ctx.http(),
@@ -53,9 +62,9 @@ pub async fn ban(
         )])
         .accent_color(0xda77f2);
 
-    if let Some(reason) = &reason {
+    if let Some(user_reason) = &user_reason {
         container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
-            serenity::CreateTextDisplay::new(format!("**Reason**\n{reason}")),
+            serenity::CreateTextDisplay::new(format!("**Reason**\n{user_reason}")),
         ));
     }
 

@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
+use std::borrow::Cow;
+
 use bytesize::ByteSize;
 
 mod axum;
@@ -20,4 +22,31 @@ pub fn truncate(s: &str, new_len: usize) -> String {
 
 pub fn format_bytes(bytes: u64) -> String {
     ByteSize::b(bytes).display().si().to_string()
+}
+
+pub fn option_strings<'a>(a: Option<&'a str>, b: Option<&'a str>) -> Option<Cow<'a, str>> {
+    if let Some(a) = a {
+        if let Some(b) = b {
+            Some(Cow::Owned(a.to_owned() + " " + b))
+        } else {
+            Some(Cow::Borrowed(a))
+        }
+    } else if let Some(b) = b {
+        Some(Cow::Borrowed(b))
+    } else {
+        None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn option_strings_works() {
+        assert_eq!(option_strings(Some("a"), Some("b")), Some("a b".into()));
+        assert_eq!(option_strings(Some("a"), None), Some("a".into()));
+        assert_eq!(option_strings(None, Some("b")), Some("b".into()));
+        assert_eq!(option_strings(None, None), None);
+    }
 }
