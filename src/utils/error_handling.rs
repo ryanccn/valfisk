@@ -110,7 +110,7 @@ You can contact the owner of this app with the error ID `{}` if you need support
             if let Some(data) = &CONFIG.safe_browsing_api_key {
                 error_string = error_string.replace(data, "<redacted>");
             }
-            if let Some(data) = &CONFIG.openrouter_api_key {
+            if let Some(data) = &CONFIG.anthropic_api_key {
                 error_string = error_string.replace(data, "<redacted>");
             }
 

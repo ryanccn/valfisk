@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use rand::{distr::slice::Choose, prelude::*};
+use rand::distr::{Distribution as _, slice::Choose};
 
 static ALPHABET: [char; 64] = [
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
@@ -12,11 +12,9 @@ static ALPHABET: [char; 64] = [
 ];
 
 pub fn nanoid(len: usize) -> String {
-    let rng = &mut rand::rng();
-
     Choose::new(&ALPHABET)
         .unwrap()
-        .sample_iter(rng)
+        .sample_iter(&mut rand::rng())
         .take(len)
         .collect()
 }

@@ -14,13 +14,13 @@ use crate::{
     utils::ExitCodeError,
 };
 
+mod anthropic;
 mod api;
 mod commands;
 mod config;
 mod event_handler;
 mod handlers;
 mod http;
-mod openrouter;
 mod safe_browsing;
 mod schedule;
 mod storage;

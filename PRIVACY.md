@@ -26,7 +26,7 @@ When you use the `/lighthouse` command, the URL that is being tested will be sen
 
 When you use the `/dig` command, your queries will be sent to the DNS resolvers that you specify in your command invocations, under their respective privacy policies. See the privacy policies for [Cloudflare's 1.1.1.1](https://developers.cloudflare.com/1.1.1.1/privacy/public-dns-resolver/), [Google Public DNS](https://developers.google.com/speed/public-dns/privacy), [Quad9](https://quad9.net/privacy/policy/), [dns0.eu](https://www.dns0.eu/privacy), [Mullvad](https://mullvad.net/en/help/privacy-policy), [AdGuard DNS](https://adguard-dns.io/en/privacy.html), [OpenDNS](https://www.opendns.com/privacy-policy/), and [Wikimedia DNS](https://meta.wikimedia.org/wiki/Wikimedia_DNS#Privacy_policy).
 
-When you use Valfisk's intelligence features (including translation and chat), your query will be sent to [OpenRouter](https://openrouter.ai/) and [Anthropic](https://www.anthropic.com/), according to [OpenRouter's](https://openrouter.ai/privacy) and [Anthropic's](https://www.anthropic.com/legal/privacy) privacy policies.
+When you use Valfisk's intelligence features (including translation and chat), your query will be sent to [Anthropic](https://www.anthropic.com/) and processed according to Anthropic's [privacy policy](https://www.anthropic.com/legal/privacy).
 
 ## Rights to your data
 

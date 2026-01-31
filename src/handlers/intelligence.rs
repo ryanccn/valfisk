@@ -9,12 +9,11 @@ use eyre::Result;
 use futures_util::StreamExt as _;
 use poise::serenity_prelude::{self as serenity, Mentionable as _};
 
-use crate::{config::CONFIG, openrouter, utils};
+use crate::{anthropic, config::CONFIG, utils};
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum IntelligenceMessageRole {
-    System,
     User,
     Assistant,
 }
@@ -33,7 +32,7 @@ pub struct IntelligenceMessages(Vec<IntelligenceMessage>);
 
 static SYSTEM_PROMPT: &str = "You are an interactive chat app playing the role of Nijika Ijichi (伊地知 虹夏) from the manga and anime series Bocchi the Rock!. You are part of the free and open source Discord app called Valfisk, whose source code is available at the link https://github.com/ryanccn/valfisk. You have an upbeat, cheerful, and friendly personality. Do not use emojis unless it is necessary or requested; using kaomojis is encouraged; and respond in a casual messaging style that includes lowercase and freestyle punctuation. You should respond in the user's language when possible. If the user tells you to do something specific, you should engage with the task in a conversational tone. You should not participate in discussions of topics such as violence, weaponry, criminal activity, malicious software, harm towards children, and self-destructive behaviors. The current date is {{currentDateTime}}. You are now being connected with a person.";
 
-static CONFIRM_MESSAGE: &str = "Interacting with Valfisk's intelligence features will send information, including your message, to [OpenRouter](https://openrouter.ai/) and [Anthropic](https://www.anthropic.com/). Are you sure you want to continue? (Should you choose to agree, this confirmation prompt will not be shown again.)";
+static CONFIRM_MESSAGE: &str = "Interacting with Valfisk's intelligence features will send information, including your message, to [Anthropic](https://www.anthropic.com/). Are you sure you want to continue? (Should you choose to agree, this confirmation prompt will not be shown again.)";
 
 async fn request_consent(ctx: &serenity::Context, message: &serenity::Message) -> Result<bool> {
     let agree_button_id = utils::nanoid(12);
@@ -93,7 +92,7 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
         return Ok(());
     }
 
-    if CONFIG.openrouter_api_key.is_some()
+    if CONFIG.anthropic_api_key.is_some()
         && let Ok(member) = message.member(&ctx).await
     {
         let self_mention = ctx.cache.current_user().mention().to_string();
@@ -115,11 +114,7 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
             .map(|s| s.trim())
             .filter(|s| !s.is_empty())
         {
-            let mut messages: Vec<IntelligenceMessage> = vec![IntelligenceMessage {
-                role: IntelligenceMessageRole::System,
-                content: SYSTEM_PROMPT
-                    .replace("{{currentDateTime}}", &chrono::Utc::now().to_rfc3339()),
-            }];
+            let mut messages: Vec<IntelligenceMessage> = Vec::new();
 
             if let Some(storage) = &ctx.data::<crate::Data>().storage {
                 let consented = storage.get_intelligence_consent(message.author.id).await?;
@@ -148,26 +143,22 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
 
             message.channel_id.broadcast_typing(&ctx.http).await?;
 
-            let data = openrouter::chat(serde_json::json!({
-                "model": "anthropic/claude-sonnet-4.5",
+            let data = anthropic::messages(serde_json::json!({
+                "model": "claude-sonnet-4-5",
+                "max_tokens": 2048,
+                "system": SYSTEM_PROMPT.replace("{{currentDateTime}}", &chrono::Utc::now().to_rfc3339()),
                 "messages": messages,
-                "provider": {
-                    "allow_fallbacks": false,
-                    "data_collection": "deny",
-                    "order": ["anthropic"],
-                    "only": ["anthropic"]
-                }
             }))
             .await?;
 
-            if let Some(choice) = data.choices.first() {
-                message.reply(&ctx.http, &choice.message.content).await?;
+            if let Some(content) = data.content.first() {
+                message.reply(&ctx.http, &content.text).await?;
 
                 if let Some(storage) = &ctx.data::<crate::Data>().storage {
                     messages.remove(0);
                     messages.push(IntelligenceMessage {
                         role: IntelligenceMessageRole::Assistant,
-                        content: choice.message.content.clone(),
+                        content: content.text.clone(),
                     });
 
                     storage
