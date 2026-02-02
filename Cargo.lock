@@ -1082,7 +1082,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.5.10",
+ "socket2 0.6.2",
  "system-configuration",
  "tokio",
  "tower-service",
@@ -1597,7 +1597,7 @@ checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 [[package]]
 name = "poise"
 version = "0.6.1"
-source = "git+https://github.com/serenity-rs/poise.git?branch=serenity-next#3d2a7765df66c53312a334fb26fe1846b8fa9d91"
+source = "git+https://github.com/serenity-rs/poise.git?branch=serenity-next#84ef2d1654610b403d1e66225e67435cb7e2a88b"
 dependencies = [
  "async-trait",
  "derivative",
@@ -1615,7 +1615,7 @@ dependencies = [
 [[package]]
 name = "poise_macros"
 version = "0.6.1"
-source = "git+https://github.com/serenity-rs/poise.git?branch=serenity-next#3d2a7765df66c53312a334fb26fe1846b8fa9d91"
+source = "git+https://github.com/serenity-rs/poise.git?branch=serenity-next#84ef2d1654610b403d1e66225e67435cb7e2a88b"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -1675,7 +1675,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash",
  "rustls",
- "socket2 0.5.10",
+ "socket2 0.6.2",
  "thiserror 2.0.18",
  "tokio",
  "tracing",
@@ -1713,7 +1713,7 @@ dependencies = [
  "cfg_aliases",
  "libc",
  "once_cell",
- "socket2 0.5.10",
+ "socket2 0.6.2",
  "tracing",
  "windows-sys 0.60.2",
 ]
