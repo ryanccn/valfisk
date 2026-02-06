@@ -27,7 +27,7 @@
       doCheck = true;
 
       cargoLock.outputHashes = {
-        "poise-0.6.1" = "sha256-S20k+LvthUnd4w6nY6X55pqFQL7HLiob/zdwqy42aQ8=";
+        "poise-0.6.1" = "sha256-AUf9/ZZCPge/OWRA9OOlxi8LHw1S1UdzjbMCd4C6qSQ=";
         "serenity-0.12.5" = "sha256-ay5HP8xRrNyD8OE5onQtNwXIcBqgcMxNAFLikkDpju0=";
       };
 
