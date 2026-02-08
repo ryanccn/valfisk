@@ -7,7 +7,7 @@ use redis::{
     AsyncCommands as _, RedisResult,
     aio::{ConnectionManager, ConnectionManagerConfig},
 };
-use std::time::Duration;
+use std::{fmt::Debug, time::Duration};
 
 use log::MessageLog;
 use reminder::ReminderData;
@@ -22,6 +22,12 @@ pub mod reminder;
 #[non_exhaustive]
 pub struct Storage {
     conn: ConnectionManager,
+}
+
+impl Debug for Storage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Storage").finish_non_exhaustive()
+    }
 }
 
 impl Storage {
