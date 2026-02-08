@@ -19,7 +19,6 @@ Valfisk is a next-generation general purpose Discord app, built with [Poise](htt
 - Make DNS queries to a variety of DNS-over-HTTPS resolvers
 - Reminders (public by default when installed in servers, private when not)
 - Translate messages using a context menu command
-- Show front page posts from [Hacker News](https://news.ycombinator.com/) and [Lobsters](https://lobste.rs/)
 - Retrieve public information about a Discord user
 - Show comprehensive data on Unicode character(s) from the [Unicode Character Database](https://www.unicode.org/ucd/)
 - Render [Typst](https://typst.app/) documents into raster images

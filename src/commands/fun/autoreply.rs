@@ -13,7 +13,7 @@ use poise::{
 
 use crate::Context;
 
-#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
     guild_only,
@@ -28,7 +28,7 @@ pub async fn autoreply(ctx: Context<'_>) -> Result<()> {
 }
 
 /// List autoreply keywords
-#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
     guild_only,
@@ -81,7 +81,7 @@ async fn list(ctx: Context<'_>) -> Result<()> {
 }
 
 /// Add an autoreply keyword
-#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
     guild_only,
@@ -132,7 +132,7 @@ async fn add(
 }
 
 /// Delete an autoreply keyword
-#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
     guild_only,
@@ -182,7 +182,7 @@ async fn delete(
 }
 
 /// Delete all autoreply keywords
-#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     rename = "delete-all",
     slash_command,

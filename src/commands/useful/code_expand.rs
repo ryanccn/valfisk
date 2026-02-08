@@ -8,7 +8,7 @@ use poise::{CreateReply, serenity_prelude as serenity};
 use crate::{Context, handlers::code_expansion};
 
 /// Expand a link to lines of source code on GitHub, Codeberg, GitLab, and the Rust and Go playgrounds.
-#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     rename = "code-expand",
     slash_command,

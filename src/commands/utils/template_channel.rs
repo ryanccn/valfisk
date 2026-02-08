@@ -14,7 +14,7 @@ use poise::{
 use crate::{Context, http::HTTP, template_channel::Template};
 
 /// Apply a channel template from a URL to a channel
-#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     rename = "template-channel",
     slash_command,

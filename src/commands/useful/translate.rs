@@ -61,7 +61,7 @@ async fn translate_call(src: &str) -> Result<TranslateResult> {
 }
 
 /// Translates a message
-#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     context_menu_command = "Translate",
     install_context = "Guild | User",
@@ -154,7 +154,7 @@ There is no content to translate.",
 }
 
 /// Translates a message
-#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     context_menu_command = "Translate (ephemeral)",
     rename = "translate-ephemeral",

@@ -8,7 +8,7 @@ use poise::serenity_prelude as serenity;
 use crate::Context;
 
 /// Purge a number of messages from a channel
-#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
     ephemeral,

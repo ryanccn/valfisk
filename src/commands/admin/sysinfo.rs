@@ -17,7 +17,7 @@ use sysinfo::{CpuRefreshKind, MemoryRefreshKind, Pid, ProcessRefreshKind, Refres
 use crate::{Context, utils};
 
 /// Get system information for the app server
-#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
     ephemeral,

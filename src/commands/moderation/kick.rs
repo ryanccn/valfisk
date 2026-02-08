@@ -8,7 +8,7 @@ use poise::serenity_prelude::{self as serenity, Mentionable as _};
 use crate::{Context, utils};
 
 /// Kick a member
-#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[tracing::instrument(skip(ctx, member), fields(member = member.user.id.get(), ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
     ephemeral,

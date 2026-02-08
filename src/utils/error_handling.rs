@@ -8,7 +8,8 @@ use poise::{
     CreateReply,
     serenity_prelude::{
         CreateAllowedMentions, CreateComponent, CreateContainer, CreateContainerComponent,
-        CreateMessage, CreateTextDisplay, FormattedTimestamp, MessageFlags,
+        CreateMessage, CreateTextDisplay, FormattedTimestamp, HttpError, JsonErrorCode,
+        MessageFlags,
     },
 };
 
@@ -72,20 +73,31 @@ impl ValfiskError<'_> {
     /// Reply to the interaction with an embed informing the user of an error, containing the randomly generated error ID.
     #[tracing::instrument(skip(self))]
     pub async fn handle_reply(&self) {
+        let mut components = vec![CreateContainerComponent::TextDisplay(
+            CreateTextDisplay::new(format!(
+                r"### An error occurred!
+You can contact the owner of this app with the error ID `{}` if you require support.",
+                self.error_id
+            )),
+        )];
+
+        if let ReportOrPanic::Report(report) = &self.report_or_panic
+            && let Some(HttpError::UnsuccessfulRequest(response)) =
+                report.root_cause().downcast_ref::<HttpError>()
+            && response.error.code == JsonErrorCode::LackPermissionsForAction
+        {
+            components.push(CreateContainerComponent::TextDisplay(
+                CreateTextDisplay::new("**:warning: Missing permissions; check if permissions are configured correctly.**"),
+            ));
+        }
+
         if let Err(err) = self
             .ctx
             .send(
                 CreateReply::default()
                     .flags(MessageFlags::IS_COMPONENTS_V2)
                     .components(&[CreateComponent::Container(
-                        CreateContainer::new(&[CreateContainerComponent::TextDisplay(
-                            CreateTextDisplay::new(format!(
-                                r"### An error occurred!
-You can contact the owner of this app with the error ID `{}` if you need support.",
-                                self.error_id
-                            )),
-                        )])
-                        .accent_color(0xff6b6b),
+                        CreateContainer::new(components).accent_color(0xff6b6b),
                     )]),
             )
             .await

@@ -11,7 +11,7 @@ use poise::{
 use crate::{Context, schedule};
 
 /// Rotate color roles to a random color
-#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
     guild_only,

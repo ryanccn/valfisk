@@ -24,7 +24,7 @@ use crate::Context;
 //         .map_err(|err| err.into())
 // }
 
-#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
     guild_only,
@@ -39,7 +39,7 @@ pub async fn config(ctx: Context<'_>) -> Result<()> {
 }
 
 /// Edit the guild configuration interactively
-#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
     guild_only,
@@ -225,7 +225,7 @@ async fn edit(ctx: Context<'_>) -> Result<()> {
 }
 
 /// Manage additional starboard configs
-#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
     guild_only,
@@ -300,7 +300,7 @@ async fn starboard(
 }
 
 /// Manage additional moderation configs
-#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
     guild_only,
@@ -373,7 +373,7 @@ async fn moderation(
 }
 
 /// View the guild configuration in raw JSON
-#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
     guild_only,
@@ -418,7 +418,7 @@ async fn raw(ctx: Context<'_>) -> Result<()> {
 }
 
 /// Reset the guild configuration to defaults
-#[tracing::instrument(skip(ctx), fields(channel = ctx.channel_id().get(), author = ctx.author().id.get()))]
+#[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
     guild_only,
