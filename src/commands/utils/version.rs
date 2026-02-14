@@ -34,8 +34,22 @@ pub async fn version(ctx: Context<'_>) -> Result<()> {
 
     let revision = option_env!("METADATA_REVISION").map_or_else(
         || "*Unknown*".to_owned(),
-        |rev| format!("[`{rev}`](https://github.com/ryanccn/valfisk/tree/{rev})"),
+        |rev| {
+            format!(
+                "[`{0}`](https://github.com/ryanccn/valfisk/tree/{0})",
+                rev.strip_suffix("-dirty").unwrap_or(rev)
+            )
+        },
     );
+
+    let last_modified = option_env!("METADATA_LAST_MODIFIED")
+        .and_then(|modified| {
+            modified
+                .parse::<u64>()
+                .ok()
+                .map(|t| format!("<t:{t}:F> (<t:{t}:R>)"))
+        })
+        .unwrap_or_else(|| "*Unknown*".to_owned());
 
     ctx.send(
         CreateReply::default()
@@ -55,6 +69,9 @@ pub async fn version(ctx: Context<'_>) -> Result<()> {
                 ))),
                 CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                     "**Revision**\n{revision}"
+                ))),
+                CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
+                    "**Last modified**\n{last_modified}"
                 ))),
             ]))]),
     )

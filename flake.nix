@@ -23,7 +23,9 @@
 
       env = {
         METADATA_REVISION = self.rev or self.dirtyRev or null;
+        METADATA_LAST_MODIFIED = self.lastModified or 0;
       };
+
       doCheck = true;
 
       cargoLock.outputHashes = {
@@ -42,36 +44,12 @@
 
           pkgFor = arch: self.legacyPackages.${system}."valfisk-static-${arch}-unknown-linux-musl";
 
-          osReleaseFor =
-            arch:
-            pkgs.writeTextFile {
-              name = "valfisk-etc-os-release";
-              text =
-                let
-                  inherit (pkgFor arch) version;
-                in
-                ''
-                  NAME="Valfisk Linux"
-                  ID=valfisk
-                  VERSION_ID=${version}
-                  PRETTY_NAME="Valfisk Linux v${version}"
-                '';
-              destination = "/etc/os-release";
-            };
-
           dockerImageFor =
             arch:
             pkgs.dockerTools.buildImage {
               name = "valfisk";
               tag = "latest-${arch}";
               architecture = crossPkgs.${arch}.go.GOARCH;
-
-              copyToRoot = pkgs.buildEnv {
-                name = "valfisk-image-root-${arch}";
-                paths = [ (osReleaseFor arch) ];
-                pathsToLink = [ "/etc" ];
-              };
-
               config.Cmd = [ (lib.getExe (pkgFor arch)) ];
             };
         in

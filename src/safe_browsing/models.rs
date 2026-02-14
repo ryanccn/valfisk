@@ -2,6 +2,9 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
+use std::{fmt::Display, str::FromStr};
+
+use eyre::eyre;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize)]
@@ -27,10 +30,66 @@ impl Default for ClientInfo {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ThreatType {
+    Malware,
+    SocialEngineering,
+    UnwantedSoftware,
+}
+
+impl ThreatType {
+    pub const VARIANTS: [Self; 3] = [
+        Self::Malware,
+        Self::SocialEngineering,
+        Self::UnwantedSoftware,
+    ];
+}
+
+impl Display for ThreatType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Malware => "MALWARE",
+            Self::SocialEngineering => "SOCIAL_ENGINEERING",
+            Self::UnwantedSoftware => "UNWANTED_SOFTWARE",
+        })
+    }
+}
+
+impl FromStr for ThreatType {
+    type Err = eyre::Report;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "MALWARE" => Ok(Self::Malware),
+            "SOCIAL_ENGINEERING" => Ok(Self::SocialEngineering),
+            "UNWANTED_SOFTWARE" => Ok(Self::UnwantedSoftware),
+            _ => Err(eyre!("unknown Safe Browsing threat type: {s:?}")),
+        }
+    }
+}
+
+impl Serialize for ThreatType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for ThreatType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = <&str>::deserialize(deserializer)?;
+        s.parse::<Self>().map_err(serde::de::Error::custom)
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ListUpdateRequest {
-    pub threat_type: String,
+    pub threat_type: ThreatType,
     pub platform_type: String,
     pub threat_entry_type: String,
     pub state: String,
@@ -55,7 +114,7 @@ pub struct ThreatListUpdateResponse {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ListUpdateResponse {
-    pub threat_type: String,
+    pub threat_type: ThreatType,
     pub new_client_state: String,
     pub checksum: ListUpdateChecksum,
 

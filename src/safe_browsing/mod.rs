@@ -14,7 +14,7 @@ use std::{
 };
 use tokio::sync::RwLock;
 
-use crate::http::HTTP;
+use crate::{http::HTTP, safe_browsing::models::ThreatType};
 
 mod canonicalize;
 mod models;
@@ -26,8 +26,6 @@ use models::{
     ThreatMatch,
 };
 
-static THREAT_TYPES: [&str; 3] = ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE"];
-
 #[derive(Debug, Clone)]
 struct SafeBrowsingListState {
     state: String,
@@ -37,7 +35,7 @@ struct SafeBrowsingListState {
 #[derive(Debug, Clone)]
 pub struct SafeBrowsing {
     key: String,
-    states: Arc<RwLock<HashMap<String, SafeBrowsingListState>>>,
+    states: Arc<RwLock<HashMap<ThreatType, SafeBrowsingListState>>>,
 }
 
 impl SafeBrowsing {
@@ -53,24 +51,27 @@ impl SafeBrowsing {
         loop {
             let mut failed = false;
 
-            let current_states: HashMap<String, String> = {
+            let current_states: HashMap<ThreatType, String> = {
                 let states_lock = self.states.read().await;
 
                 states_lock
                     .iter()
-                    .map(|(k, v)| (k.clone(), v.state.clone()))
+                    .map(|(k, v)| (*k, v.state.clone()))
                     .collect()
             };
 
             let request = ThreatListUpdateRequest {
                 client: ClientInfo::default(),
-                list_update_requests: THREAT_TYPES
-                    .into_iter()
+                list_update_requests: ThreatType::VARIANTS
                     .map(|threat_type| ListUpdateRequest {
-                        threat_type: threat_type.to_owned(),
+                        threat_type,
                         platform_type: "ANY_PLATFORM".to_owned(),
                         threat_entry_type: "URL".to_owned(),
-                        state: current_states.get(threat_type).cloned().unwrap_or_default(),
+
+                        state: current_states
+                            .get(&threat_type)
+                            .cloned()
+                            .unwrap_or_default(),
 
                         constraints: ThreatListConstraints {
                             max_update_entries: 50000,
@@ -79,7 +80,7 @@ impl SafeBrowsing {
                             supported_compressions: vec!["RAW".to_owned()],
                         },
                     })
-                    .collect(),
+                    .to_vec(),
             };
 
             let response: ThreatListUpdateResponse = HTTP
@@ -142,7 +143,7 @@ impl SafeBrowsing {
                     );
                 } else {
                     tracing::error!(
-                        r#type = list_update.threat_type,
+                        r#type = ?list_update.threat_type,
                         actual = checksum,
                         expected = list_update.checksum.sha256,
                         "list checksum has drifted, resetting",
@@ -235,7 +236,7 @@ impl SafeBrowsing {
                     .collect(),
 
                 threat_info: ThreatInfo {
-                    threat_types: THREAT_TYPES.map(String::from).to_vec(),
+                    threat_types: ThreatType::VARIANTS.map(|v| v.to_string()).to_vec(),
                     platform_types: vec!["ANY_PLATFORM".to_owned()],
                     threat_entry_types: vec!["URL".to_owned()],
                     threat_entries: matched_hash_prefixes

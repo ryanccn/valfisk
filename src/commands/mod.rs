@@ -52,8 +52,6 @@ pub fn all() -> Vec<poise::Command<Data, eyre::Report>> {
         command!(utils, rotate_color_roles),
         command!(utils, template_channel),
         command!(utils, version),
-        command!(admin, presence),
-        command!(admin, say),
-        command!(admin, sysinfo),
+        admin::admin(),
     ]
 }

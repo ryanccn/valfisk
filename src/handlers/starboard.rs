@@ -109,7 +109,7 @@ impl<'de> serde::Deserialize<'de> for StarboardEmojis {
     where
         D: serde::Deserializer<'de>,
     {
-        let s: String = serde::Deserialize::deserialize(deserializer)?;
+        let s = <&str>::deserialize(deserializer)?;
         s.parse().map_err(serde::de::Error::custom)
     }
 }
