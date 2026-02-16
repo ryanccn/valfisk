@@ -21,7 +21,7 @@ color-eyre = "0.6.5"
 dotenvy = "0.15.7"
 envy = "0.4.2"
 eyre = "0.6.12"
-futures-util = "0.3.31"
+futures-util = "0.3.32"
 hickory-resolver = { version = "0.25.2", features = ["https-aws-lc-rs", "dnssec-aws-lc-rs", "webpki-roots"] }
 humantime = "2.3.0"
 indexmap = { version = "2.13.0", features = ["serde"] }
@@ -36,12 +36,12 @@ rustls = "0.23.36"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 sha2 = "0.10.9"
-sysinfo = "0.38.1"
+sysinfo = "0.38.2"
 tokio = { version = "1.49.0", features = ["full"] }
 toml = "0.9.11"
 tracing = "0.1.44"
 tracing-error = "0.2.1"
-tracing-subscriber = { version = "=0.3.19", features = ["env-filter"] }
+tracing-subscriber = { version = "=0.3.22", features = ["env-filter"] }
 unic = "0.9.0"
 url = "2.5.8"
 webpki-roots = "1.0.6"
