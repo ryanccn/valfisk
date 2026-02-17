@@ -48,7 +48,7 @@ pub async fn ban(
     member
         .ban(
             ctx.http(),
-            delete_message_days.unwrap_or(0),
+            delete_message_days.map_or(0, |d| d * 86400),
             reason.as_deref(),
         )
         .await?;

@@ -55,7 +55,7 @@ pub async fn guilds(ctx: Context<'_>) -> Result<()> {
             .components(&[serenity::CreateComponent::Container(
                 serenity::CreateContainer::new(&[
                     serenity::CreateContainerComponent::TextDisplay(
-                        serenity::CreateTextDisplay::new("## Guilds"),
+                        serenity::CreateTextDisplay::new(format!("## Guilds ({})", guilds.len())),
                     ),
                     serenity::CreateContainerComponent::TextDisplay(
                         serenity::CreateTextDisplay::new(

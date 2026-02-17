@@ -51,12 +51,12 @@ async fn recreate(
 
 #[derive(poise::ChoiceParameter, PartialEq, Eq, Clone, Copy, Debug)]
 enum RotateLogsKind {
-    Moderation,
     Message,
+    Moderation,
     Member,
 }
 
-/// Rotate logs channels by recreating and automatically configuring them
+/// Rotate a logs channel by recreating and automatically configuring it
 #[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
@@ -68,7 +68,7 @@ enum RotateLogsKind {
 )]
 pub async fn rotate_logs(
     ctx: Context<'_>,
-    #[description = "Only rotate one kind of logs channel"] kind: Option<RotateLogsKind>,
+    #[description = "Kind of logs channel to rotate"] kind: RotateLogsKind,
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
@@ -89,7 +89,7 @@ pub async fn rotate_logs(
         serenity::CreateContainer::new(&[
             serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
                 "### Rotate logs
-Are you sure you want to rotate logs channels? This will delete the configured logs channels and create new ones.",
+Are you sure you want to rotate this logs channel? This will delete the configured logs channel and create a new one.",
             )),
         ]).accent_color(0xffd43b)
     )
@@ -97,56 +97,75 @@ Are you sure you want to rotate logs channels? This will delete the configured l
 
     if confirmed {
         let mut guild_config = storage.get_config(guild_id).await?;
-        let mut new_channels = Vec::new();
+        let mut new_channel = None;
 
-        if kind.is_none_or(|k| k == RotateLogsKind::Moderation)
-            && let Some(channel) = guild_config.moderation_logs_channel
-            && let Some(ch) = recreate(ctx, channel, guild_id, actor).await?
-        {
-            new_channels.push(ch);
-            guild_config.moderation_logs_channel = Some(ch);
-        }
+        match kind {
+            RotateLogsKind::Message => {
+                if let Some(channel) = guild_config.message_logs_channel
+                    && let Some(ch) = recreate(ctx, channel, guild_id, actor).await?
+                {
+                    guild_config.message_logs_channel = Some(ch);
+                    new_channel = Some(ch);
+                }
+            }
 
-        if kind.is_none_or(|k| k == RotateLogsKind::Message)
-            && let Some(channel) = guild_config.message_logs_channel
-            && let Some(ch) = recreate(ctx, channel, guild_id, actor).await?
-        {
-            new_channels.push(ch);
-            guild_config.message_logs_channel = Some(ch);
-        }
+            RotateLogsKind::Moderation => {
+                if let Some(channel) = guild_config.moderation_logs_channel
+                    && let Some(ch) = recreate(ctx, channel, guild_id, actor).await?
+                {
+                    guild_config.moderation_logs_channel = Some(ch);
+                    new_channel = Some(ch);
+                }
+            }
 
-        if kind.is_none_or(|k| k == RotateLogsKind::Member)
-            && let Some(channel) = guild_config.member_logs_channel
-            && let Some(ch) = recreate(ctx, channel, guild_id, actor).await?
-        {
-            new_channels.push(ch);
-            guild_config.member_logs_channel = Some(ch);
+            RotateLogsKind::Member => {
+                if let Some(channel) = guild_config.member_logs_channel
+                    && let Some(ch) = recreate(ctx, channel, guild_id, actor).await?
+                {
+                    guild_config.member_logs_channel = Some(ch);
+                    new_channel = Some(ch);
+                }
+            }
         }
 
         storage.set_config(guild_id, &guild_config).await?;
 
-        reply
-            .edit(
-                ctx,
-                CreateReply::default()
-                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                    .components(&[serenity::CreateComponent::Container(
-                        serenity::CreateContainer::new(&[
-                            serenity::CreateContainerComponent::TextDisplay(
-                                serenity::CreateTextDisplay::new(format!(
-                                    "### Rotated logs\n{}",
-                                    new_channels
-                                        .iter()
-                                        .map(|ch| ch.mention().to_string())
-                                        .collect::<Vec<_>>()
-                                        .join(" ")
-                                )),
-                            ),
-                        ])
-                        .accent_color(0x4ade80),
-                    )]),
-            )
-            .await?;
+        if let Some(new_channel) = new_channel {
+            reply
+                .edit(
+                    ctx,
+                    CreateReply::default()
+                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                        .components(&[serenity::CreateComponent::Container(
+                            serenity::CreateContainer::new(&[
+                                serenity::CreateContainerComponent::TextDisplay(
+                                    serenity::CreateTextDisplay::new(format!(
+                                        "### Rotated logs\n{}",
+                                        new_channel.mention()
+                                    )),
+                                ),
+                            ])
+                            .accent_color(0x4ade80),
+                        )]),
+                )
+                .await?;
+        } else {
+            reply
+                .edit(
+                    ctx,
+                    CreateReply::default()
+                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                        .components(&[serenity::CreateComponent::Container(
+                            serenity::CreateContainer::new(&[
+                                serenity::CreateContainerComponent::TextDisplay(
+                                    serenity::CreateTextDisplay::new("### No logs rotated"),
+                                ),
+                            ])
+                            .accent_color(0xff6b6b),
+                        )]),
+                )
+                .await?;
+        }
     } else {
         reply
             .edit(

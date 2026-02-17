@@ -14,7 +14,7 @@ use std::{
 };
 use tokio::sync::RwLock;
 
-use crate::{http::HTTP, safe_browsing::models::ThreatType};
+use crate::http::HTTP;
 
 mod canonicalize;
 mod models;
@@ -23,7 +23,7 @@ use canonicalize::canonicalize;
 use models::{
     ClientInfo, FindFullHashesRequest, FindFullHashesResponse, ListUpdateRequest, ThreatEntry,
     ThreatInfo, ThreatListConstraints, ThreatListUpdateRequest, ThreatListUpdateResponse,
-    ThreatMatch,
+    ThreatMatch, ThreatType,
 };
 
 #[derive(Debug, Clone)]
