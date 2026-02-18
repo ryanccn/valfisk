@@ -144,7 +144,7 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
             message.channel_id.broadcast_typing(&ctx.http).await?;
 
             let data = anthropic::messages(serde_json::json!({
-                "model": "claude-sonnet-4-5",
+                "model": "claude-sonnet-4-6",
                 "max_tokens": 2048,
                 "system": SYSTEM_PROMPT.replace("{{currentDateTime}}", &chrono::Utc::now().to_rfc3339()),
                 "messages": messages,
@@ -155,7 +155,6 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                 message.reply(&ctx.http, &content.text).await?;
 
                 if let Some(storage) = &ctx.data::<crate::Data>().storage {
-                    messages.remove(0);
                     messages.push(IntelligenceMessage {
                         role: IntelligenceMessageRole::Assistant,
                         content: content.text.clone(),
