@@ -10,7 +10,7 @@ fn validate_commands(commands: &[poise::Command<crate::Data, eyre::Report>]) {
     if !commands.iter().filter(|c| c.guild_only).all(|c| {
         c.install_context
             .as_ref()
-            .is_some_and(|i| i.as_ref() == &[serenity::InstallationContext::Guild])
+            .is_some_and(|i| i.as_ref() == [serenity::InstallationContext::Guild])
     }) {
         panic!(
             "some commands marked as `guild_only` do not have installation contexts restricted to `Guild`"
@@ -20,7 +20,7 @@ fn validate_commands(commands: &[poise::Command<crate::Data, eyre::Report>]) {
     if !commands.iter().filter(|c| c.guild_only).all(|c| {
         c.interaction_context
             .as_ref()
-            .is_some_and(|i| i.as_ref() == &[serenity::InteractionContext::Guild])
+            .is_some_and(|i| i.as_ref() == [serenity::InteractionContext::Guild])
     }) {
         panic!(
             "some commands marked as `guild_only` do not have interaction contexts restricted to `Guild`"
@@ -30,7 +30,7 @@ fn validate_commands(commands: &[poise::Command<crate::Data, eyre::Report>]) {
     if !commands.iter().filter(|c| !c.guild_only).all(|c| {
         c.install_context.as_ref().is_some_and(|i| {
             i.as_ref()
-                == &[
+                == [
                     serenity::InstallationContext::Guild,
                     serenity::InstallationContext::User,
                 ]
@@ -47,7 +47,7 @@ fn validate_commands(commands: &[poise::Command<crate::Data, eyre::Report>]) {
         .all(|c| {
             c.interaction_context.as_ref().is_some_and(|i| {
                 i.as_ref()
-                    == &[
+                    == [
                         serenity::InteractionContext::Guild,
                         serenity::InteractionContext::BotDm,
                         serenity::InteractionContext::PrivateChannel,
@@ -73,7 +73,7 @@ fn validate_commands(commands: &[poise::Command<crate::Data, eyre::Report>]) {
     if !commands.iter().filter(|c| c.owners_only).all(|c| {
         c.install_context
             .as_ref()
-            .is_some_and(|i| i.as_ref() == &[serenity::InstallationContext::Guild])
+            .is_some_and(|i| i.as_ref() == [serenity::InstallationContext::Guild])
     }) {
         panic!(
             "some commands marked as `owners_only` do not have install contexts restricted to `Guild`"
@@ -83,7 +83,7 @@ fn validate_commands(commands: &[poise::Command<crate::Data, eyre::Report>]) {
     if !commands.iter().filter(|c| c.owners_only).all(|c| {
         c.interaction_context
             .as_ref()
-            .is_some_and(|i| i.as_ref() == &[serenity::InteractionContext::Guild])
+            .is_some_and(|i| i.as_ref() == [serenity::InteractionContext::Guild])
     }) {
         panic!(
             "some commands marked as `owners_only` do not have interaction contexts restricted to `Guild`"
