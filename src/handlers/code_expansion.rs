@@ -100,7 +100,7 @@ async fn github(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateCom
             "-# GitHub · {}",
             serenity::FormattedTimestamp::now()
         ))),
-        serenity::CreateComponent::Separator(serenity::CreateSeparator::new(true)),
+        serenity::CreateComponent::Separator(serenity::CreateSeparator::new().divider(true)),
     ])
 }
 
@@ -157,7 +157,7 @@ async fn tangled(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateCo
             "-# Tangled · {}",
             serenity::FormattedTimestamp::now()
         ))),
-        serenity::CreateComponent::Separator(serenity::CreateSeparator::new(true)),
+        serenity::CreateComponent::Separator(serenity::CreateSeparator::new().divider(true)),
     ])
 }
 
@@ -219,7 +219,7 @@ async fn tangled_strings(
             "-# Tangled Strings · {}",
             serenity::FormattedTimestamp::now()
         ))),
-        serenity::CreateComponent::Separator(serenity::CreateSeparator::new(true)),
+        serenity::CreateComponent::Separator(serenity::CreateSeparator::new().divider(true)),
     ])
 }
 
@@ -281,7 +281,7 @@ async fn codeberg(
             "-# Codeburger · {}",
             serenity::FormattedTimestamp::now()
         ))),
-        serenity::CreateComponent::Separator(serenity::CreateSeparator::new(true)),
+        serenity::CreateComponent::Separator(serenity::CreateSeparator::new().divider(true)),
     ])
 }
 
@@ -338,7 +338,7 @@ async fn gitlab(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateCom
             "-# GitLab · {}",
             serenity::FormattedTimestamp::now()
         ))),
-        serenity::CreateComponent::Separator(serenity::CreateSeparator::new(true)),
+        serenity::CreateComponent::Separator(serenity::CreateSeparator::new().divider(true)),
     ])
 }
 
@@ -375,7 +375,7 @@ async fn rust_playground(
             "-# play.rust-lang.org · {}",
             serenity::FormattedTimestamp::now()
         ))),
-        serenity::CreateComponent::Separator(serenity::CreateSeparator::new(true)),
+        serenity::CreateComponent::Separator(serenity::CreateSeparator::new().divider(true)),
     ])
 }
 
@@ -410,7 +410,7 @@ async fn go_playground(
             "-# go.dev/play · {}",
             serenity::FormattedTimestamp::now()
         ))),
-        serenity::CreateComponent::Separator(serenity::CreateSeparator::new(true)),
+        serenity::CreateComponent::Separator(serenity::CreateSeparator::new().divider(true)),
     ])
 }
 

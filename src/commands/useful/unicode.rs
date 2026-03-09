@@ -70,7 +70,7 @@ pub async fn unicode(
                     unic::ucd::Name::of(character)
                         .map_or_else(String::new, |name| format!(" \u{2013} {name}")),
                 ))),
-                CreateContainerComponent::Separator(CreateSeparator::new(true)),
+                CreateContainerComponent::Separator(CreateSeparator::new().divider(true)),
                 CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                     r"**Block**: {}
 **General Category**: {}
@@ -82,7 +82,7 @@ pub async fn unicode(
                         |age| format!("Unicode {}", age.actual())
                     ),
                 ))),
-                CreateContainerComponent::Separator(CreateSeparator::new(true)),
+                CreateContainerComponent::Separator(CreateSeparator::new().divider(true)),
                 CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                     r"**Alphabetic**: {}
 **Bidirectionally mirrored**: {}
@@ -103,7 +103,7 @@ pub async fn unicode(
                     yesno(unic::char::basics::is_private_use(character)),
                     yesno(unic::char::basics::is_noncharacter(character)),
                 ))),
-                CreateContainerComponent::Separator(CreateSeparator::new(true)),
+                CreateContainerComponent::Separator(CreateSeparator::new().divider(true)),
                 CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                     r"**Emoji**: {}
 **Emoji component**: {}

@@ -99,7 +99,7 @@ pub async fn interaction_confirm<'a>(
                 .components(vec![serenity::CreateComponent::Container(
                     container
                         .add_component(serenity::CreateContainerComponent::Separator(
-                            serenity::CreateSeparator::new(false),
+                            serenity::CreateSeparator::new().divider(false),
                         ))
                         .add_component(serenity::CreateContainerComponent::ActionRow(
                             serenity::CreateActionRow::Buttons(

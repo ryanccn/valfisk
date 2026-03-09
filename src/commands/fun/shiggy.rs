@@ -69,7 +69,7 @@ pub async fn shiggy(
                             serenity::CreateTextDisplay::new(data.source),
                         ),
                         serenity::CreateContainerComponent::Separator(
-                            serenity::CreateSeparator::new(false),
+                            serenity::CreateSeparator::new().divider(false),
                         ),
                         serenity::CreateContainerComponent::MediaGallery(
                             serenity::CreateMediaGallery::new(&[

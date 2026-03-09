@@ -116,11 +116,13 @@ pub async fn timeout(
             ));
         }
 
+        let reply_container = container.clone();
+
         if let Some(storage) = &ctx.data().storage {
             let guild_config = storage.get_config(member.guild_id).await?;
 
             if let Some(logs_channel) = guild_config.moderation_logs_channel {
-                container =
+                let log_container =
                     container.add_component(serenity::CreateContainerComponent::TextDisplay(
                         serenity::CreateTextDisplay::new(format!(
                             "-# {} \u{00B7} {}",
@@ -135,13 +137,18 @@ pub async fn timeout(
                         serenity::CreateMessage::default()
                             .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
                             .allowed_mentions(serenity::CreateAllowedMentions::new())
-                            .components(&[serenity::CreateComponent::Container(container)]),
+                            .components(vec![serenity::CreateComponent::Container(log_container)]),
                     )
                     .await?;
             }
         }
 
-        ctx.say("Success!").await?;
+        ctx.send(
+            poise::CreateReply::default()
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                .components(vec![serenity::CreateComponent::Container(reply_container)]),
+        )
+        .await?;
     } else {
         ctx.say("Invalid duration provided!").await?;
     }
