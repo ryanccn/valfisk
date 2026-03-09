@@ -5,7 +5,7 @@
 use std::{fmt::Display, str::FromStr};
 
 use eyre::eyre;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de};
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -133,13 +133,31 @@ pub struct ListUpdateChecksum {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ListUpdateAdditions {
-    pub raw_hashes: RawHashes,
+    pub raw_hashes: Option<RawHashes>,
+    pub rice_hashes: Option<RiceDeltaEncoded>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ListUpdateRemovals {
-    pub raw_indices: RawIndices,
+    pub raw_indices: Option<RawIndices>,
+    pub rice_indices: Option<RiceDeltaEncoded>,
+}
+
+fn deserialize_string_u64<'de, D: de::Deserializer<'de>>(d: D) -> Result<u64, D::Error> {
+    let s = <&str>::deserialize(d)?;
+    s.parse::<u64>().map_err(de::Error::custom)
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RiceDeltaEncoded {
+    #[serde(default, deserialize_with = "deserialize_string_u64")]
+    pub first_value: u64,
+    pub rice_parameter: u32,
+    #[serde(default)]
+    pub num_entries: u32,
+    pub encoded_data: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]

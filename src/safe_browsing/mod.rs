@@ -18,6 +18,7 @@ use crate::http::HTTP;
 
 mod canonicalize;
 mod models;
+mod rice;
 
 use canonicalize::canonicalize;
 use models::{
@@ -77,7 +78,7 @@ impl SafeBrowsing {
                             max_update_entries: 50000,
                             max_database_entries: 100000,
                             region: "US".to_owned(),
-                            supported_compressions: vec!["RAW".to_owned()],
+                            supported_compressions: vec!["RAW".to_owned(), "RICE".to_owned()],
                         },
                     })
                     .to_vec(),
@@ -103,7 +104,18 @@ impl SafeBrowsing {
                     .unwrap_or_default();
 
                 for removal in &list_update.removals {
-                    let mut indices = removal.raw_indices.indices.clone();
+                    let mut indices: Vec<usize> = if let Some(raw) = &removal.raw_indices {
+                        raw.indices.clone()
+                    } else if let Some(rice) = &removal.rice_indices {
+                        let data = BASE64.decode(&rice.encoded_data)?;
+                        rice::decode(rice.first_value, rice.rice_parameter, rice.num_entries, &data)?
+                            .into_iter()
+                            .map(|v| v as usize)
+                            .collect()
+                    } else {
+                        return Err(eyre!("list update removal had no raw or rice indices"));
+                    };
+
                     indices.sort_unstable();
 
                     for idx in indices.into_iter().rev() {
@@ -114,13 +126,20 @@ impl SafeBrowsing {
                 }
 
                 for addition in &list_update.additions {
-                    let hashes = BASE64.decode(&addition.raw_hashes.raw_hashes)?;
-
-                    current_prefixes.extend(
-                        hashes
-                            .chunks(addition.raw_hashes.prefix_size)
-                            .map(|c| c.to_vec()),
-                    );
+                    if let Some(raw) = &addition.raw_hashes {
+                        let hashes = BASE64.decode(&raw.raw_hashes)?;
+                        current_prefixes
+                            .extend(hashes.chunks(raw.prefix_size).map(|c| c.to_vec()));
+                    } else if let Some(rice) = &addition.rice_hashes {
+                        let data = BASE64.decode(&rice.encoded_data)?;
+                        current_prefixes.extend(
+                            rice::decode(rice.first_value, rice.rice_parameter, rice.num_entries, &data)?
+                                .into_iter()
+                                .map(|v| v.to_le_bytes().to_vec()),
+                        );
+                    } else {
+                        return Err(eyre!("list update addition had no raw or rice hashes"));
+                    }
                 }
 
                 current_prefixes.sort_unstable();
