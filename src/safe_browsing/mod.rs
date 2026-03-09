@@ -108,10 +108,15 @@ impl SafeBrowsing {
                         raw.indices.clone()
                     } else if let Some(rice) = &removal.rice_indices {
                         let data = BASE64.decode(&rice.encoded_data)?;
-                        rice::decode(rice.first_value, rice.rice_parameter, rice.num_entries, &data)?
-                            .into_iter()
-                            .map(|v| v as usize)
-                            .collect()
+                        rice::decode(
+                            rice.first_value,
+                            rice.rice_parameter,
+                            rice.num_entries,
+                            &data,
+                        )?
+                        .into_iter()
+                        .map(|v| v as usize)
+                        .collect()
                     } else {
                         return Err(eyre!("list update removal had no raw or rice indices"));
                     };
@@ -128,14 +133,18 @@ impl SafeBrowsing {
                 for addition in &list_update.additions {
                     if let Some(raw) = &addition.raw_hashes {
                         let hashes = BASE64.decode(&raw.raw_hashes)?;
-                        current_prefixes
-                            .extend(hashes.chunks(raw.prefix_size).map(|c| c.to_vec()));
+                        current_prefixes.extend(hashes.chunks(raw.prefix_size).map(|c| c.to_vec()));
                     } else if let Some(rice) = &addition.rice_hashes {
                         let data = BASE64.decode(&rice.encoded_data)?;
                         current_prefixes.extend(
-                            rice::decode(rice.first_value, rice.rice_parameter, rice.num_entries, &data)?
-                                .into_iter()
-                                .map(|v| v.to_le_bytes().to_vec()),
+                            rice::decode(
+                                rice.first_value,
+                                rice.rice_parameter,
+                                rice.num_entries,
+                                &data,
+                            )?
+                            .into_iter()
+                            .map(|v| v.to_le_bytes().to_vec()),
                         );
                     } else {
                         return Err(eyre!("list update addition had no raw or rice hashes"));

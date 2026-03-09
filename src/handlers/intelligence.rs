@@ -136,6 +136,27 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                 messages.extend(context);
             }
 
+            let mut user_content_blocks =
+                vec![serde_json::json!({"type": "text", "text": content})];
+
+            for attachment in message.attachments.iter().filter(|a| {
+                a.content_type
+                    .as_deref()
+                    .is_some_and(|ct| ct.starts_with("image/"))
+            }) {
+                user_content_blocks.push(serde_json::json!({
+                    "type": "image",
+                    "source": {"type": "url", "url": attachment.url},
+                }));
+            }
+
+            let mut api_messages: Vec<serde_json::Value> = messages
+                .iter()
+                .map(|m| serde_json::json!({"role": m.role, "content": m.content}))
+                .collect();
+
+            api_messages.push(serde_json::json!({"role": "user", "content": user_content_blocks}));
+
             messages.push(IntelligenceMessage {
                 role: IntelligenceMessageRole::User,
                 content: content.to_owned(),
@@ -147,7 +168,7 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                 "model": "claude-sonnet-4-6",
                 "max_tokens": 2048,
                 "system": SYSTEM_PROMPT.replace("{{currentDateTime}}", &chrono::Utc::now().to_rfc3339()),
-                "messages": messages,
+                "messages": api_messages,
             }))
             .await?;
 
