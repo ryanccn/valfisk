@@ -25,6 +25,7 @@ mod safe_browsing;
 mod schedule;
 mod storage;
 mod template_channel;
+mod ucd;
 mod utils;
 
 #[derive(Debug)]
