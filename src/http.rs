@@ -12,13 +12,6 @@ pub static HTTP: LazyLock<Client> = LazyLock::new(|| {
         .user_agent(USER_AGENT)
         .timeout(Duration::from_secs(30))
         .https_only(true)
-        .tls_backend_preconfigured(
-            rustls::ClientConfig::builder_with_protocol_versions(rustls::DEFAULT_VERSIONS)
-                .with_root_certificates(rustls::RootCertStore {
-                    roots: webpki_roots::TLS_SERVER_ROOTS.to_vec(),
-                })
-                .with_no_client_auth(),
-        )
         .build()
         .unwrap()
 });

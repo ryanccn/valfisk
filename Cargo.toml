@@ -43,7 +43,6 @@ tracing = "0.1.44"
 tracing-error = "0.2.1"
 tracing-subscriber = { version = "=0.3.22", features = ["env-filter"] }
 url = "2.5.8"
-webpki-roots = "1.0.6"
 
 [lints.clippy]
 all = { level = "warn", priority = -1 }
