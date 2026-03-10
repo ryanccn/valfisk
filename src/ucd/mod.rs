@@ -202,7 +202,7 @@ pub fn bidi_class_of(c: char) -> Option<(&'static str, &'static str)> {
     Some((abbr, bidi_class_full_name(abbr)))
 }
 
-fn bidi_class_full_name<'a>(abbr: &'a str) -> &'a str {
+fn bidi_class_full_name(abbr: &str) -> &str {
     match abbr {
         "L" => "Left-to-Right",
         "LRE" => "Left-to-Right Embedding",

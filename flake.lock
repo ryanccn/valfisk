@@ -2,11 +2,11 @@
   "nodes": {
     "ferrix": {
       "locked": {
-        "lastModified": 1768524035,
-        "narHash": "sha256-6Py4u7f1I6Xwu+YwKZ9mK6klNNEr1bJy1IIAl0KWr1c=",
+        "lastModified": 1773169879,
+        "narHash": "sha256-G2QsqjQXhyz/8W11FlWLRTq2ftFenbwEl0dbTspZans=",
         "owner": "ryanccn",
         "repo": "ferrix",
-        "rev": "a593189715e72054a223cefda50d1bc3a1107512",
+        "rev": "a133d72dad219a6c16c12aea9202e2b0e8baff49",
         "type": "github"
       },
       "original": {

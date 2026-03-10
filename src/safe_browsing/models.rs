@@ -154,9 +154,11 @@ fn deserialize_string_u64<'de, D: de::Deserializer<'de>>(d: D) -> Result<u64, D:
 pub struct RiceDeltaEncoded {
     #[serde(default, deserialize_with = "deserialize_string_u64")]
     pub first_value: u64,
+    #[serde(default)]
     pub rice_parameter: u32,
     #[serde(default)]
     pub num_entries: u32,
+    #[serde(default)]
     pub encoded_data: String,
 }
 

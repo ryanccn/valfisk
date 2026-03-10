@@ -80,7 +80,6 @@ mod tests {
     ///
     /// Tests with missing protocols were removed, since they are handled elsewhere;
     /// tests with invalid domains were also removed since `url` refuses to parse them.
-    #[expect(clippy::too_many_lines)]
     #[test]
     fn canonicalize_works() {
         assert_eq!(canonicalize("http://host/%25%32%35"), "http://host/%25");

@@ -70,24 +70,20 @@ pub async fn unicode(
                         .map_or_else(String::new, |name| format!(" \u{2013} {name}")),
                 ))),
                 CreateContainerComponent::Separator(CreateSeparator::new().divider(true)),
-                CreateContainerComponent::TextDisplay(CreateTextDisplay::new({
-                    let mut s = format!(
-                        "**Block**: {}\n**Script**: {}\n**General Category**: {} ({cat_abbr})\n**Bidi Class**: {}\n**Age**: {}",
-                        ucd::block_of(character).unwrap_or("None"),
-                        ucd::script_of(character).unwrap_or("Unknown"),
-                        cat_name,
-                        ucd::bidi_class_of(character).map_or_else(
-                            || "Unknown".to_owned(),
-                            |(abbr, name)| format!("{name} ({abbr})")
-                        ),
-                        ucd::age_of(character)
-                            .map_or_else(|| "Unknown".to_owned(), |v| format!("Unicode {v}")),
-                    );
-                    if let Some(num_val) = ucd::numeric_value_of(character) {
-                        s.push_str(&format!("\n**Numeric Value**: {num_val}"));
-                    }
-                    s
-                })),
+                CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
+                    "**Block**: {}\n**Script**: {}\n**General Category**: {} ({cat_abbr})\n**Bidi Class**: {}\n**Age**: {}{}",
+                    ucd::block_of(character).unwrap_or("None"),
+                    ucd::script_of(character).unwrap_or("Unknown"),
+                    cat_name,
+                    ucd::bidi_class_of(character).map_or_else(
+                        || "Unknown".to_owned(),
+                        |(abbr, name)| format!("{name} ({abbr})")
+                    ),
+                    ucd::age_of(character)
+                        .map_or_else(|| "Unknown".to_owned(), |v| format!("Unicode {v}")),
+                    ucd::numeric_value_of(character)
+                        .map_or_else(String::new, |v| format!("\n**Numeric Value**: {v}"))
+                ))),
                 CreateContainerComponent::Separator(CreateSeparator::new().divider(true)),
                 CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                     r"**Alphabetic**: {}
