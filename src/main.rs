@@ -124,6 +124,7 @@ async fn valfisk() -> Result<()> {
 
     if let Some(safe_browsing) = &data.safe_browsing {
         safe_browsing.update().await?;
+        safe_browsing.update().await?;
     }
 
     let mut client = serenity::Client::builder(

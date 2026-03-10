@@ -61,6 +61,10 @@ pub fn decode(
     let first = first_value as u32;
     values.push(first);
 
+    if num_entries == 0 {
+        return Ok(values);
+    }
+
     let mut prev = first;
     for _ in 0..num_entries {
         #[expect(clippy::cast_possible_truncation)]
