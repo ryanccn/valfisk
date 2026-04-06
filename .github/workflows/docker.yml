@@ -33,7 +33,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Nix
-        uses: cachix/install-nix-action@1ca7d21a94afc7c957383a2d217460d980de4934 # ratchet:cachix/install-nix-action@v31
+        uses: cachix/install-nix-action@96951a368ba55167b55f1c916f7d416bac6505fe # ratchet:cachix/install-nix-action@v31
 
       - name: Build Docker image
         id: image
@@ -69,7 +69,7 @@ jobs:
           path: images
 
       - name: Log in to registry
-        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # ratchet:docker/login-action@v4.0.0
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # ratchet:docker/login-action@v4.1.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
