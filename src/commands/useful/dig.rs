@@ -11,10 +11,10 @@ use poise::{
 };
 
 use hickory_resolver::{
-    Name, TokioResolver,
-    config::{NameServerConfigGroup, ResolveHosts, ResolverConfig, ResolverOpts},
-    name_server::TokioConnectionProvider,
-    proto::rr::RecordType,
+    TokioResolver,
+    config::{CLOUDFLARE, NameServerConfig, ResolveHosts, ResolverConfig, ResolverOpts},
+    net::runtime::TokioRuntimeProvider,
+    proto::rr::{Name, RecordType},
 };
 
 use eyre::Result;
@@ -28,7 +28,9 @@ fn fqdn(name: &str) -> Result<Name> {
     Ok(name)
 }
 
-const fn set_resolver_opts(options: &mut ResolverOpts, bootstrap: bool) {
+fn build_resolver_opts(bootstrap: bool) -> ResolverOpts {
+    let mut options = ResolverOpts::default();
+
     options.attempts = 5;
     options.use_hosts_file = ResolveHosts::Never;
     options.validate = true;
@@ -36,17 +38,18 @@ const fn set_resolver_opts(options: &mut ResolverOpts, bootstrap: bool) {
     if !bootstrap {
         options.cache_size = 0;
     }
+
+    options
 }
 
 pub static BOOTSTRAP_RESOLVER: LazyLock<TokioResolver> = LazyLock::new(|| {
-    let mut builder = TokioResolver::builder_with_config(
-        ResolverConfig::cloudflare_https(),
-        TokioConnectionProvider::default(),
-    );
-
-    set_resolver_opts(builder.options_mut(), true);
-
-    builder.build()
+    TokioResolver::builder_with_config(
+        ResolverConfig::https(&CLOUDFLARE),
+        TokioRuntimeProvider::default(),
+    )
+    .with_options(build_resolver_opts(true))
+    .build()
+    .unwrap()
 });
 
 #[expect(clippy::upper_case_acronyms)]
@@ -168,14 +171,12 @@ impl ResolverChoice {
     async fn resolver_config(&self) -> Result<ResolverConfig> {
         let domain = self.domain();
 
-        let ips = BOOTSTRAP_RESOLVER
+        let name_servers = BOOTSTRAP_RESOLVER
             .lookup_ip(fqdn(domain)?)
             .await?
-            .into_iter()
-            .collect::<Vec<_>>();
-
-        let name_servers =
-            NameServerConfigGroup::from_ips_https(&ips, 443, domain.to_owned(), true);
+            .iter()
+            .map(|ip| NameServerConfig::https(ip, domain.into(), None))
+            .collect();
 
         Ok(ResolverConfig::from_parts(None, Vec::new(), name_servers))
     }
@@ -198,16 +199,12 @@ pub async fn dig(
 
     ctx.defer().await?;
 
-    let hickory = {
-        let mut builder = TokioResolver::builder_with_config(
-            resolver.resolver_config().await?,
-            TokioConnectionProvider::default(),
-        );
-
-        set_resolver_opts(builder.options_mut(), false);
-
-        builder.build()
-    };
+    let hickory = TokioResolver::builder_with_config(
+        resolver.resolver_config().await?,
+        TokioRuntimeProvider::default(),
+    )
+    .with_options(build_resolver_opts(false))
+    .build()?;
 
     let Ok(fqdn) = fqdn(&name) else {
         ctx.say("Invalid domain name provided!").await?;
@@ -228,13 +225,10 @@ pub async fn dig(
                             CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                                 "```\n{}\n```",
                                 response
-                                    .record_iter()
-                                    .map(|r| format!(
-                                        "{}  {}  {}",
-                                        r.name(),
-                                        r.record_type(),
-                                        r.data()
-                                    ))
+                                    .answers()
+                                    .iter()
+                                    .map(|r| r.clone().into_record_of_rdata())
+                                    .map(|r| format!("{}  {}  {}", r.name, r.record_type(), r.data))
                                     .collect::<Vec<_>>()
                                     .join("\n")
                             ))),

@@ -4,7 +4,6 @@
 
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use eyre::eyre;
-use sha2::{Digest as _, Sha256};
 
 use rayon::prelude::*;
 use std::{
@@ -26,6 +25,11 @@ use models::{
     ThreatInfo, ThreatListConstraints, ThreatListUpdateRequest, ThreatListUpdateResponse,
     ThreatMatch, ThreatType,
 };
+
+fn sha256(data: &[u8]) -> Vec<u8> {
+    use aws_lc_rs::digest::{SHA256, digest};
+    digest(&SHA256, data).as_ref().to_vec()
+}
 
 #[derive(Debug, Clone)]
 struct SafeBrowsingListState {
@@ -153,8 +157,8 @@ impl SafeBrowsing {
 
                 current_prefixes.sort_unstable();
 
-                let checksum = BASE64.encode(Sha256::digest(
-                    current_prefixes
+                let checksum = BASE64.encode(sha256(
+                    &current_prefixes
                         .clone()
                         .into_iter()
                         .flatten()
@@ -215,7 +219,7 @@ impl SafeBrowsing {
                 url_hashes
                     .entry((*url).to_string())
                     .or_default()
-                    .insert(Sha256::digest(&url_prefix).to_vec());
+                    .insert(sha256(url_prefix.as_bytes()));
             }
 
             if let Some(url_without_end_parens) = url.strip_suffix([')', ']']) {
@@ -223,7 +227,7 @@ impl SafeBrowsing {
                     url_hashes
                         .entry(url_without_end_parens.to_string())
                         .or_default()
-                        .insert(Sha256::digest(&url_prefix).to_vec());
+                        .insert(sha256(url_prefix.as_bytes()));
                 }
             }
         }

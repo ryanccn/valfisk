@@ -98,7 +98,7 @@ async fn shutdown() {
 async fn valfisk() -> Result<()> {
     color_eyre::install()?;
     tracing_subscriber::registry()
-        .with(tracing_subscriber::fmt::layer())
+        .with(tracing_subscriber::fmt::layer().with_ansi_sanitization(false))
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("valfisk=info,warn")),
