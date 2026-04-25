@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use eyre::{Report, Result};
+use eyre::{Report, Result, eyre};
 use std::{process::ExitCode, sync::Arc};
 use tokio::{signal, sync::mpsc, task};
 use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
@@ -115,7 +115,7 @@ async fn valfisk() -> Result<()> {
 
     rustls::crypto::aws_lc_rs::default_provider()
         .install_default()
-        .unwrap();
+        .map_err(|_| eyre!("failed to install aws-lc-rs as rustls's CryptoProvider"))?;
 
     // Preload config from environment
     let _ = *CONFIG;

@@ -36,7 +36,7 @@ impl Storage {
             redis,
             ConnectionManagerConfig::new()
                 .set_connection_timeout(Some(Duration::from_secs(10)))
-                .set_response_timeout(Some(Duration::from_secs(60)))
+                .set_response_timeout(Some(Duration::from_mins(1)))
                 .set_number_of_retries(3),
         )
         .await?;

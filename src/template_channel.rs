@@ -165,7 +165,7 @@ impl Template {
                             .map(|(idx, (title, desc))| {
                                 let mut container = CreateContainer::new(vec![
                                     CreateContainerComponent::TextDisplay(CreateTextDisplay::new(
-                                        format!("### {}\u{200B}. {title}\n{desc}", idx + 1,),
+                                        format!("### {}\u{200B}. {title}\n{desc}", idx + 1),
                                     )),
                                 ]);
 

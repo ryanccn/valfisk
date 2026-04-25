@@ -59,7 +59,7 @@ async fn request_consent(ctx: &serenity::Context, message: &serenity::Message) -
         )
         .await?;
 
-    timeout(Duration::from_secs(24 * 60 * 60), async move {
+    timeout(Duration::from_hours(24), async move {
         let mut collector = serenity::collect(ctx, {
             let confirm_message_id = confirm_message.id;
 

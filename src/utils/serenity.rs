@@ -119,7 +119,7 @@ pub async fn interaction_confirm<'a>(
         .await?;
 
     let interaction = timeout(
-        Duration::from_secs(24 * 60 * 60),
+        Duration::from_hours(24),
         serenity::collect(ctx.serenity_context(), {
             let confirm_message_id = handle.message().await?.id;
 

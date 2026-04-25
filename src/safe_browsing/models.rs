@@ -108,6 +108,7 @@ pub struct ThreatListConstraints {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ThreatListUpdateResponse {
+    #[serde(default)]
     pub list_update_responses: Vec<ListUpdateResponse>,
 }
 
