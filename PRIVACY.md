@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 # Privacy
 
-Last updated: Jan 15, 2026
+Last updated: Apr 25, 2026
 
 ## Data we collect
 
@@ -26,7 +26,11 @@ When you use the `/lighthouse` command, the URL that is being tested will be sen
 
 When you use the `/dig` command, your queries will be sent to the DNS resolvers that you specify in your command invocations, under their respective privacy policies. See the privacy policies for [Cloudflare's 1.1.1.1](https://developers.cloudflare.com/1.1.1.1/privacy/public-dns-resolver/), [Google Public DNS](https://developers.google.com/speed/public-dns/privacy), [Quad9](https://quad9.net/privacy/policy/), [dns0.eu](https://www.dns0.eu/privacy), [Mullvad](https://mullvad.net/en/help/privacy-policy), [AdGuard DNS](https://adguard-dns.io/en/privacy.html), [OpenDNS](https://www.opendns.com/privacy-policy/), and [Wikimedia DNS](https://meta.wikimedia.org/wiki/Wikimedia_DNS#Privacy_policy).
 
+When you use the `/exchange` command, the data that you input (including currency codes and amounts) will be sent to [Frankfurter](https://frankfurter.dev), [Wise](https://wise.com), and [Revolut](https://revolut.com).
+
 When you use Valfisk's intelligence features (including translation and chat), your query will be sent to [Anthropic](https://www.anthropic.com/) and processed according to Anthropic's [privacy policy](https://www.anthropic.com/legal/privacy).
+
+**No information associated with your individually identifiable user is automatically sent to third parties under any circumstances**, unless you provide them explicitly in your inputs.
 
 ## Rights to your data
 
