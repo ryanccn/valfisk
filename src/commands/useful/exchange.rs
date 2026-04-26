@@ -164,23 +164,29 @@ async fn fetch_visa(from: &str, to: &str, amount: f64) -> Result<f64> {
     let today = chrono::Utc::now().format("%m/%d/%Y").to_string();
 
     let args = vec![
-        "-G".to_owned(),
-        "-d".to_owned(),
+        "--compressed".to_owned(),
+        "--impersonate".to_owned(),
+        "chrome145".to_owned(),
+        "--url-query".to_owned(),
         format!("amount={amount}"),
-        "-d".to_owned(),
+        "--url-query".to_owned(),
         "fee=0".to_owned(),
-        "-d".to_owned(),
+        "--url-query".to_owned(),
         format!("utcConvertedDate={today}"),
-        "-d".to_owned(),
+        "--url-query".to_owned(),
         format!("exchangedate={today}"),
-        "-d".to_owned(),
+        "--url-query".to_owned(),
         format!("fromCurr={to}"),
-        "-d".to_owned(),
+        "--url-query".to_owned(),
         format!("toCurr={from}"),
         "https://usa.visa.com/cmsapi/fx/rates".to_owned(),
     ];
 
-    let output = Command::new("curl_chrome146").args(&args).output().await?;
+    let output = Command::new("curl-impersonate")
+        .args(&args)
+        .output()
+        .await?;
+
     if !output.status.success() {
         bail!("fetching Visa exchange rate failed");
     }
@@ -191,21 +197,27 @@ async fn fetch_visa(from: &str, to: &str, amount: f64) -> Result<f64> {
 
 async fn fetch_mastercard(from: &str, to: &str, amount: f64) -> Result<f64> {
     let args = vec![
-        "-G".to_owned(),
-        "-d".to_owned(),
+        "--compressed".to_owned(),
+        "--impersonate".to_owned(),
+        "chrome145".to_owned(),
+        "--url-query".to_owned(),
         "exchange_date=0000-00-00".to_owned(),
-        "-d".to_owned(),
+        "--url-query".to_owned(),
         format!("transaction_currency={from}"),
-        "-d".to_owned(),
+        "--url-query".to_owned(),
         format!("cardholder_billing_currency={to}"),
-        "-d".to_owned(),
+        "--url-query".to_owned(),
         "bank_fee=0".to_owned(),
-        "-d".to_owned(),
+        "--url-query".to_owned(),
         format!("transaction_amount={amount}"),
         "https://www.mastercard.com/marketingservices/public/mccom-services/currency-conversions/conversion-rates".to_owned()
     ];
 
-    let output = Command::new("curl_chrome146").args(&args).output().await?;
+    let output = Command::new("curl-impersonate")
+        .args(&args)
+        .output()
+        .await?;
+
     if !output.status.success() {
         bail!("fetching Mastercard exchange rate failed");
     }
