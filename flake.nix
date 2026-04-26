@@ -27,10 +27,11 @@
       };
 
       doCheck = true;
+      cargoBuildFlags = [ "--ignore-rust-version" ];
 
       cargoLock.outputHashes = {
-        "poise-0.6.1" = "sha256-qCTEkOWCpKgEXCt7apg+tiScE+X0Br0giTNNBxqNCs0=";
-        "serenity-0.12.5" = "sha256-vwlSxavZ4DNGtZUvg/GuIQY8bm/OZsks0/s0lK3ZV2c=";
+        "poise-0.6.1" = "sha256-6NU1UOQUz8WO77Luv7VLp/RL1May65Y7JmMWxaPbgvo=";
+        "serenity-0.12.5" = "sha256-j3tQkPHR1+xe8hFM8ECP04AxNPrRQpbtyv+it/7XI74=";
       };
 
       flake.legacyPackages = lib.genAttrs lib.systems.flakeExposed (

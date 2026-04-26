@@ -14,7 +14,7 @@ struct RichGuildInfo {
     pub id: serenity::GuildId,
     pub name: String,
     pub owner: serenity::UserId,
-    pub members: Option<u64>,
+    pub members: Option<u32>,
 }
 
 /// List guilds that have the app installed

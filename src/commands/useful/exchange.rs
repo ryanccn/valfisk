@@ -1,35 +1,53 @@
-// SPDX-FileCopyrightText: 2024 Ryan Cao <hello@ryanccn.dev>
+// SPDX-FileCopyrightText: 2026 Ryan Cao <hello@ryanccn.dev>
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
 use poise::{CreateReply, serenity_prelude as serenity};
 
-use eyre::{Result, bail};
-use thousands::Separable as _;
+use eyre::{Result, bail, eyre};
 use tokio::process::Command;
 
 use crate::{Context, http::HTTP};
 
-// const FIREFOX_UA: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:150.0) Gecko/20100101 Firefox/150.0";
-
-fn minor_unit_factor(currency: &str) -> f64 {
+fn decimal_places(currency: &str) -> usize {
     match currency {
         "BIF" | "CLP" | "DJF" | "GNF" | "ISK" | "JPY" | "KMF" | "KRW" | "MGA" | "PYG" | "RWF"
-        | "UGX" | "VND" | "VUV" | "XAF" | "XOF" | "XPF" => 1.0,
-        _ => 100.0,
+        | "UGX" | "VND" | "VUV" | "XAF" | "XOF" | "XPF" => 0,
+        _ => 2,
     }
 }
 
-fn format_number(n: f64) -> String {
-    ((n * 100.).round() / 100.).separate_with_commas()
+#[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+fn minor_unit_factor(currency: &str) -> f64 {
+    10_f64.powi(decimal_places(currency) as i32)
+}
+
+fn format_number(amount: f64, d: usize) -> String {
+    let formatted = format!("{amount:.d$}");
+
+    let (int_part, dec_part) = formatted
+        .find('.')
+        .map_or((&formatted[..], ""), |i| (&formatted[..i], &formatted[i..]));
+
+    let mut int_with_commas = String::new();
+    for (i, ch) in int_part.chars().rev().enumerate() {
+        if i > 0 && i % 3 == 0 {
+            int_with_commas.push(',');
+        }
+        int_with_commas.push(ch);
+    }
+    let int_with_commas: String = int_with_commas.chars().rev().collect();
+
+    format!("{int_with_commas}{dec_part}")
 }
 
 fn format_amount(amount: f64, currency: &str) -> String {
-    format!("{} {currency}", format_number(amount))
+    let d = decimal_places(currency);
+    format!("{} {currency}", format_number(amount, d))
 }
 
 #[derive(serde::Deserialize, Debug)]
-struct FrankfurterRate {
+struct FrankfurterResponse {
     rate: f64,
 }
 
@@ -47,29 +65,37 @@ struct WiseProvider {
 #[derive(serde::Deserialize, Debug)]
 struct WiseQuote {
     fee: f64,
+    rate: f64,
     #[serde(rename = "receivedAmount")]
     received_amount: f64,
 }
 
 #[derive(serde::Deserialize, Debug)]
 struct RevolutQuote {
-    recipient: RevolutAmount,
+    recipient: RevolutMoneyAmount,
+    plans: Vec<RevolutPlan>,
 }
 
 #[derive(serde::Deserialize, Debug)]
-struct RevolutAmount {
+struct RevolutMoneyAmount {
     amount: i64,
 }
 
-#[derive(Debug)]
-struct WiseInfo {
-    fee: f64,
-    received_amount: f64,
+#[derive(serde::Deserialize, Debug)]
+struct RevolutPlan {
+    id: String,
+    fees: RevolutPlanFees,
+}
+
+#[derive(serde::Deserialize, Debug)]
+struct RevolutPlanFees {
+    total: RevolutMoneyAmount,
 }
 
 #[derive(Debug)]
 struct RevolutInfo {
-    received_amount: f64,
+    received: f64,
+    fee: Option<f64>,
 }
 
 #[derive(serde::Deserialize, Debug)]
@@ -89,25 +115,26 @@ struct MastercardData {
     cardholder_bill_amount: String,
 }
 
-async fn fetch_frankfurter(from: &str, to: &str) -> Result<FrankfurterRate> {
+async fn fetch_frankfurter(from: &str, to: &str) -> Result<f64> {
     let rate = HTTP
         .get(format!("https://api.frankfurter.dev/v2/rate/{from}/{to}"))
         .send()
         .await?
         .error_for_status()?
-        .json::<FrankfurterRate>()
+        .json::<FrankfurterResponse>()
         .await?;
-    Ok(rate)
+
+    Ok(rate.rate)
 }
 
-async fn fetch_wise(from: &str, to: &str, amount: f64) -> Result<Option<WiseInfo>> {
+async fn fetch_wise(from: &str, to: &str, amount: f64) -> Result<WiseQuote> {
     let resp = HTTP
         .get("https://wise.com/gateway/v4/comparisons")
         .query(&[
             ("sourceCurrency", from),
             ("targetCurrency", to),
             ("sendAmount", &amount.to_string()),
-            ("sourceCountry", "US"),
+            ("sourceCountry", "GB"),
             ("filter", "POPULAR"),
             ("includeWise", "true"),
             ("numberOfProviders", "3"),
@@ -118,18 +145,11 @@ async fn fetch_wise(from: &str, to: &str, amount: f64) -> Result<Option<WiseInfo
         .json::<WiseComparison>()
         .await?;
 
-    let result = resp
-        .providers
+    resp.providers
         .into_iter()
         .find(|p| p.alias == "wise")
-        .and_then(|p| {
-            p.quotes.into_iter().next().map(|q| WiseInfo {
-                fee: q.fee,
-                received_amount: q.received_amount,
-            })
-        });
-
-    Ok(result)
+        .and_then(|p| p.quotes.into_iter().next())
+        .ok_or_else(|| eyre!("could not find Wise quote in API response"))
 }
 
 #[expect(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
@@ -140,7 +160,7 @@ async fn fetch_revolut(from: &str, to: &str, amount: f64) -> Result<RevolutInfo>
         .get("https://www.revolut.com/api/exchange/quote")
         .query(&[
             ("amount", amount_minor.to_string().as_str()),
-            ("country", "US"),
+            ("country", "GB"),
             ("fromCurrency", from),
             ("isRecipientAmount", "false"),
             ("toCurrency", to),
@@ -152,8 +172,15 @@ async fn fetch_revolut(from: &str, to: &str, amount: f64) -> Result<RevolutInfo>
         .json::<RevolutQuote>()
         .await?;
 
+    let fee = resp
+        .plans
+        .iter()
+        .find(|p| p.id == "STANDARD")
+        .map(|p| p.fees.total.amount as f64 / minor_unit_factor(from));
+
     Ok(RevolutInfo {
-        received_amount: resp.recipient.amount as f64 / minor_unit_factor(to),
+        received: resp.recipient.amount as f64 / minor_unit_factor(to),
+        fee,
     })
 }
 
@@ -230,6 +257,7 @@ async fn fetch_mastercard(from: &str, to: &str, amount: f64) -> Result<f64> {
     install_context = "Guild | User",
     interaction_context = "Guild | BotDm | PrivateChannel"
 )]
+#[expect(clippy::too_many_lines)]
 pub async fn exchange(
     ctx: Context<'_>,
     #[description = "Source currency code (e.g. USD)"] from: String,
@@ -291,7 +319,7 @@ pub async fn exchange(
             .map_or_else(String::new, |e| format!("{e} "))
     };
 
-    let Ok(frankfurter_result) = fetch_frankfurter(&from, &to).await else {
+    let Ok(frankfurter_rate) = fetch_frankfurter(&from, &to).await else {
         ctx.send(
             CreateReply::default()
                 .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
@@ -307,6 +335,7 @@ pub async fn exchange(
                 )]),
         )
         .await?;
+
         return Ok(());
     };
 
@@ -317,15 +346,13 @@ pub async fn exchange(
         fetch_mastercard(&from, &to, amount),
     );
 
-    let converted = amount * frankfurter_result.rate;
-
     let mut components = vec![
         serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "### **{}** = **{}**\n1 {} = {} {}",
+            "### **{}** = **{}**\n1 {} = {:.4} {}",
             format_amount(amount, &from),
-            format_amount(converted, &to),
+            format_amount(amount * frankfurter_rate, &to),
             from,
-            format_number(frankfurter_result.rate),
+            frankfurter_rate,
             to,
         ))),
         serenity::CreateContainerComponent::Separator(
@@ -335,27 +362,32 @@ pub async fn exchange(
 
     let mut source_links: Vec<&str> = vec!["[Frankfurter](https://frankfurter.dev)"];
 
-    if let Ok(Some(wise)) = &wise_result {
+    if let Ok(wise) = &wise_result {
         components.push(serenity::CreateContainerComponent::TextDisplay(
             serenity::CreateTextDisplay::new(format!(
-                "{}**Wise**\n{}\n-# Fee: {:.2} {}",
+                "{}**Wise**\n{}\n-# \\- {} (fee) = {} (received)",
                 emoji_prefix("wise"),
+                format_amount(amount * wise.rate, &to),
+                format_amount(wise.fee, &from),
                 format_amount(wise.received_amount, &to),
-                wise.fee,
-                from,
             )),
         ));
+
         source_links.push("[Wise](https://wise.com)");
     }
 
     if let Ok(revolut) = &revolut_result {
         components.push(serenity::CreateContainerComponent::TextDisplay(
             serenity::CreateTextDisplay::new(format!(
-                "{}**Revolut**\n{}",
+                "{}**Revolut**\n{}{}",
                 emoji_prefix("revolut"),
-                format_amount(revolut.received_amount, &to),
+                format_amount(revolut.received, &to),
+                revolut.fee.map_or_else(String::new, |fee| {
+                    format!("\n-# \\- {} (fee)", format_amount(fee, &from))
+                }),
             )),
         ));
+
         source_links.push("[Revolut](https://revolut.com)");
     }
 
@@ -367,6 +399,7 @@ pub async fn exchange(
                 format_amount(*visa, &to)
             )),
         ));
+
         source_links.push("[Visa](https://www.visa.com/)");
     }
 
