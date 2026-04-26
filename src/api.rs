@@ -17,12 +17,14 @@ use tokio::net::TcpListener;
 use crate::config::CONFIG;
 
 mod routes {
-    use serde_json::json;
-
     use axum::{
+        extract::Query,
         http::StatusCode,
         response::{IntoResponse, Json},
     };
+    use serde_json::json;
+
+    use crate::utils::AxumResult;
 
     #[tracing::instrument(skip_all)]
     pub async fn ping() -> impl IntoResponse {
@@ -32,6 +34,45 @@ mod routes {
     #[tracing::instrument(skip_all)]
     pub async fn ping_head() -> impl IntoResponse {
         StatusCode::OK
+    }
+
+    #[derive(serde::Deserialize)]
+    pub struct ExchangeQuery {
+        from: String,
+        to: String,
+        amount: Option<f64>,
+    }
+
+    #[tracing::instrument(skip_all)]
+    pub async fn exchange(Query(query): Query<ExchangeQuery>) -> AxumResult<impl IntoResponse> {
+        use crate::commands::exchange::{
+            fetch_frankfurter, fetch_mastercard, fetch_revolut, fetch_visa, fetch_wise,
+        };
+
+        let ExchangeQuery { from, to, amount } = query;
+        let amount = amount.unwrap_or(1.);
+
+        let (frankfurter, wise, revolut, visa, mastercard) = tokio::join!(
+            fetch_frankfurter(&from, &to),
+            fetch_wise(&from, &to, amount),
+            fetch_revolut(&from, &to, amount),
+            fetch_visa(&from, &to, amount),
+            fetch_mastercard(&from, &to, amount),
+        );
+
+        Ok((
+            StatusCode::OK,
+            Json(json!({
+                "frankfurter": frankfurter.map_or_else(|_| serde_json::Value::Null, |rate| json!({
+                    "amount": amount * rate,
+                    "rate": rate,
+                })),
+                "wise": wise.map_or_else(|_| Ok(serde_json::Value::Null), serde_json::to_value)?,
+                "revolut": revolut.map_or_else(|_| Ok(serde_json::Value::Null), serde_json::to_value)?,
+                "visa": visa.map_or_else(|_| Ok(serde_json::Value::Null), serde_json::to_value)?,
+                "mastercard": mastercard.map_or_else(|_| Ok(serde_json::Value::Null), serde_json::to_value)?,
+            })),
+        ))
     }
 
     #[tracing::instrument(skip_all)]
@@ -81,6 +122,7 @@ pub async fn serve(serenity_http: Arc<serenity::Http>) -> eyre::Result<()> {
 
     let app = Router::new()
         .route("/", get(routes::ping).head(routes::ping_head))
+        .route("/exchange", get(routes::exchange))
         .fallback(routes::not_found)
         .layer(middleware::from_fn(security_middleware))
         .with_state(state);

@@ -15,6 +15,12 @@ pub mod restore {
     pub use super::useful::remind::restore as reminders;
 }
 
+pub mod exchange {
+    pub use super::useful::exchange::{
+        fetch_frankfurter, fetch_mastercard, fetch_revolut, fetch_visa, fetch_wise,
+    };
+}
+
 macro_rules! command {
     ($category: ident, $name: ident) => {
         $category::$name::$name()

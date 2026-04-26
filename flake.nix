@@ -28,6 +28,7 @@
 
       doCheck = true;
       cargoBuildFlags = [ "--ignore-rust-version" ];
+      cargoCheckFlags = [ "--ignore-rust-version" ];
 
       cargoLock.outputHashes = {
         "poise-0.6.1" = "sha256-6NU1UOQUz8WO77Luv7VLp/RL1May65Y7JmMWxaPbgvo=";

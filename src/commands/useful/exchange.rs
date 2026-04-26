@@ -62,23 +62,29 @@ struct WiseProvider {
     quotes: Vec<WiseQuote>,
 }
 
-#[derive(serde::Deserialize, Debug)]
-struct WiseQuote {
-    fee: f64,
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct WiseQuote {
+    #[serde(rename(deserialize = "receivedAmount"))]
+    received: f64,
     rate: f64,
-    #[serde(rename = "receivedAmount")]
-    received_amount: f64,
+    fee: f64,
 }
 
 #[derive(serde::Deserialize, Debug)]
-struct RevolutQuote {
+struct RevolutResponse {
     recipient: RevolutMoneyAmount,
+    rate: RevolutRate,
     plans: Vec<RevolutPlan>,
 }
 
 #[derive(serde::Deserialize, Debug)]
 struct RevolutMoneyAmount {
     amount: i64,
+}
+
+#[derive(serde::Deserialize, Debug)]
+struct RevolutRate {
+    rate: f64,
 }
 
 #[derive(serde::Deserialize, Debug)]
@@ -92,9 +98,10 @@ struct RevolutPlanFees {
     total: RevolutMoneyAmount,
 }
 
-#[derive(Debug)]
-struct RevolutInfo {
+#[derive(serde::Serialize, Debug)]
+pub struct RevolutQuote {
     received: f64,
+    rate: f64,
     fee: Option<f64>,
 }
 
@@ -115,7 +122,7 @@ struct MastercardData {
     cardholder_bill_amount: String,
 }
 
-async fn fetch_frankfurter(from: &str, to: &str) -> Result<f64> {
+pub async fn fetch_frankfurter(from: &str, to: &str) -> Result<f64> {
     let rate = HTTP
         .get(format!("https://api.frankfurter.dev/v2/rate/{from}/{to}"))
         .send()
@@ -127,7 +134,7 @@ async fn fetch_frankfurter(from: &str, to: &str) -> Result<f64> {
     Ok(rate.rate)
 }
 
-async fn fetch_wise(from: &str, to: &str, amount: f64) -> Result<WiseQuote> {
+pub async fn fetch_wise(from: &str, to: &str, amount: f64) -> Result<WiseQuote> {
     let resp = HTTP
         .get("https://wise.com/gateway/v4/comparisons")
         .query(&[
@@ -153,7 +160,7 @@ async fn fetch_wise(from: &str, to: &str, amount: f64) -> Result<WiseQuote> {
 }
 
 #[expect(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
-async fn fetch_revolut(from: &str, to: &str, amount: f64) -> Result<RevolutInfo> {
+pub async fn fetch_revolut(from: &str, to: &str, amount: f64) -> Result<RevolutQuote> {
     let amount_minor = (amount * minor_unit_factor(from)).round() as i64;
 
     let resp = HTTP
@@ -169,7 +176,7 @@ async fn fetch_revolut(from: &str, to: &str, amount: f64) -> Result<RevolutInfo>
         .send()
         .await?
         .error_for_status()?
-        .json::<RevolutQuote>()
+        .json::<RevolutResponse>()
         .await?;
 
     let fee = resp
@@ -178,13 +185,14 @@ async fn fetch_revolut(from: &str, to: &str, amount: f64) -> Result<RevolutInfo>
         .find(|p| p.id == "STANDARD")
         .map(|p| p.fees.total.amount as f64 / minor_unit_factor(from));
 
-    Ok(RevolutInfo {
+    Ok(RevolutQuote {
         received: resp.recipient.amount as f64 / minor_unit_factor(to),
+        rate: resp.rate.rate,
         fee,
     })
 }
 
-async fn fetch_visa(from: &str, to: &str, amount: f64) -> Result<f64> {
+pub async fn fetch_visa(from: &str, to: &str, amount: f64) -> Result<f64> {
     let today = chrono::Utc::now().format("%m/%d/%Y").to_string();
 
     let args = vec![
@@ -219,7 +227,7 @@ async fn fetch_visa(from: &str, to: &str, amount: f64) -> Result<f64> {
     Ok(data.converted_amount.replace(',', "").parse::<f64>()?)
 }
 
-async fn fetch_mastercard(from: &str, to: &str, amount: f64) -> Result<f64> {
+pub async fn fetch_mastercard(from: &str, to: &str, amount: f64) -> Result<f64> {
     let args = vec![
         "--compressed".to_owned(),
         "--impersonate".to_owned(),
@@ -369,7 +377,7 @@ pub async fn exchange(
                 emoji_prefix("wise"),
                 format_amount(amount * wise.rate, &to),
                 format_amount(wise.fee, &from),
-                format_amount(wise.received_amount, &to),
+                format_amount(wise.received, &to),
             )),
         ));
 

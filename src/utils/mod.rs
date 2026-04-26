@@ -7,7 +7,7 @@ use std::borrow::Cow;
 use bytesize::ByteSize;
 
 mod axum;
-// pub use axum::AxumResult;
+pub use axum::AxumResult;
 mod error_handling;
 pub use error_handling::ValfiskError;
 mod exit_code_error;
