@@ -28,7 +28,7 @@
 
       doCheck = true;
       cargoBuildFlags = [ "--ignore-rust-version" ];
-      cargoCheckFlags = [ "--ignore-rust-version" ];
+      cargoTestFlags = [ "--ignore-rust-version" ];
 
       cargoLock.outputHashes = {
         "poise-0.6.1" = "sha256-6NU1UOQUz8WO77Luv7VLp/RL1May65Y7JmMWxaPbgvo=";
@@ -39,11 +39,11 @@
         system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
-          crossPkgs = {
-            x86_64 = pkgs.pkgsCross.musl64.pkgsStatic;
-            aarch64 = pkgs.pkgsCross.aarch64-multiplatform.pkgsStatic;
-          };
 
+          dockerArchFor = {
+            "x86_64" = "amd64";
+            "aarch64" = "arm64";
+          };
           pkgFor = arch: self.legacyPackages.${system}."valfisk-static-${arch}-unknown-linux-musl";
 
           dockerImageFor =
@@ -51,7 +51,7 @@
             pkgs.dockerTools.buildImage {
               name = "valfisk";
               tag = "latest-${arch}";
-              architecture = crossPkgs.${arch}.go.GOARCH;
+              architecture = dockerArchFor.${arch};
 
               copyToRoot = pkgs.buildEnv {
                 name = "image-root";
