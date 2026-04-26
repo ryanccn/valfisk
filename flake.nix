@@ -51,8 +51,19 @@
               tag = "latest-${arch}";
               architecture = crossPkgs.${arch}.go.GOARCH;
 
+              copyToRoot = pkgs.buildEnv {
+                name = "image-root";
+                paths = [
+                  pkgs.dockerTools.caCertificates
+                  pkgs.curl-impersonate
+                ];
+                pathsToLink = [
+                  "/bin"
+                  "/etc"
+                ];
+              };
+
               config.Cmd = [ (lib.getExe (pkgFor arch)) ];
-              copyToRoot = [ pkgs.dockerTools.caCertificates ];
             };
         in
         {

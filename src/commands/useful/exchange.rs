@@ -2,9 +2,11 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use eyre::Result;
 use poise::{CreateReply, serenity_prelude as serenity};
+
+use eyre::{Result, bail};
 use thousands::Separable as _;
+use tokio::process::Command;
 
 use crate::{Context, http::HTTP};
 
@@ -72,22 +74,22 @@ struct RevolutInfo {
     received_amount: f64,
 }
 
-// #[derive(serde::Deserialize, Debug)]
-// struct VisaRate {
-//     #[serde(rename = "convertedAmount")]
-//     converted_amount: String,
-// }
+#[derive(serde::Deserialize, Debug)]
+struct VisaRate {
+    #[serde(rename = "convertedAmount")]
+    converted_amount: String,
+}
 
-// #[derive(serde::Deserialize, Debug)]
-// struct MastercardResponse {
-//     data: MastercardData,
-// }
+#[derive(serde::Deserialize, Debug)]
+struct MastercardResponse {
+    data: MastercardData,
+}
 
-// #[derive(serde::Deserialize, Debug)]
-// struct MastercardData {
-//     #[serde(rename = "crdhldBillAmt")]
-//     cardholder_bill_amount: String,
-// }
+#[derive(serde::Deserialize, Debug)]
+struct MastercardData {
+    #[serde(rename = "crdhldBillAmt")]
+    cardholder_bill_amount: String,
+}
 
 async fn fetch_frankfurter(from: &str, to: &str) -> Result<FrankfurterRate> {
     let rate = HTTP
@@ -158,48 +160,59 @@ async fn fetch_revolut(from: &str, to: &str, amount: f64) -> Result<RevolutInfo>
     })
 }
 
-// async fn fetch_visa(from: &str, to: &str, amount: f64) -> Result<f64> {
-//     let date = chrono::Utc::now().format("%m/%d/%Y").to_string();
+async fn fetch_visa(from: &str, to: &str, amount: f64) -> Result<f64> {
+    let today = chrono::Utc::now().format("%m/%d/%Y").to_string();
 
-//     let resp = HTTP
-//         .get("https://usa.visa.com/cmsapi/fx/rates")
-//         .header("User-Agent", FIREFOX_UA)
-//         .query(&[
-//             ("amount", amount.to_string().as_str()),
-//             ("fee", "0"),
-//             ("utcConvertedDate", date.as_str()),
-//             ("exchangedate", date.as_str()),
-//             ("fromCurr", to),
-//             ("toCurr", from),
-//         ])
-//         .send()
-//         .await?
-//         .error_for_status()?
-//         .json::<VisaRate>()
-//         .await?;
+    let args = vec![
+        "-G".to_owned(),
+        "-d".to_owned(),
+        format!("amount={amount}"),
+        "-d".to_owned(),
+        "fee=0".to_owned(),
+        "-d".to_owned(),
+        format!("utcConvertedDate={today}"),
+        "-d".to_owned(),
+        format!("exchangedate={today}"),
+        "-d".to_owned(),
+        format!("fromCurr={to}"),
+        "-d".to_owned(),
+        format!("toCurr={from}"),
+        "https://usa.visa.com/cmsapi/fx/rates".to_owned(),
+    ];
 
-//     Ok(resp.converted_amount.replace(',', "").parse::<f64>()?)
-// }
+    let output = Command::new("curl_chrome146").args(&args).output().await?;
+    if !output.status.success() {
+        bail!("fetching Visa exchange rate failed");
+    }
 
-// async fn fetch_mastercard(from: &str, to: &str, amount: f64) -> Result<f64> {
-//     let resp = HTTP
-//         .get("https://www.mastercard.com/marketingservices/public/mccom-services/currency-conversions/conversion-rates")
-//         .header(header::USER_AGENT, FIREFOX_UA)
-//         .query(&[
-//             ("exchange_date", "0000-00-00"),
-//             ("transaction_currency", from),
-//             ("cardholder_billing_currency", to),
-//             ("bank_fee", "0"),
-//             ("transaction_amount", amount.to_string().as_str()),
-//         ])
-//         .send()
-//         .await?
-//         .error_for_status()?
-//         .json::<MastercardResponse>()
-//         .await?;
+    let data = serde_json::from_slice::<VisaRate>(&output.stdout)?;
+    Ok(data.converted_amount.replace(',', "").parse::<f64>()?)
+}
 
-//     Ok(resp.data.cardholder_bill_amount.parse::<f64>()?)
-// }
+async fn fetch_mastercard(from: &str, to: &str, amount: f64) -> Result<f64> {
+    let args = vec![
+        "-G".to_owned(),
+        "-d".to_owned(),
+        "exchange_date=0000-00-00".to_owned(),
+        "-d".to_owned(),
+        format!("transaction_currency={from}"),
+        "-d".to_owned(),
+        format!("cardholder_billing_currency={to}"),
+        "-d".to_owned(),
+        "bank_fee=0".to_owned(),
+        "-d".to_owned(),
+        format!("transaction_amount={amount}"),
+        "https://www.mastercard.com/marketingservices/public/mccom-services/currency-conversions/conversion-rates".to_owned()
+    ];
+
+    let output = Command::new("curl_chrome146").args(&args).output().await?;
+    if !output.status.success() {
+        bail!("fetching Mastercard exchange rate failed");
+    }
+
+    let data = serde_json::from_slice::<MastercardResponse>(&output.stdout)?;
+    Ok(data.data.cardholder_bill_amount.parse::<f64>()?)
+}
 
 /// Convert between currencies
 #[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
@@ -212,7 +225,10 @@ pub async fn exchange(
     ctx: Context<'_>,
     #[description = "Source currency code (e.g. USD)"] from: String,
     #[description = "Target currency code (e.g. EUR)"] to: String,
-    #[description = "Amount to convert (default: 1)"] amount: Option<f64>,
+
+    #[description = "Amount to convert (default: 1)"]
+    #[min = 0]
+    amount: Option<f64>,
 ) -> Result<()> {
     let from = from.trim().to_uppercase();
     let to = to.trim().to_uppercase();
@@ -277,9 +293,11 @@ pub async fn exchange(
         return Ok(());
     };
 
-    let (wise_result, revolut_result) = tokio::join!(
+    let (wise_result, revolut_result, visa_result, mastercard_result) = tokio::join!(
         fetch_wise(&from, &to, amount),
         fetch_revolut(&from, &to, amount),
+        fetch_visa(&from, &to, amount),
+        fetch_mastercard(&from, &to, amount),
     );
 
     let converted = amount * frankfurter_result.rate;
@@ -320,25 +338,22 @@ pub async fn exchange(
         source_links.push("[Revolut](https://revolut.com)");
     }
 
-    // if let Ok(visa_received) = &visa_result {
-    //     components.push(serenity::CreateContainerComponent::TextDisplay(
-    //         serenity::CreateTextDisplay::new(format!(
-    //             "**Visa**\n{}",
-    //             format_amount(visa_received, &to),
-    //         )),
-    //     ));
-    //     source_links.push("[Visa](https://usa.visa.com/support/consumer/travel-support/exchange-rate-calculator.html)");
-    // }
+    if let Ok(visa) = &visa_result {
+        components.push(serenity::CreateContainerComponent::TextDisplay(
+            serenity::CreateTextDisplay::new(format!("**Visa**\n{}", format_amount(*visa, &to))),
+        ));
+        source_links.push("[Visa](https://www.visa.com/)");
+    }
 
-    // if let Ok(mc_received) = &mastercard_result {
-    //     components.push(serenity::CreateContainerComponent::TextDisplay(
-    //         serenity::CreateTextDisplay::new(format!(
-    //             "**Mastercard**\n{}",
-    //             format_amount(mc_received, &to),
-    //         )),
-    //     ));
-    //     source_links.push("[Mastercard](https://www.mastercard.com/global/en/personal/get-support/convert-currency.html)");
-    // }
+    if let Ok(mastercard) = &mastercard_result {
+        components.push(serenity::CreateContainerComponent::TextDisplay(
+            serenity::CreateTextDisplay::new(format!(
+                "**Mastercard**\n{}",
+                format_amount(*mastercard, &to),
+            )),
+        ));
+        source_links.push("[Mastercard](https://www.mastercard.com/)");
+    }
 
     components.push(serenity::CreateContainerComponent::TextDisplay(
         serenity::CreateTextDisplay::new(format!(
