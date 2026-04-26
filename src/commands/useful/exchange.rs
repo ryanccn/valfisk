@@ -41,7 +41,6 @@ struct WiseComparison {
 #[derive(serde::Deserialize, Debug)]
 struct WiseProvider {
     alias: String,
-    name: String,
     quotes: Vec<WiseQuote>,
 }
 
@@ -64,7 +63,6 @@ struct RevolutAmount {
 
 #[derive(Debug)]
 struct WiseInfo {
-    name: String,
     fee: f64,
     received_amount: f64,
 }
@@ -126,7 +124,6 @@ async fn fetch_wise(from: &str, to: &str, amount: f64) -> Result<Option<WiseInfo
         .find(|p| p.alias == "wise")
         .and_then(|p| {
             p.quotes.into_iter().next().map(|q| WiseInfo {
-                name: p.name,
                 fee: q.fee,
                 received_amount: q.received_amount,
             })
@@ -286,6 +283,14 @@ pub async fn exchange(
 
     ctx.defer().await?;
 
+    let available_emojis = ctx.http().get_application_emojis().await?;
+    let emoji_prefix = |name: &str| {
+        available_emojis
+            .iter()
+            .find(|e| e.name == name)
+            .map_or_else(String::new, |e| format!("{e} "))
+    };
+
     let Ok(frankfurter_result) = fetch_frankfurter(&from, &to).await else {
         ctx.send(
             CreateReply::default()
@@ -314,24 +319,27 @@ pub async fn exchange(
 
     let converted = amount * frankfurter_result.rate;
 
-    let mut components = vec![serenity::CreateContainerComponent::TextDisplay(
-        serenity::CreateTextDisplay::new(format!(
+    let mut components = vec![
+        serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
             "### **{}** = **{}**\n1 {} = {} {}",
             format_amount(amount, &from),
             format_amount(converted, &to),
             from,
             format_number(frankfurter_result.rate),
             to,
-        )),
-    )];
+        ))),
+        serenity::CreateContainerComponent::Separator(
+            serenity::CreateSeparator::new().divider(false),
+        ),
+    ];
 
     let mut source_links: Vec<&str> = vec!["[Frankfurter](https://frankfurter.dev)"];
 
     if let Ok(Some(wise)) = &wise_result {
         components.push(serenity::CreateContainerComponent::TextDisplay(
             serenity::CreateTextDisplay::new(format!(
-                "**{}**\n{}\n-# Fee: {:.2} {}",
-                wise.name,
+                "{}**Wise**\n{}\n-# Fee: {:.2} {}",
+                emoji_prefix("wise"),
                 format_amount(wise.received_amount, &to),
                 wise.fee,
                 from,
@@ -343,7 +351,8 @@ pub async fn exchange(
     if let Ok(revolut) = &revolut_result {
         components.push(serenity::CreateContainerComponent::TextDisplay(
             serenity::CreateTextDisplay::new(format!(
-                "**Revolut**\n{}",
+                "{}**Revolut**\n{}",
+                emoji_prefix("revolut"),
                 format_amount(revolut.received_amount, &to),
             )),
         ));
@@ -352,7 +361,11 @@ pub async fn exchange(
 
     if let Ok(visa) = &visa_result {
         components.push(serenity::CreateContainerComponent::TextDisplay(
-            serenity::CreateTextDisplay::new(format!("**Visa**\n{}", format_amount(*visa, &to))),
+            serenity::CreateTextDisplay::new(format!(
+                "{}**Visa**\n{}",
+                emoji_prefix("visa"),
+                format_amount(*visa, &to)
+            )),
         ));
         source_links.push("[Visa](https://www.visa.com/)");
     }
@@ -360,12 +373,17 @@ pub async fn exchange(
     if let Ok(mastercard) = &mastercard_result {
         components.push(serenity::CreateContainerComponent::TextDisplay(
             serenity::CreateTextDisplay::new(format!(
-                "**Mastercard**\n{}",
+                "{}**Mastercard**\n{}",
+                emoji_prefix("mastercard"),
                 format_amount(*mastercard, &to),
             )),
         ));
         source_links.push("[Mastercard](https://www.mastercard.com/)");
     }
+
+    components.push(serenity::CreateContainerComponent::Separator(
+        serenity::CreateSeparator::new().divider(false),
+    ));
 
     components.push(serenity::CreateContainerComponent::TextDisplay(
         serenity::CreateTextDisplay::new(format!(
