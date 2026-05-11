@@ -97,7 +97,8 @@ async fn github(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateCom
                 + "\n```",
         )),
         serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "-# GitHub · {}",
+            "-# [GitHub]({}) · {}",
+            &captures[0],
             serenity::FormattedTimestamp::now()
         ))),
         serenity::CreateComponent::Separator(serenity::CreateSeparator::new().divider(true)),
@@ -154,7 +155,8 @@ async fn tangled(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateCo
                 + "\n```",
         )),
         serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "-# Tangled · {}",
+            "-# [Tangled]({}) · {}",
+            &captures[0],
             serenity::FormattedTimestamp::now()
         ))),
         serenity::CreateComponent::Separator(serenity::CreateSeparator::new().divider(true)),
@@ -216,7 +218,8 @@ async fn tangled_strings(
                 + "\n```",
         )),
         serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "-# Tangled Strings · {}",
+            "-# [Tangled Strings]({}) · {}",
+            &captures[0],
             serenity::FormattedTimestamp::now()
         ))),
         serenity::CreateComponent::Separator(serenity::CreateSeparator::new().divider(true)),
@@ -278,7 +281,8 @@ async fn codeberg(
                 + "\n```",
         )),
         serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "-# Codeburger · {}",
+            "-# [Codeberg]({}) · {}",
+            &captures[0],
             serenity::FormattedTimestamp::now()
         ))),
         serenity::CreateComponent::Separator(serenity::CreateSeparator::new().divider(true)),
@@ -335,7 +339,8 @@ async fn gitlab(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateCom
                 + "\n```",
         )),
         serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "-# GitLab · {}",
+            "-# [GitLab]({}) · {}",
+            &captures[0],
             serenity::FormattedTimestamp::now()
         ))),
         serenity::CreateComponent::Separator(serenity::CreateSeparator::new().divider(true)),
@@ -372,7 +377,8 @@ async fn rust_playground(
             "```rust\n".to_owned() + &truncate(&escape_backticks(&dedent(&gist)), 2048) + "\n```",
         )),
         serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "-# play.rust-lang.org · {}",
+            "-# [play.rust-lang.org]({}) · {}",
+            &captures[0],
             serenity::FormattedTimestamp::now()
         ))),
         serenity::CreateComponent::Separator(serenity::CreateSeparator::new().divider(true)),
@@ -407,7 +413,8 @@ async fn go_playground(
             "```go\n".to_owned() + &truncate(&escape_backticks(&dedent(&code)), 2048) + "\n```",
         )),
         serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "-# go.dev/play · {}",
+            "-# [go.dev/play]({}) · {}",
+            &captures[0],
             serenity::FormattedTimestamp::now()
         ))),
         serenity::CreateComponent::Separator(serenity::CreateSeparator::new().divider(true)),

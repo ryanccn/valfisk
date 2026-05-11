@@ -366,8 +366,7 @@ mod ucd {
         let f_prop_list = download_ucd_file("PropList.txt", &cache_dir)?;
         let f_derived_gen_cat =
             download_ucd_file("extracted/DerivedGeneralCategory.txt", &cache_dir)?;
-        let f_derived_bidi_class =
-            download_ucd_file("extracted/DerivedBidiClass.txt", &cache_dir)?;
+        let f_derived_bidi_class = download_ucd_file("extracted/DerivedBidiClass.txt", &cache_dir)?;
         let f_scripts = download_ucd_file("Scripts.txt", &cache_dir)?;
         let f_emoji_data = download_ucd_file("emoji/emoji-data.txt", &cache_dir)?;
 
@@ -583,7 +582,11 @@ mod ucd {
         )?;
 
         // ── Script ranges ─────────────────────────────────────────────────────────
-        write_str_ranges(&mut w, "SCRIPT_RANGES", &named_props_to_ranges(&scripts_data))?;
+        write_str_ranges(
+            &mut w,
+            "SCRIPT_RANGES",
+            &named_props_to_ranges(&scripts_data),
+        )?;
 
         // ── Bidi class ranges ─────────────────────────────────────────────────────
         write_str_ranges(
@@ -600,10 +603,6 @@ mod ucd {
         }
         writeln!(w, "];")?;
         writeln!(w)?;
-
-        // ── Identifier properties ─────────────────────────────────────────────────
-        write_bool_ranges(&mut w, "ID_START", &get_prop(&core_props, "ID_Start"))?;
-        write_bool_ranges(&mut w, "ID_CONTINUE", &get_prop(&core_props, "ID_Continue"))?;
 
         fs::remove_dir_all(cache_dir)?;
 

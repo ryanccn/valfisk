@@ -180,13 +180,6 @@ pub fn is_private_use(c: char) -> bool {
     general_category_of(c).0 == "Co"
 }
 
-pub fn is_id_start(c: char) -> bool {
-    bool_range_lookup(ID_START, c as u32)
-}
-pub fn is_id_continue(c: char) -> bool {
-    bool_range_lookup(ID_CONTINUE, c as u32)
-}
-
 // ── Script ────────────────────────────────────────────────────────────────────
 
 /// Return the Unicode script name for `c` (e.g. `"Latin"`, `"Arabic"`), or `None`.

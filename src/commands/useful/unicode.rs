@@ -93,8 +93,6 @@ pub async fn unicode(
 **Lowercase**: {}
 **Uppercase**: {}
 **Whitespace**: {}
-**ID Start**: {}
-**ID Continue**: {}
 **Private use**: {}
 **Noncharacter**: {}",
                     yesno(ucd::is_alphabetic(character)),
@@ -104,8 +102,6 @@ pub async fn unicode(
                     yesno(ucd::is_lowercase(character)),
                     yesno(ucd::is_uppercase(character)),
                     yesno(ucd::is_white_space(character)),
-                    yesno(ucd::is_id_start(character)),
-                    yesno(ucd::is_id_continue(character)),
                     yesno(ucd::is_private_use(character)),
                     yesno(ucd::is_noncharacter(character)),
                 ))),
