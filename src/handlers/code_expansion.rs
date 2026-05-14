@@ -11,6 +11,7 @@ use std::{pin::Pin, sync::LazyLock};
 use tracing::warn;
 
 use crate::{
+    analytics,
     http::HTTP,
     utils::{serenity::suppress_embeds, truncate},
 };
@@ -506,6 +507,8 @@ pub async fn handle_message(ctx: &serenity::Context, message: &serenity::Message
                     .reference_message(message),
             )
             .await?;
+
+        analytics::send_code_expansion(message.guild_id).await;
     }
 
     Ok(())

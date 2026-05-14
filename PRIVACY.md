@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 # Privacy
 
-Last updated: Apr 25, 2026
+Last updated: May 14, 2026
 
 ## Data we collect
 
@@ -17,6 +17,8 @@ Guild-level configurations, such as those set using the `/config` and `/autorepl
 When users set reminders, the content of the reminder and the user's ID are stored until the reminder is completed (i.e. sent to the user after the specified duration has elapsed).
 
 When you interact with Valfisk's intelligence features, your messages and generated responses to your messages will be stored temporarily within a window of **5 minutes** in order to construct a continuous conversational context.
+
+We may collect analytics events and store them indefinitely in order to track usage of and improve Valfisk's commands and features. Only command names and guild IDs are currently associated with analytics data.
 
 ## Data we share with third parties
 

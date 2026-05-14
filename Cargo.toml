@@ -13,7 +13,7 @@ license = "AGPL-3.0-only"
 publish = false
 
 [dependencies]
-aws-lc-rs = "1.16.3"
+aws-lc-rs = "1.17.0"
 axum = "0.8.9"
 base64 = "0.22.1"
 bytesize = "2.3.1"
@@ -36,7 +36,7 @@ reqwest = { version = "0.13.3", features = ["query", "json", "deflate", "gzip", 
 rustls = "0.23.40"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-sysinfo = "0.38.4"
+sysinfo = "0.39.1"
 tokio = { version = "1.52.3", features = ["full"] }
 toml = "1.1.2"
 tracing = "0.1.44"

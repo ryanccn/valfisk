@@ -14,6 +14,7 @@ use crate::{
     utils::ExitCodeError,
 };
 
+mod analytics;
 mod anthropic;
 mod api;
 mod commands;
@@ -136,6 +137,7 @@ async fn valfisk() -> Result<()> {
     .event_handler(Arc::new(EventHandler))
     .framework(Box::new(Framework::new(FrameworkOptions {
         commands: commands::all(),
+        post_command: |ctx| Box::pin(analytics::send_command(ctx)),
         on_error: |err| Box::pin(handlers::error(err)),
         owners: CONFIG.owners.clone().unwrap_or_default(),
         allowed_mentions: Some(serenity::CreateAllowedMentions::new().replied_user(true)),

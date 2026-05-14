@@ -5,6 +5,8 @@
 use eyre::Result;
 use poise::serenity_prelude as serenity;
 
+use crate::analytics;
+
 mod autoreply;
 pub mod code_expansion;
 pub mod config;
@@ -27,8 +29,10 @@ pub async fn message_guild(ctx: &serenity::Context, message: &serenity::Message)
         log::handle_message(ctx, message),
         autoreply::handle(ctx, message),
         code_expansion::handle_message(ctx, message),
-        intelligence::handle(ctx, message)
+        intelligence::handle(ctx, message),
     )?;
+
+    analytics::send_message(message.guild_id).await;
 
     Ok(())
 }

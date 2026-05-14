@@ -25,6 +25,10 @@ pub struct EnvConfig {
     pub intelligence_allowed_roles: Option<HashSet<RoleId>>,
     pub anthropic_api_key: Option<String>,
 
+    pub umami_endpoint: Option<String>,
+    pub umami_website_id: Option<String>,
+    pub umami_hostname: Option<String>,
+
     #[serde(default = "defaults::host")]
     pub host: String,
     #[serde(default = "defaults::port")]
