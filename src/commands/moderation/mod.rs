@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 pub mod ban;
+pub mod ban_reason;
 pub mod kick;
 pub mod purge;
 pub mod rotate_logs;
