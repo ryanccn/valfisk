@@ -183,7 +183,7 @@ impl Storage {
             .set_options(
                 keys::STARBOARD.message(message_id),
                 value,
-                redis::SetOptions::default().with_expiration(redis::SetExpiry::EX(2592000)),
+                redis::SetOptions::default().with_expiration(redis::SetExpiry::EX(31536000)),
             )
             .await?;
         Ok(())
