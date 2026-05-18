@@ -45,14 +45,6 @@ pub async fn ban(
 
     let user_reason = utils::option_strings(reason.as_deref(), extra_message.as_deref());
 
-    member
-        .ban(
-            ctx.http(),
-            delete_message_days.map_or(0, |d| d * 86400),
-            reason.as_deref(),
-        )
-        .await?;
-
     let mut container =
         serenity::CreateContainer::new(vec![serenity::CreateContainerComponent::TextDisplay(
             serenity::CreateTextDisplay::new(format!(
@@ -141,6 +133,14 @@ pub async fn ban(
                 .await?;
         }
     }
+
+    member
+        .ban(
+            ctx.http(),
+            delete_message_days.map_or(0, |d| d * 86400),
+            reason.as_deref(),
+        )
+        .await?;
 
     ctx.send(
         poise::CreateReply::default()

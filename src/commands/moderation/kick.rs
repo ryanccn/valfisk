@@ -39,8 +39,6 @@ pub async fn kick(
 
     let user_reason = utils::option_strings(reason.as_deref(), extra_message.as_deref());
 
-    member.kick(ctx.http(), reason.as_deref()).await?;
-
     let mut container =
         serenity::CreateContainer::new(vec![serenity::CreateContainerComponent::TextDisplay(
             serenity::CreateTextDisplay::new(format!(
@@ -122,6 +120,8 @@ pub async fn kick(
                 .await?;
         }
     }
+
+    member.kick(ctx.http(), reason.as_deref()).await?;
 
     ctx.send(
         poise::CreateReply::default()

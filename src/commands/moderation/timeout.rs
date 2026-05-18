@@ -43,15 +43,6 @@ pub async fn timeout(
     if let Ok(duration) = humantime::parse_duration(&duration) {
         let end = chrono::Utc::now() + duration;
 
-        let mut edit_member =
-            serenity::EditMember::default().disable_communication_until(end.into());
-
-        if let Some(reason) = &reason {
-            edit_member = edit_member.audit_log_reason(reason);
-        }
-
-        member.edit(ctx.http(), edit_member).await?;
-
         let mut container =
             serenity::CreateContainer::new(vec![serenity::CreateContainerComponent::TextDisplay(
                 serenity::CreateTextDisplay::new(format!(
@@ -142,6 +133,15 @@ pub async fn timeout(
                     .await?;
             }
         }
+
+        let mut edit_member =
+            serenity::EditMember::default().disable_communication_until(end.into());
+
+        if let Some(reason) = &reason {
+            edit_member = edit_member.audit_log_reason(reason);
+        }
+
+        member.edit(ctx.http(), edit_member).await?;
 
         ctx.send(
             poise::CreateReply::default()
