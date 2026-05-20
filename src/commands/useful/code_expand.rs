@@ -7,7 +7,7 @@ use poise::{CreateReply, serenity_prelude as serenity};
 
 use crate::{Context, handlers::code_expansion};
 
-/// Expand a link to lines of source code on GitHub, Codeberg, GitLab, and the Rust and Go playgrounds.
+/// Expand a link to lines of source code on GitHub, Codeberg, Tangled, etc.
 #[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     rename = "code-expand",
@@ -19,7 +19,36 @@ pub async fn code_expand(
     ctx: Context<'_>,
     #[description = "A link, or multiple links"] content: String,
 ) -> Result<()> {
+    ctx.defer().await?;
+
     let components = code_expansion::resolve(&content).await?;
+
+    if components.is_empty() {
+        ctx.say("No supported code links detected!").await?;
+    } else {
+        ctx.send(
+            CreateReply::default()
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                .allowed_mentions(serenity::CreateAllowedMentions::new())
+                .components(components),
+        )
+        .await?;
+    }
+
+    Ok(())
+}
+
+/// Expand a link to lines of source code on GitHub, Codeberg, Tangled, etc.
+#[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
+#[poise::command(
+    context_menu_command = "Expand code links",
+    install_context = "Guild | User",
+    interaction_context = "Guild | BotDm | PrivateChannel"
+)]
+pub async fn code_expand_context_menu(ctx: Context<'_>, message: serenity::Message) -> Result<()> {
+    ctx.defer().await?;
+
+    let components = code_expansion::resolve(&message.content).await?;
 
     if components.is_empty() {
         ctx.say("No supported code links detected!").await?;

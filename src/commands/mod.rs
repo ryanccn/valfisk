@@ -34,6 +34,7 @@ macro_rules! command {
 pub fn all() -> Vec<poise::Command<Data, eyre::Report>> {
     vec![
         command!(useful, code_expand),
+        command!(useful, code_expand, code_expand_context_menu),
         command!(useful, dig),
         command!(useful, exchange),
         command!(useful, lighthouse),
