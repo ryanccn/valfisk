@@ -7,8 +7,8 @@ use poise::serenity_prelude::{self as serenity, Mentionable as _};
 
 use crate::{Context, utils};
 
-/// Warn a member
-#[tracing::instrument(skip(ctx, member), fields(member = member.user.id.get(), ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
+/// Warn a user
+#[tracing::instrument(skip(ctx, user), fields(user = user.id.get(), ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
     ephemeral,
@@ -19,7 +19,7 @@ use crate::{Context, utils};
 )]
 pub async fn warn(
     ctx: Context<'_>,
-    #[description = "The member to warn"] member: serenity::Member,
+    #[description = "The user to warn"] user: serenity::User,
     #[description = "Reason for the warn"] reason: Option<String>,
     #[description = "Notify with a direct message (default: true)"] dm: Option<bool>,
 ) -> Result<()> {
@@ -31,11 +31,7 @@ pub async fn warn(
         .ok_or_else(|| eyre!("failed to obtain partial guild"))?;
 
     let warn_count = if let Some(storage) = &ctx.data().storage {
-        Some(
-            storage
-                .incr_warn_count(member.user.id, partial_guild.id)
-                .await?,
-        )
+        Some(storage.incr_warn_count(user.id, partial_guild.id).await?)
     } else {
         None
     };
@@ -44,7 +40,7 @@ pub async fn warn(
         serenity::CreateContainer::new(vec![serenity::CreateContainerComponent::TextDisplay(
             serenity::CreateTextDisplay::new(format!(
                 "### Warn\n{}",
-                utils::serenity::format_mentionable(Some(member.user.id)),
+                utils::serenity::format_mentionable(Some(user.id)),
             )),
         )])
         .accent_color(0xfacc15);
@@ -73,7 +69,7 @@ pub async fn warn(
                     )),
                 ));
 
-        if let Ok(dm) = member.user.create_dm_channel(ctx).await
+        if let Ok(dm) = user.create_dm_channel(ctx).await
             && dm
                 .id
                 .widen()
@@ -104,7 +100,7 @@ pub async fn warn(
     let reply_container = container.clone();
 
     if let Some(storage) = &ctx.data().storage {
-        let guild_config = storage.get_config(member.guild_id).await?;
+        let guild_config = storage.get_config(partial_guild.id).await?;
 
         if let Some(logs_channel) = guild_config.moderation_logs_channel {
             let log_container =
@@ -138,8 +134,8 @@ pub async fn warn(
     Ok(())
 }
 
-/// Reset a member's warn count to zero
-#[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
+/// Reset a user's warn count to zero
+#[tracing::instrument(skip(ctx), fields(user = user.id.get(), ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
     rename = "warn-reset",
@@ -151,7 +147,7 @@ pub async fn warn(
 )]
 pub async fn warn_reset(
     ctx: Context<'_>,
-    #[description = "The member to reset warns for"] member: serenity::Member,
+    #[description = "The user to reset warns for"] user: serenity::User,
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
@@ -161,15 +157,13 @@ pub async fn warn_reset(
         .ok_or_else(|| eyre!("failed to obtain partial guild"))?;
 
     if let Some(storage) = &ctx.data().storage {
-        storage
-            .del_warn_count(member.user.id, partial_guild.id)
-            .await?;
+        storage.del_warn_count(user.id, partial_guild.id).await?;
     }
 
     let container = serenity::CreateContainer::new(vec![
         serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
             "### Warn reset\n{}",
-            utils::serenity::format_mentionable(Some(member.user.id)),
+            utils::serenity::format_mentionable(Some(user.id)),
         ))),
         serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
             "**Warn count**\n0".to_string(),
@@ -180,7 +174,7 @@ pub async fn warn_reset(
     let reply_container = container.clone();
 
     if let Some(storage) = &ctx.data().storage {
-        let guild_config = storage.get_config(member.guild_id).await?;
+        let guild_config = storage.get_config(partial_guild.id).await?;
 
         if let Some(logs_channel) = guild_config.moderation_logs_channel {
             let log_container =

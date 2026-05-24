@@ -7,8 +7,8 @@ use poise::serenity_prelude::{self as serenity, Mentionable as _};
 
 use crate::{Context, utils};
 
-/// Ban a member
-#[tracing::instrument(skip(ctx, member), fields(member = member.user.id.get(), ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
+/// Ban a user
+#[tracing::instrument(skip(ctx, user), fields(user = user.id.get(), ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
     ephemeral,
@@ -19,7 +19,7 @@ use crate::{Context, utils};
 )]
 pub async fn ban(
     ctx: Context<'_>,
-    #[description = "The member to ban"] member: serenity::Member,
+    #[description = "The user to ban"] user: serenity::User,
     #[description = "Reason for the ban"] reason: Option<String>,
 
     #[description = "Days of messages to delete (default: 0)"]
@@ -49,7 +49,7 @@ pub async fn ban(
         serenity::CreateContainer::new(vec![serenity::CreateContainerComponent::TextDisplay(
             serenity::CreateTextDisplay::new(format!(
                 "### Ban\n{}",
-                utils::serenity::format_mentionable(Some(member.user.id)),
+                utils::serenity::format_mentionable(Some(user.id)),
             )),
         )])
         .accent_color(0xda77f2);
@@ -72,7 +72,7 @@ pub async fn ban(
                     )),
                 ));
 
-        if let Ok(dm) = member.user.create_dm_channel(ctx).await
+        if let Ok(dm) = user.create_dm_channel(ctx).await
             && dm
                 .id
                 .widen()
@@ -110,7 +110,7 @@ pub async fn ban(
     let reply_container = container.clone();
 
     if let Some(storage) = &ctx.data().storage {
-        let guild_config = storage.get_config(member.guild_id).await?;
+        let guild_config = storage.get_config(partial_guild.id).await?;
 
         if let Some(logs_channel) = guild_config.moderation_logs_channel {
             let log_container =
@@ -134,7 +134,10 @@ pub async fn ban(
         }
     }
 
-    member
+    partial_guild
+        .id
+        .member(&ctx, user.id)
+        .await?
         .ban(
             ctx.http(),
             delete_message_days.map_or(0, |d| d * 86400),

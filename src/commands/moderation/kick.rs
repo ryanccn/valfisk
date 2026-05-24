@@ -7,8 +7,8 @@ use poise::serenity_prelude::{self as serenity, Mentionable as _};
 
 use crate::{Context, utils};
 
-/// Kick a member
-#[tracing::instrument(skip(ctx, member), fields(member = member.user.id.get(), ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
+/// Kick a user
+#[tracing::instrument(skip(ctx, user), fields(user = user.id.get(), ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
     ephemeral,
@@ -19,7 +19,7 @@ use crate::{Context, utils};
 )]
 pub async fn kick(
     ctx: Context<'_>,
-    #[description = "The member to kick"] member: serenity::Member,
+    #[description = "The user to kick"] user: serenity::User,
     #[description = "Reason for the kick"] reason: Option<String>,
     #[description = "Notify with a direct message (default: true)"] dm: Option<bool>,
 ) -> Result<()> {
@@ -43,7 +43,7 @@ pub async fn kick(
         serenity::CreateContainer::new(vec![serenity::CreateContainerComponent::TextDisplay(
             serenity::CreateTextDisplay::new(format!(
                 "### Kick\n{}",
-                utils::serenity::format_mentionable(Some(member.user.id)),
+                utils::serenity::format_mentionable(Some(user.id)),
             )),
         )])
         .accent_color(0xf783ac);
@@ -66,7 +66,7 @@ pub async fn kick(
                     )),
                 ));
 
-        if let Ok(dm) = member.user.create_dm_channel(ctx).await
+        if let Ok(dm) = user.create_dm_channel(ctx).await
             && dm
                 .id
                 .widen()
@@ -97,7 +97,7 @@ pub async fn kick(
     let reply_container = container.clone();
 
     if let Some(storage) = &ctx.data().storage {
-        let guild_config = storage.get_config(member.guild_id).await?;
+        let guild_config = storage.get_config(partial_guild.id).await?;
 
         if let Some(logs_channel) = guild_config.moderation_logs_channel {
             let log_container =
@@ -121,7 +121,12 @@ pub async fn kick(
         }
     }
 
-    member.kick(ctx.http(), reason.as_deref()).await?;
+    partial_guild
+        .id
+        .member(&ctx, user.id)
+        .await?
+        .kick(ctx.http(), reason.as_deref())
+        .await?;
 
     ctx.send(
         poise::CreateReply::default()

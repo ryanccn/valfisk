@@ -7,8 +7,8 @@ use poise::serenity_prelude::{self as serenity, Mentionable as _};
 
 use crate::{Context, utils};
 
-/// Timeout a member
-#[tracing::instrument(skip(ctx, member), fields(member = member.user.id.get(), ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
+/// Timeout a user
+#[tracing::instrument(skip(ctx, user), fields(user = user.id.get(), ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
     ephemeral,
@@ -19,7 +19,7 @@ use crate::{Context, utils};
 )]
 pub async fn timeout(
     ctx: Context<'_>,
-    #[description = "The member to timeout"] mut member: serenity::Member,
+    #[description = "The user to timeout"] user: serenity::User,
     #[description = "Duration of timeout"] duration: String,
     #[description = "Reason for the timeout"] reason: Option<String>,
     #[description = "Notify with a direct message (default: true)"] dm: Option<bool>,
@@ -47,7 +47,7 @@ pub async fn timeout(
             serenity::CreateContainer::new(vec![serenity::CreateContainerComponent::TextDisplay(
                 serenity::CreateTextDisplay::new(format!(
                     "### Timeout\n{}",
-                    utils::serenity::format_mentionable(Some(member.user.id)),
+                    utils::serenity::format_mentionable(Some(user.id)),
                 )),
             )])
             .accent_color(0x9775fa);
@@ -77,7 +77,7 @@ pub async fn timeout(
                         )),
                     ));
 
-            if let Ok(dm) = member.user.create_dm_channel(ctx).await
+            if let Ok(dm) = user.create_dm_channel(ctx).await
                 && dm
                     .id
                     .widen()
@@ -110,7 +110,7 @@ pub async fn timeout(
         let reply_container = container.clone();
 
         if let Some(storage) = &ctx.data().storage {
-            let guild_config = storage.get_config(member.guild_id).await?;
+            let guild_config = storage.get_config(partial_guild.id).await?;
 
             if let Some(logs_channel) = guild_config.moderation_logs_channel {
                 let log_container =
@@ -141,7 +141,12 @@ pub async fn timeout(
             edit_member = edit_member.audit_log_reason(reason);
         }
 
-        member.edit(ctx.http(), edit_member).await?;
+        partial_guild
+            .id
+            .member(&ctx, user.id)
+            .await?
+            .edit(ctx.http(), edit_member)
+            .await?;
 
         ctx.send(
             poise::CreateReply::default()
