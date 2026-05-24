@@ -136,10 +136,9 @@ pub async fn ban(
 
     partial_guild
         .id
-        .member(&ctx, user.id)
-        .await?
         .ban(
             ctx.http(),
+            user.id,
             delete_message_days.map_or(0, |d| d * 86400),
             reason.as_deref(),
         )

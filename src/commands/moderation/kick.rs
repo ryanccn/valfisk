@@ -123,9 +123,7 @@ pub async fn kick(
 
     partial_guild
         .id
-        .member(&ctx, user.id)
-        .await?
-        .kick(ctx.http(), reason.as_deref())
+        .kick(ctx.http(), user.id, reason.as_deref())
         .await?;
 
     ctx.send(
