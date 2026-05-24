@@ -70,11 +70,17 @@ pub enum StarboardEmojis {
 }
 
 impl StarboardEmojis {
-    pub fn allow(&self, reaction: &serenity::MessageReaction) -> bool {
+    pub fn allow(
+        &self,
+        guild_emojis: &[serenity::EmojiId],
+        reaction: &serenity::MessageReaction,
+    ) -> bool {
         match self {
             Self::Any => true,
             Self::Allowlist(list) => match &reaction.reaction_type {
-                serenity::ReactionType::Custom { id, .. } => list.contains(&id.to_string()),
+                serenity::ReactionType::Custom { id, .. } => {
+                    guild_emojis.contains(id) && list.contains(&id.to_string())
+                }
                 serenity::ReactionType::Unicode(fixed_string) => {
                     list.contains(&fixed_string.to_string())
                 }
@@ -116,6 +122,7 @@ impl<'de> serde::Deserialize<'de> for StarboardEmojis {
 
 fn is_significant_reaction(
     guild_config: &GuildConfig,
+    guild_emojis: &[serenity::EmojiId],
     reaction: &serenity::MessageReaction,
     threshold: u64,
 ) -> bool {
@@ -124,19 +131,20 @@ fn is_significant_reaction(
         .as_deref()
         .unwrap_or_default()
         .parse::<StarboardEmojis>()
-        .is_ok_and(|r| r.allow(reaction))
+        .is_ok_and(|r| r.allow(guild_emojis, reaction))
         && reaction.count >= threshold
 }
 
 fn get_significant_reactions<'a>(
     guild_config: &GuildConfig,
+    guild_emojis: &[serenity::EmojiId],
     message: &'a serenity::Message,
     threshold: u64,
 ) -> Vec<(&'a serenity::ReactionType, u64)> {
     let mut collected_reactions: Vec<(&serenity::ReactionType, u64)> = message
         .reactions
         .iter()
-        .filter(|r| is_significant_reaction(guild_config, r, threshold))
+        .filter(|r| is_significant_reaction(guild_config, guild_emojis, r, threshold))
         .map(|r| (&r.reaction_type, r.count))
         .collect();
 
@@ -257,8 +265,16 @@ pub async fn handle(
                 guild_config.starboard_threshold.unwrap_or(3)
             };
 
+            let guild_emojis = guild_id
+                .to_partial_guild(&ctx)
+                .await?
+                .emojis
+                .iter()
+                .map(|e| e.id)
+                .collect::<Vec<_>>();
+
             let significant_reactions =
-                get_significant_reactions(&guild_config, message, threshold);
+                get_significant_reactions(&guild_config, &guild_emojis, message, threshold);
 
             if let Some(existing_starboard_message) =
                 storage.get_starboard(message.id).await?.map(|s| s.into())
