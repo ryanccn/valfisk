@@ -27,12 +27,10 @@
       };
 
       doCheck = true;
-      cargoBuildFlags = [ "--ignore-rust-version" ];
-      cargoTestFlags = [ "--ignore-rust-version" ];
 
       cargoLock.outputHashes = {
         "poise-0.6.1" = "sha256-6NU1UOQUz8WO77Luv7VLp/RL1May65Y7JmMWxaPbgvo=";
-        "serenity-0.12.5" = "sha256-VXzcBdDuMHFLXqcHCyAq9VbWFUCPW/a5gHFy8kRX8Ho=";
+        "serenity-0.12.5" = "sha256-V5FxH5DlNqPE0Eb76y5zL6ZjzX4q52H2hspqaoOGeQA=";
       };
 
       flake.legacyPackages = lib.genAttrs lib.systems.flakeExposed (
