@@ -173,12 +173,12 @@ impl serenity::EventHandler for EventHandler {
                         return Ok(());
                     }
 
-                    let edited_timestamp = event
-                        .message
-                        .edited_timestamp
-                        .map_or_else(chrono::Utc::now, |ts| ts.to_utc());
-
                     if let Some(storage) = &ctx.data::<crate::Data>().storage {
+                        let edited_timestamp = event
+                            .message
+                            .edited_timestamp
+                            .map_or_else(chrono::Utc::now, |ts| ts.to_utc());
+
                         let prev_data = storage.get_message_log(event.message.id).await?;
 
                         let new_content = event.message.content.as_str();
@@ -212,6 +212,8 @@ impl serenity::EventHandler for EventHandler {
                             .await?;
                         }
                     }
+
+                    handlers::code_expansion::handle_edit(ctx, &event.message).await?;
                 }
 
                 FullEvent::MessageDelete {
@@ -224,12 +226,11 @@ impl serenity::EventHandler for EventHandler {
                         return Ok(());
                     }
 
-                    let timestamp = chrono::Utc::now();
-
                     if let Some(storage) = &ctx.data::<crate::Data>().storage
                         && let Some(logged_data) =
                             storage.get_message_log(*deleted_message_id).await?
                     {
+                        let timestamp = chrono::Utc::now();
                         handlers::log::delete(
                             ctx,
                             handlers::log::LogMessageIds {
@@ -253,6 +254,9 @@ impl serenity::EventHandler for EventHandler {
                         *guild_id,
                     )
                     .await?;
+
+                    handlers::code_expansion::handle_delete(ctx, *channel_id, *deleted_message_id)
+                        .await?;
                 }
 
                 FullEvent::ReactionAdd { add_reaction, .. } => {

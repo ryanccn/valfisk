@@ -476,7 +476,7 @@ pub async fn resolve(content: &str) -> Result<Vec<serenity::CreateComponent<'sta
     Ok(components)
 }
 
-#[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
+#[tracing::instrument(skip_all, fields(message = message.id.get()))]
 pub async fn handle_message(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
     if message.author.id == ctx.cache.current_user().id {
         return Ok(());
@@ -492,9 +492,9 @@ pub async fn handle_message(ctx: &serenity::Context, message: &serenity::Message
     let components = resolve(&message.content).await?;
 
     if !components.is_empty() {
-        suppress_embeds(ctx, message).await?;
+        let _ = suppress_embeds(ctx, message).await;
 
-        message
+        let new_message = message
             .channel_id
             .send_message(
                 &ctx.http,
@@ -508,7 +508,78 @@ pub async fn handle_message(ctx: &serenity::Context, message: &serenity::Message
             )
             .await?;
 
+        if let Some(storage) = &ctx.data::<crate::Data>().storage {
+            storage
+                .set_code_expansion(message.id, new_message.id)
+                .await?;
+        }
+
         analytics::send_code_expansion(message.guild_id).await;
+    }
+
+    Ok(())
+}
+
+#[tracing::instrument(skip_all, fields(message = message.id.get()))]
+pub async fn handle_edit(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
+    if message.author.id == ctx.cache.current_user().id {
+        return Ok(());
+    }
+
+    if message
+        .flags
+        .is_some_and(|f| f.contains(serenity::MessageFlags::SUPPRESS_NOTIFICATIONS))
+    {
+        return Ok(());
+    }
+
+    if let Some(storage) = &ctx.data::<crate::Data>().storage
+        && let Some(existing) = storage.get_code_expansion(message.id).await?
+    {
+        let components = resolve(&message.content).await?;
+
+        if components.is_empty() {
+            message
+                .channel_id
+                .delete_message(&ctx.http, existing, None)
+                .await?;
+
+            storage.del_code_expansion(message.id).await?;
+        } else {
+            let _ = suppress_embeds(ctx, message).await;
+
+            message
+                .channel_id
+                .edit_message(
+                    &ctx.http,
+                    existing,
+                    serenity::EditMessage::default()
+                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                        .allowed_mentions(
+                            serenity::CreateAllowedMentions::default().replied_user(false),
+                        )
+                        .components(components),
+                )
+                .await?;
+
+            analytics::send_code_expansion(message.guild_id).await;
+        }
+    }
+
+    Ok(())
+}
+
+#[tracing::instrument(skip(ctx))]
+pub async fn handle_delete(
+    ctx: &serenity::Context,
+    channel: serenity::GenericChannelId,
+    message: serenity::MessageId,
+) -> Result<()> {
+    if let Some(storage) = &ctx.data::<crate::Data>().storage
+        && let Some(existing) = storage.get_code_expansion(message).await?
+    {
+        channel.delete_message(&ctx.http, existing, None).await?;
+        storage.del_code_expansion(message).await?;
     }
 
     Ok(())

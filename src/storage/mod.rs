@@ -128,6 +128,7 @@ mod keys {
     pub const INTELLIGENCE_CONSENT: StorageKey = StorageKey::new("intelligence-consent-v1");
     pub const INTELLIGENCE_CONTEXT: StorageKey = StorageKey::new("intelligence-context-v2");
     pub const WARN_COUNT: StorageKey = StorageKey::new("warn-count-v1");
+    pub const CODE_EXPANSION: StorageKey = StorageKey::new("code-expansion-v1");
 }
 
 impl Storage {
@@ -364,6 +365,39 @@ impl Storage {
     pub async fn del_warn_count(&self, user: UserId, guild: GuildId) -> RedisResult<()> {
         let mut conn = self.conn.clone();
         () = conn.del(keys::WARN_COUNT.user(user).guild(guild)).await?;
+
+        Ok(())
+    }
+}
+
+impl Storage {
+    pub async fn get_code_expansion(&self, original: MessageId) -> RedisResult<Option<MessageId>> {
+        let mut conn = self.conn.clone();
+        let value: Option<u64> = conn.get(keys::CODE_EXPANSION.message(original)).await?;
+
+        Ok(value.map(|v| v.into()))
+    }
+
+    pub async fn set_code_expansion(
+        &self,
+        original: MessageId,
+        message: MessageId,
+    ) -> RedisResult<()> {
+        let mut conn = self.conn.clone();
+        () = conn
+            .set_options(
+                keys::CODE_EXPANSION.message(original),
+                message.get(),
+                redis::SetOptions::default().with_expiration(redis::SetExpiry::EX(300)),
+            )
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn del_code_expansion(&self, original: MessageId) -> RedisResult<()> {
+        let mut conn = self.conn.clone();
+        () = conn.del(keys::CODE_EXPANSION.message(original)).await?;
 
         Ok(())
     }
