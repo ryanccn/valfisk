@@ -492,8 +492,6 @@ pub async fn handle_message(ctx: &serenity::Context, message: &serenity::Message
     let components = resolve(&message.content).await?;
 
     if !components.is_empty() {
-        let _ = suppress_embeds(ctx, message).await;
-
         let new_message = message
             .channel_id
             .send_message(
@@ -507,6 +505,8 @@ pub async fn handle_message(ctx: &serenity::Context, message: &serenity::Message
                     .reference_message(message),
             )
             .await?;
+
+        let _ = suppress_embeds(ctx, message).await;
 
         if let Some(storage) = &ctx.data::<crate::Data>().storage {
             storage
