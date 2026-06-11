@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Ryan Cao <hello@ryanccn.dev>
+// SPDX-FileCopyrightText: 2026 Ryan Cao <hello@ryanccn.dev>
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
@@ -7,29 +7,30 @@ use poise::serenity_prelude::{self as serenity, Mentionable as _};
 
 use crate::{Context, utils};
 
-/// Ban a user
+/// Kick a user and purge recent messages from them
 #[tracing::instrument(skip(ctx, user), fields(user = user.id.get(), ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,
+    rename = "purge-user",
     ephemeral,
     guild_only,
     install_context = "Guild",
     interaction_context = "Guild",
     default_member_permissions = "MODERATE_MEMBERS"
 )]
-pub async fn ban(
+pub async fn purge_user(
     ctx: Context<'_>,
-    #[description = "The user to ban"] user: serenity::User,
-    #[description = "Reason for the ban"] reason: Option<String>,
+    #[description = "The user to purge"] user: serenity::User,
+    #[description = "Reason for the purge"] reason: Option<String>,
 
-    #[description = "Days of messages to delete (default: 0)"]
+    #[description = "Days of messages to delete (default: 1)"]
     #[min = 0]
     #[max = 7]
     delete_message_days: Option<u32>,
 
     #[description = "Notify with a direct message (default: true)"] dm: Option<bool>,
 ) -> Result<()> {
-    let delete_message_days = delete_message_days.unwrap_or(0);
+    let delete_message_days = delete_message_days.unwrap_or(1);
 
     ctx.defer_ephemeral().await?;
 
@@ -38,27 +39,18 @@ pub async fn ban(
         .await
         .ok_or_else(|| eyre!("failed to obtain partial guild"))?;
 
-    let extra_message = if let Some(storage) = &ctx.data().storage {
-        let guild_config = storage.get_config(partial_guild.id).await?;
-        guild_config.moderation_extra_message_ban
-    } else {
-        None
-    };
-
-    let user_reason = utils::option_strings(reason.as_deref(), extra_message.as_deref());
-
     let mut container =
         serenity::CreateContainer::new(vec![serenity::CreateContainerComponent::TextDisplay(
             serenity::CreateTextDisplay::new(format!(
-                "### Ban\n{}",
+                "### Purge\n{}",
                 utils::serenity::format_mentionable(Some(user.id)),
             )),
         )])
         .accent_color(0xda77f2);
 
-    if let Some(user_reason) = &user_reason {
+    if let Some(reason) = &reason {
         container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
-            serenity::CreateTextDisplay::new(format!("**Reason**\n{user_reason}")),
+            serenity::CreateTextDisplay::new(format!("**Reason**\n{reason}")),
         ));
     }
 
@@ -144,6 +136,8 @@ pub async fn ban(
             reason.as_deref(),
         )
         .await?;
+
+    partial_guild.id.unban(ctx.http(), user.id, None).await?;
 
     ctx.send(
         poise::CreateReply::default()

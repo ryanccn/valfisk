@@ -49,6 +49,7 @@ pub fn all() -> Vec<poise::Command<Data, eyre::Report>> {
         command!(moderation, ban_reason),
         command!(moderation, kick),
         command!(moderation, purge),
+        command!(moderation, purge_user),
         command!(moderation, rotate_logs),
         command!(moderation, timeout),
         command!(moderation, warn),
