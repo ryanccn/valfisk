@@ -546,8 +546,6 @@ pub async fn handle_edit(ctx: &serenity::Context, message: &serenity::Message) -
 
             storage.del_code_expansion(message.id).await?;
         } else {
-            let _ = suppress_embeds(ctx, message).await;
-
             message
                 .channel_id
                 .edit_message(

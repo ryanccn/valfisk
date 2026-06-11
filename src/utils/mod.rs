@@ -25,17 +25,14 @@ pub fn format_bytes(bytes: u64) -> String {
 }
 
 pub fn option_strings<'a>(a: Option<&'a str>, b: Option<&'a str>) -> Option<Cow<'a, str>> {
-    if let Some(a) = a {
-        if let Some(b) = b {
-            Some(Cow::Owned(a.to_owned() + " " + b))
-        } else {
-            Some(Cow::Borrowed(a))
-        }
-    } else if let Some(b) = b {
-        Some(Cow::Borrowed(b))
-    } else {
-        None
-    }
+    a.map_or_else(
+        || b.map(Cow::Borrowed),
+        |a| {
+            b.map_or(Some(Cow::Borrowed(a)), |b| {
+                Some(Cow::Owned(a.to_owned() + " " + b))
+            })
+        },
+    )
 }
 
 #[cfg(test)]

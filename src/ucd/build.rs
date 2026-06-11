@@ -87,11 +87,7 @@ mod ucd {
 
     /// Strip inline comment from a UCD data line.
     fn strip_comment(line: &str) -> &str {
-        if let Some(idx) = line.find('#') {
-            &line[..idx]
-        } else {
-            line
-        }
+        line.find('#').map_or(line, |idx| &line[..idx])
     }
 
     /// Parse files with the format `RANGE ; PROPERTY_VALUE  # comment`

@@ -17,7 +17,7 @@ aws-lc-rs = "1.17.0"
 axum = "0.8.9"
 base64 = "0.22.1"
 bytesize = "2.3.1"
-chrono = "0.4.44"
+chrono = "0.4.45"
 color-eyre = "0.6.5"
 dotenvy = "0.15.7"
 envy = "0.4.2"
@@ -31,7 +31,7 @@ poise = { git = "https://github.com/serenity-rs/poise.git", branch = "serenity-n
 rand = "0.10.1"
 rayon = "1.12.0"
 redis = { version = "1.2.2", features = ["tokio-rustls-comp", "tls-rustls-webpki-roots", "connection-manager"] }
-regex = "1.12.3"
+regex = "1.12.4"
 reqwest = { version = "0.13.4", features = ["query", "json", "deflate", "gzip", "brotli", "zstd"] }
 rustls = "0.23.40"
 serde = { version = "1.0.228", features = ["derive"] }

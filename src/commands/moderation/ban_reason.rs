@@ -41,7 +41,8 @@ pub async fn ban_reason(
                         serenity::CreateContainerComponent::TextDisplay(
                             serenity::CreateTextDisplay::new(format!(
                                 "**Reason**\n{}",
-                                ban.reason.map_or("*None*".to_owned(), |s| s.to_string())
+                                ban.reason
+                                    .map_or_else(|| "*None*".to_owned(), |s| s.to_string())
                             )),
                         ),
                     ])

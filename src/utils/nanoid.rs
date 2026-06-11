@@ -25,8 +25,10 @@ mod tests {
 
     #[test]
     fn nanoid_works() {
-        let id = nanoid(12);
-        assert_eq!(id.len(), 12);
-        assert!(id.chars().all(|c| ALPHABET.contains(&c)));
+        for i in 0..=12 {
+            let id = nanoid(i);
+            assert_eq!(id.len(), i);
+            assert!(id.chars().all(|c| ALPHABET.contains(&c)));
+        }
     }
 }
