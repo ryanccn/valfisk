@@ -13,6 +13,7 @@ use crate::{Context, utils};
 #[poise::command(
     rename = "self-timeout",
     slash_command,
+    ephemeral,
     guild_only,
     install_context = "Guild",
     interaction_context = "Guild"

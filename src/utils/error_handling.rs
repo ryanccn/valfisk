@@ -96,6 +96,7 @@ You can contact the owner of this app with the error ID `{}` if you require supp
             .send(
                 CreateReply::default()
                     .flags(MessageFlags::IS_COMPONENTS_V2)
+                    .ephemeral(self.ctx.command().ephemeral)
                     .components(&[CreateComponent::Container(
                         CreateContainer::new(components).accent_color(0xff6b6b),
                     )]),
