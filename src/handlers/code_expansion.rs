@@ -426,51 +426,69 @@ async fn go_playground(
 pub async fn resolve(content: &str) -> Result<Vec<serenity::CreateComponent<'static>>> {
     let mut components_tasks: Vec<
         Pin<
-            Box<dyn Future<Output = Result<Vec<serenity::CreateComponent<'static>>>> + Send + Sync>,
+            Box<
+                dyn Future<Output = (usize, Result<Vec<serenity::CreateComponent<'static>>>)>
+                    + Send
+                    + Sync,
+            >,
         >,
     > = Vec::new();
 
     for captures in GITHUB.captures_iter(content) {
-        components_tasks.push(Box::pin(async move { github(captures).await }));
+        let start = captures.get_match().start();
+        components_tasks.push(Box::pin(async move { (start, github(captures).await) }));
     }
 
     for captures in TANGLED.captures_iter(content) {
-        components_tasks.push(Box::pin(async move { tangled(captures).await }));
+        let start = captures.get_match().start();
+        components_tasks.push(Box::pin(async move { (start, tangled(captures).await) }));
     }
 
     for captures in TANGLED_STRINGS.captures_iter(content) {
-        components_tasks.push(Box::pin(async move { tangled_strings(captures).await }));
+        let start = captures.get_match().start();
+        components_tasks.push(Box::pin(
+            async move { (start, tangled_strings(captures).await) },
+        ));
     }
 
     for captures in CODEBERG.captures_iter(content) {
-        components_tasks.push(Box::pin(async move { codeberg(captures).await }));
+        let start = captures.get_match().start();
+        components_tasks.push(Box::pin(async move { (start, codeberg(captures).await) }));
     }
 
     for captures in GITLAB.captures_iter(content) {
-        components_tasks.push(Box::pin(async move { gitlab(captures).await }));
+        let start = captures.get_match().start();
+        components_tasks.push(Box::pin(async move { (start, gitlab(captures).await) }));
     }
 
     for captures in RUST_PLAYGROUND.captures_iter(content) {
-        components_tasks.push(Box::pin(async move { rust_playground(captures).await }));
+        let start = captures.get_match().start();
+        components_tasks.push(Box::pin(
+            async move { (start, rust_playground(captures).await) },
+        ));
     }
 
     for captures in GO_PLAYGROUND.captures_iter(content) {
-        components_tasks.push(Box::pin(async move { go_playground(captures).await }));
+        let start = captures.get_match().start();
+        components_tasks.push(Box::pin(
+            async move { (start, go_playground(captures).await) },
+        ));
     }
 
-    let mut components = futures_util::future::join_all(components_tasks)
+    let mut results = futures_util::future::join_all(components_tasks)
         .await
         .into_iter()
-        .filter_map(|r| match r {
-            Ok(c) => Some(c),
+        .filter_map(|(start, result)| match result {
+            Ok(result) => Some((start, result)),
             Err(err) => {
                 warn!("{err:?}");
                 None
             }
         })
-        .flatten()
         .collect::<Vec<_>>();
+    results.sort_unstable_by_key(|v| v.0);
 
+    let mut components = results.into_iter().flat_map(|v| v.1).collect::<Vec<_>>();
     components.pop();
 
     Ok(components)
