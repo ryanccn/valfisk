@@ -31,6 +31,22 @@ pub async fn timeout(
         .await
         .ok_or_else(|| eyre!("failed to obtain partial guild"))?;
 
+    let Ok(duration) = humantime::parse_duration(&duration) else {
+        ctx.say("Invalid duration provided!").await?;
+        return Ok(());
+    };
+
+    let end = chrono::Utc::now() + duration;
+
+    let mut container =
+        serenity::CreateContainer::new(vec![serenity::CreateContainerComponent::TextDisplay(
+            serenity::CreateTextDisplay::new(format!(
+                "### Timeout\n{}",
+                utils::serenity::format_mentionable(Some(user.id)),
+            )),
+        )])
+        .accent_color(0x9775fa);
+
     let extra_message = if let Some(storage) = &ctx.data().storage {
         let guild_config = storage.get_config(partial_guild.id).await?;
         guild_config.moderation_extra_message_timeout
@@ -38,125 +54,105 @@ pub async fn timeout(
         None
     };
 
-    let user_reason = utils::option_strings(reason.as_deref(), extra_message.as_deref());
-
-    if let Ok(duration) = humantime::parse_duration(&duration) {
-        let end = chrono::Utc::now() + duration;
-
-        let mut container =
-            serenity::CreateContainer::new(vec![serenity::CreateContainerComponent::TextDisplay(
-                serenity::CreateTextDisplay::new(format!(
-                    "### Timeout\n{}",
-                    utils::serenity::format_mentionable(Some(user.id)),
-                )),
-            )])
-            .accent_color(0x9775fa);
-
-        if let Some(user_reason) = &user_reason {
-            container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
-                serenity::CreateTextDisplay::new(format!("**Reason**\n{user_reason}")),
-            ));
-        }
-
+    if let Some(reason) = utils::option_strings(reason.as_deref(), extra_message.as_deref()) {
         container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
-            serenity::CreateTextDisplay::new(format!(
-                "**Duration**\n{}",
-                humantime::format_duration(duration)
-            )),
+            serenity::CreateTextDisplay::new(format!("**Reason**\n{reason}")),
         ));
+    }
 
-        if dm.unwrap_or(true) {
-            let dm_container =
-                container
-                    .clone()
-                    .add_component(serenity::CreateContainerComponent::TextDisplay(
-                        serenity::CreateTextDisplay::new(format!(
-                            "-# {} \u{00B7} {}",
-                            partial_guild.name,
-                            serenity::FormattedTimestamp::now()
-                        )),
-                    ));
+    container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
+        serenity::CreateTextDisplay::new(format!(
+            "**Duration**\n{}",
+            humantime::format_duration(duration)
+        )),
+    ));
 
-            if let Ok(dm) = user.create_dm_channel(ctx).await
-                && dm
-                    .id
-                    .widen()
-                    .send_message(
-                        ctx.http(),
-                        serenity::CreateMessage::default()
-                            .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                            .allowed_mentions(serenity::CreateAllowedMentions::new())
-                            .components(vec![serenity::CreateComponent::Container(dm_container)]),
-                    )
-                    .await
-                    .is_ok()
-            {
-                container =
-                    container.add_component(serenity::CreateContainerComponent::TextDisplay(
-                        serenity::CreateTextDisplay::new("**User notified**\nYes"),
-                    ));
-            } else {
-                container =
-                    container.add_component(serenity::CreateContainerComponent::TextDisplay(
-                        serenity::CreateTextDisplay::new("**User notified**\nFailed"),
-                    ));
-            }
+    if dm.unwrap_or(true) {
+        let dm_container =
+            container
+                .clone()
+                .add_component(serenity::CreateContainerComponent::TextDisplay(
+                    serenity::CreateTextDisplay::new(format!(
+                        "-# {} \u{00B7} {}",
+                        partial_guild.name,
+                        serenity::FormattedTimestamp::now()
+                    )),
+                ));
+
+        if let Ok(dm) = user.create_dm_channel(ctx).await
+            && dm
+                .id
+                .widen()
+                .send_message(
+                    ctx.http(),
+                    serenity::CreateMessage::default()
+                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                        .allowed_mentions(serenity::CreateAllowedMentions::new())
+                        .components(vec![serenity::CreateComponent::Container(dm_container)]),
+                )
+                .await
+                .is_ok()
+        {
+            container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
+                serenity::CreateTextDisplay::new("**User notified**\nYes"),
+            ));
         } else {
             container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
-                serenity::CreateTextDisplay::new("**User notified**\nNo"),
+                serenity::CreateTextDisplay::new("**User notified**\nFailed"),
             ));
         }
-
-        let reply_container = container.clone();
-
-        if let Some(storage) = &ctx.data().storage {
-            let guild_config = storage.get_config(partial_guild.id).await?;
-
-            if let Some(logs_channel) = guild_config.moderation_logs_channel {
-                let log_container =
-                    container.add_component(serenity::CreateContainerComponent::TextDisplay(
-                        serenity::CreateTextDisplay::new(format!(
-                            "-# {} \u{00B7} {}",
-                            ctx.author().mention(),
-                            serenity::FormattedTimestamp::now()
-                        )),
-                    ));
-
-                logs_channel
-                    .send_message(
-                        ctx.http(),
-                        serenity::CreateMessage::default()
-                            .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                            .allowed_mentions(serenity::CreateAllowedMentions::new())
-                            .components(vec![serenity::CreateComponent::Container(log_container)]),
-                    )
-                    .await?;
-            }
-        }
-
-        let mut edit_member =
-            serenity::EditMember::default().disable_communication_until(end.into());
-
-        if let Some(reason) = &reason {
-            edit_member = edit_member.audit_log_reason(reason);
-        }
-
-        partial_guild
-            .id
-            .member(&ctx, user.id)
-            .await?
-            .edit(ctx.http(), edit_member)
-            .await?;
-
-        ctx.send(
-            poise::CreateReply::default()
-                .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                .components(vec![serenity::CreateComponent::Container(reply_container)]),
-        )
-        .await?;
     } else {
-        ctx.say("Invalid duration provided!").await?;
+        container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
+            serenity::CreateTextDisplay::new("**User notified**\nNo"),
+        ));
     }
+
+    let reply_container = container.clone();
+
+    if let Some(storage) = &ctx.data().storage {
+        let guild_config = storage.get_config(partial_guild.id).await?;
+
+        if let Some(logs_channel) = guild_config.moderation_logs_channel {
+            let log_container =
+                container.add_component(serenity::CreateContainerComponent::TextDisplay(
+                    serenity::CreateTextDisplay::new(format!(
+                        "-# {} \u{00B7} {}",
+                        ctx.author().mention(),
+                        serenity::FormattedTimestamp::now()
+                    )),
+                ));
+
+            logs_channel
+                .send_message(
+                    ctx.http(),
+                    serenity::CreateMessage::default()
+                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                        .allowed_mentions(serenity::CreateAllowedMentions::new())
+                        .components(vec![serenity::CreateComponent::Container(log_container)]),
+                )
+                .await?;
+        }
+    }
+
+    let mut edit_member = serenity::EditMember::default().disable_communication_until(end.into());
+
+    if let Some(reason) = &reason {
+        edit_member = edit_member.audit_log_reason(reason);
+    }
+
+    partial_guild
+        .id
+        .member(&ctx, user.id)
+        .await?
+        .edit(ctx.http(), edit_member)
+        .await?;
+
+    ctx.send(
+        poise::CreateReply::default()
+            .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+            .components(vec![serenity::CreateComponent::Container(reply_container)]),
+    )
+    .await?;
 
     Ok(())
 }

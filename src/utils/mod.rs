@@ -25,7 +25,7 @@ pub fn option_strings<'a>(a: Option<&'a str>, b: Option<&'a str>) -> Option<Cow<
         || b.map(Cow::Borrowed),
         |a| {
             b.map_or(Some(Cow::Borrowed(a)), |b| {
-                Some(Cow::Owned(a.to_owned() + " " + b))
+                Some(Cow::Owned(a.to_owned() + "\n" + b))
             })
         },
     )
@@ -37,7 +37,7 @@ mod tests {
 
     #[test]
     fn option_strings_works() {
-        assert_eq!(option_strings(Some("a"), Some("b")), Some("a b".into()));
+        assert_eq!(option_strings(Some("a"), Some("b")), Some("a\nb".into()));
         assert_eq!(option_strings(Some("a"), None), Some("a".into()));
         assert_eq!(option_strings(None, Some("b")), Some("b".into()));
         assert_eq!(option_strings(None, None), None);
