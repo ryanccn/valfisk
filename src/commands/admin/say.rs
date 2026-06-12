@@ -20,15 +20,19 @@ use crate::Context;
 pub async fn say(
     ctx: Context<'_>,
     #[description = "Text to send in the current channel"] content: String,
-    #[description = "Channel to send message in"] channel: Option<serenity::GenericChannelId>,
-    #[description = "User to send direct message to"] dm: Option<serenity::UserId>,
+    #[description = "Channel ID to send message in"] channel: Option<u64>,
+    #[description = "User ID to send direct message to"] dm: Option<u64>,
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
     if let Some(user) = dm {
-        user.create_dm_channel(&ctx).await?.id.widen()
+        serenity::UserId::new(user)
+            .create_dm_channel(&ctx)
+            .await?
+            .id
+            .widen()
     } else if let Some(channel) = channel {
-        channel
+        serenity::GenericChannelId::new(channel)
     } else {
         ctx.channel_id()
     }
