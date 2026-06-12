@@ -46,18 +46,24 @@ pub async fn send_command(ctx: Context<'_>) {
     )
     .await
     {
-        tracing::error!("{err:?}");
+        tracing::warn!("{err:?}");
     }
 }
 
 pub async fn send_message(guild: Option<serenity::GuildId>) {
     if let Err(err) = send("message_v1", json!({ "guild": guild })).await {
-        tracing::error!("{err:?}");
+        tracing::warn!("{err:?}");
     }
 }
 
 pub async fn send_code_expansion(guild: Option<serenity::GuildId>) {
     if let Err(err) = send("code_expansion_v1", json!({ "guild": guild })).await {
-        tracing::error!("{err:?}");
+        tracing::warn!("{err:?}");
+    }
+}
+
+pub async fn send_safe_browsing(guild: Option<serenity::GuildId>) {
+    if let Err(err) = send("safe_browsing_v1", json!({ "guild": guild })).await {
+        tracing::warn!("{err:?}");
     }
 }

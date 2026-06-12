@@ -8,7 +8,7 @@ use std::sync::LazyLock;
 
 use eyre::Result;
 
-use crate::utils;
+use crate::{analytics, utils};
 
 static URL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"https?:\/\/[-a-zA-Z0-9@:%._\+~#=]+\.[a-zA-Z0-9()]+\b[-a-zA-Z0-9()@:%_\+.~#?&//=]*")
@@ -128,6 +128,8 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                         .await?;
                 }
             }
+
+            analytics::send_safe_browsing(message.guild_id).await;
 
             return Ok(true);
         }
