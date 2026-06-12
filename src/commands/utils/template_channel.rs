@@ -55,8 +55,8 @@ pub async fn template_channel(
         }
     }
 
-    for m in messages {
-        channel.send_message(ctx.http(), m).await?;
+    for message in messages {
+        channel.send_message(ctx.http(), message).await?;
     }
 
     ctx.send(

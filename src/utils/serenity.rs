@@ -10,9 +10,10 @@ use poise::serenity_prelude::{self as serenity, Mentionable};
 
 use crate::utils;
 
+#[derive(Clone, Debug)]
 pub struct PartialContext {
-    cache: Arc<serenity::Cache>,
-    http: Arc<serenity::Http>,
+    pub cache: Arc<serenity::Cache>,
+    pub http: Arc<serenity::Http>,
 }
 
 impl serenity::CacheHttp for PartialContext {
@@ -49,12 +50,12 @@ pub async fn suppress_embeds(ctx: &serenity::Context, message: &serenity::Messag
 
     let _ = timeout(Duration::from_millis(2500), message_updates.next()).await;
 
-    ctx.http
+    message
+        .channel_id
         .edit_message(
-            message.channel_id,
+            &ctx.http,
             message.id,
-            &serenity::EditMessage::new().suppress_embeds(true),
-            Vec::new(),
+            serenity::EditMessage::new().suppress_embeds(true),
         )
         .await?;
 

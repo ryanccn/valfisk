@@ -338,7 +338,7 @@ impl serenity::EventHandler for EventHandler {
                         .as_ref()
                         .is_some_and(|a| !a.contains(&guild.id))
                     {
-                        ctx.http.leave_guild(guild.id).await?;
+                        guild.id.leave(&ctx.http).await?;
                     }
                 }
 

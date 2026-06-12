@@ -319,7 +319,7 @@ pub async fn exchange(
 
     ctx.defer().await?;
 
-    let available_emojis = ctx.http().get_application_emojis().await?;
+    let available_emojis = ctx.serenity_context().get_application_emojis().await?;
     let emoji_prefix = |name: &str| {
         available_emojis
             .iter()

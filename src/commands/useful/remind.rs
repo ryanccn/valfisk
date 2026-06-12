@@ -12,7 +12,7 @@ use crate::{Context, storage::reminder::ReminderData, utils::serenity::PartialCo
 
 #[tracing::instrument(skip(ctx, data))]
 async fn dispatch(
-    ctx: impl serenity::CacheHttp,
+    ctx: &PartialContext,
     data: Option<&crate::Data>,
     reminder: &ReminderData,
 ) -> Result<()> {
@@ -21,7 +21,7 @@ async fn dispatch(
     reminder
         .channel
         .send_message(
-            ctx.http(),
+            &ctx.http,
             serenity::CreateMessage::default()
                 .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
                 .allowed_mentions(serenity::CreateAllowedMentions::new().users(&[user.id]))
