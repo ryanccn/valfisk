@@ -28,11 +28,6 @@ pub struct EnvConfig {
     pub umami_endpoint: Option<String>,
     pub umami_website_id: Option<String>,
     pub umami_hostname: Option<String>,
-
-    #[serde(default = "defaults::host")]
-    pub host: String,
-    #[serde(default = "defaults::port")]
-    pub port: u16,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
@@ -77,17 +72,3 @@ pub struct GuildConfig {
 
 pub static CONFIG: LazyLock<EnvConfig> =
     LazyLock::new(|| envy::from_env().expect("could not parse config from environment"));
-
-mod defaults {
-    pub fn host() -> String {
-        #[cfg(debug_assertions)]
-        return "127.0.0.1".into();
-
-        #[cfg(not(debug_assertions))]
-        return "0.0.0.0".into();
-    }
-
-    pub const fn port() -> u16 {
-        8080
-    }
-}

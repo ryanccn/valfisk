@@ -63,7 +63,7 @@ struct WiseProvider {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
-pub struct WiseQuote {
+struct WiseQuote {
     #[serde(rename(deserialize = "receivedAmount"))]
     received: f64,
     rate: f64,
@@ -99,7 +99,7 @@ struct RevolutPlanFees {
 }
 
 #[derive(serde::Serialize, Debug)]
-pub struct RevolutQuote {
+struct RevolutQuote {
     received: f64,
     rate: f64,
     fee: Option<f64>,
@@ -122,7 +122,7 @@ struct MastercardData {
     cardholder_bill_amount: String,
 }
 
-pub async fn fetch_frankfurter(from: &str, to: &str) -> Result<f64> {
+async fn fetch_frankfurter(from: &str, to: &str) -> Result<f64> {
     let rate = HTTP
         .get(format!("https://api.frankfurter.dev/v2/rate/{from}/{to}"))
         .send()
@@ -134,7 +134,7 @@ pub async fn fetch_frankfurter(from: &str, to: &str) -> Result<f64> {
     Ok(rate.rate)
 }
 
-pub async fn fetch_wise(from: &str, to: &str, amount: f64) -> Result<WiseQuote> {
+async fn fetch_wise(from: &str, to: &str, amount: f64) -> Result<WiseQuote> {
     let resp = HTTP
         .get("https://wise.com/gateway/v4/comparisons")
         .query(&[
@@ -160,7 +160,7 @@ pub async fn fetch_wise(from: &str, to: &str, amount: f64) -> Result<WiseQuote> 
 }
 
 #[expect(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
-pub async fn fetch_revolut(from: &str, to: &str, amount: f64) -> Result<RevolutQuote> {
+async fn fetch_revolut(from: &str, to: &str, amount: f64) -> Result<RevolutQuote> {
     let amount_minor = (amount * minor_unit_factor(from)).round() as i64;
 
     let resp = HTTP
@@ -192,7 +192,7 @@ pub async fn fetch_revolut(from: &str, to: &str, amount: f64) -> Result<RevolutQ
     })
 }
 
-pub async fn fetch_visa(from: &str, to: &str, amount: f64) -> Result<f64> {
+async fn fetch_visa(from: &str, to: &str, amount: f64) -> Result<f64> {
     let today = chrono::Utc::now().format("%m/%d/%Y").to_string();
 
     let args = vec![
@@ -227,7 +227,7 @@ pub async fn fetch_visa(from: &str, to: &str, amount: f64) -> Result<f64> {
     Ok(data.converted_amount.replace(',', "").parse::<f64>()?)
 }
 
-pub async fn fetch_mastercard(from: &str, to: &str, amount: f64) -> Result<f64> {
+async fn fetch_mastercard(from: &str, to: &str, amount: f64) -> Result<f64> {
     let args = vec![
         "--compressed".to_owned(),
         "--impersonate".to_owned(),

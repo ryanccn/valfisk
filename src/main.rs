@@ -15,7 +15,6 @@ use crate::{
 
 mod analytics;
 mod anthropic;
-mod api;
 mod commands;
 mod config;
 mod event_handler;
@@ -153,7 +152,6 @@ async fn main() -> Result<()> {
 
     tokio::select! {
         () = shutdown() => { Ok(()) },
-        result = api::serve(Arc::clone(&client.http)) => { result },
         result = schedule::run(Arc::clone(&client.http), Arc::clone(&data)) => { result },
         result = client.start() => { result.map_err(|e| e.into()) },
     }
