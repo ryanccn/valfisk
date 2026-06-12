@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 use eyre::{Report, Result, eyre};
-use std::{process::ExitCode, sync::Arc};
+use std::sync::Arc;
 use tokio::{signal, sync::mpsc, task};
 use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
@@ -11,7 +11,6 @@ use poise::{Framework, FrameworkOptions, PrefixFrameworkOptions, serenity_prelud
 
 use crate::{
     config::CONFIG, event_handler::EventHandler, safe_browsing::SafeBrowsing, storage::Storage,
-    utils::ExitCodeError,
 };
 
 mod analytics;
@@ -42,7 +41,7 @@ impl Data {
             let storage = Storage::redis(client).await?;
             Some(storage)
         } else {
-            tracing::warn!("REDIS_URL is not configured, some features may be disabled");
+            tracing::warn!("REDIS_URL is not configured, some features will be disabled");
             None
         };
 
@@ -66,13 +65,13 @@ impl Data {
 pub type Context<'a> = poise::Context<'a, Data, Report>;
 
 async fn shutdown() {
-    let (shutdown_tx, mut shutdown_rx) = mpsc::channel::<()>(1);
+    let (shutdown_tx, mut shutdown_rx) = mpsc::unbounded_channel();
 
     task::spawn({
         let shutdown_tx = shutdown_tx.clone();
         async move {
             if signal::ctrl_c().await.is_ok() {
-                let _ = shutdown_tx.send(()).await;
+                let _ = shutdown_tx.send(());
             }
         }
     });
@@ -87,16 +86,18 @@ async fn shutdown() {
                 if let Ok(mut sigterm_signal) = signal(SignalKind::terminate())
                     && sigterm_signal.recv().await.is_some()
                 {
-                    let _ = shutdown_tx.send(()).await;
+                    let _ = shutdown_tx.send(());
                 }
             }
         });
     }
 
     shutdown_rx.recv().await;
+    tracing::warn!("shutdown signal received, exiting!");
 }
 
-async fn valfisk() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     color_eyre::install()?;
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer().with_ansi_sanitization(false))
@@ -116,7 +117,7 @@ async fn valfisk() -> Result<()> {
 
     rustls::crypto::aws_lc_rs::default_provider()
         .install_default()
-        .map_err(|_| eyre!("failed to install aws-lc-rs as rustls's CryptoProvider"))?;
+        .map_err(|_| eyre!("failed to install aws-lc-rs CryptoProvider"))?;
 
     // Preload config from environment
     let _ = *CONFIG;
@@ -151,28 +152,9 @@ async fn valfisk() -> Result<()> {
     .await?;
 
     tokio::select! {
-        () = shutdown() => {
-            tracing::warn!("shutdown signal received, exiting!");
-            Err(ExitCodeError(1).into())
-        },
-
+        () = shutdown() => { Ok(()) },
         result = api::serve(Arc::clone(&client.http)) => { result },
         result = schedule::run(Arc::clone(&client.http), Arc::clone(&data)) => { result },
         result = client.start() => { result.map_err(|e| e.into()) },
-    }
-}
-
-#[tokio::main]
-async fn main() -> ExitCode {
-    if let Err(err) = valfisk().await {
-        err.downcast_ref::<ExitCodeError>().map_or_else(
-            || {
-                eprintln!("Error: {err:?}");
-                ExitCode::FAILURE
-            },
-            |exit_code| exit_code.as_std(),
-        )
-    } else {
-        ExitCode::SUCCESS
     }
 }
