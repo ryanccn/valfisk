@@ -125,16 +125,18 @@ This could take around a minute.",
         .json()
         .await?;
 
-    let mut report_components = vec![serenity::CreateContainerComponent::TextDisplay(
-        serenity::CreateTextDisplay::new(format!(
-            "### Lighthouse report\n{url}\n-# {}\n",
-            serenity::FormattedTimestamp::now()
-        )),
-    )];
+    let mut components = vec![
+        serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+            "### Lighthouse report\n{url}",
+        ))),
+        serenity::CreateContainerComponent::Separator(
+            serenity::CreateSeparator::new().divider(false),
+        ),
+    ];
 
     for key in ["performance", "accessibility", "best-practices", "seo"] {
         if let Some(value) = data.lighthouse_result.categories.get(key) {
-            report_components.push(serenity::CreateContainerComponent::TextDisplay(
+            components.push(serenity::CreateContainerComponent::TextDisplay(
                 serenity::CreateTextDisplay::new(format!(
                     "**{}**\n{:.0}",
                     value.title,
@@ -144,13 +146,17 @@ This could take around a minute.",
         }
     }
 
+    components.push(serenity::CreateContainerComponent::TextDisplay(
+        serenity::CreateTextDisplay::new(format!("-# {}", serenity::FormattedTimestamp::now())),
+    ));
+
     reply_handle
         .edit(
             ctx,
             CreateReply::default()
                 .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
                 .components(&[serenity::CreateComponent::Container(
-                    serenity::CreateContainer::new(report_components).accent_color(0x74c0fc),
+                    serenity::CreateContainer::new(components).accent_color(0x74c0fc),
                 )]),
         )
         .await?;
