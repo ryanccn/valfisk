@@ -9,6 +9,7 @@ use tokio::{task::JoinSet, time};
 
 use chrono::{NaiveTime, TimeDelta, Timelike, Utc};
 use eyre::{Result, eyre};
+use tracing::Instrument as _;
 
 use crate::Data;
 
@@ -85,61 +86,55 @@ pub async fn run(http: Arc<Http>, data: Arc<Data>) -> Result<()> {
         let data = Arc::clone(&data);
 
         async move {
-            tracing::info_span!("rotate_color_roles")
-                .in_scope(async || {
-                    loop {
-                        let now = Utc::now();
+            loop {
+                let now = Utc::now();
 
-                        let next = (now + TimeDelta::days(1))
-                            .with_time(NaiveTime::MIN)
-                            .single()
-                            .ok_or_else(|| eyre!("could not obtain next run time"))?;
+                let next = (now + TimeDelta::days(1))
+                    .with_time(NaiveTime::MIN)
+                    .single()
+                    .ok_or_else(|| eyre!("could not obtain next run time"))?;
 
-                        tracing::trace!(?next, "next run");
+                tracing::trace!(?next, "next run at");
 
-                        time::sleep((next - now).to_std()?).await;
+                time::sleep((next - now).to_std()?).await;
 
-                        if let Err(err) = rotate_color_roles_global(&http, &data).await {
-                            tracing::error!("{err:?}");
-                        }
+                if let Err(err) = rotate_color_roles_global(&http, &data).await {
+                    tracing::error!("{err:?}");
+                }
 
-                        time::sleep(Duration::from_secs(1)).await;
-                    }
-                })
-                .await
+                time::sleep(Duration::from_secs(1)).await;
+            }
         }
+        .instrument(tracing::trace_span!("rotate_color_roles"))
     });
 
     tasks.spawn({
         let data = Arc::clone(&data);
 
         async move {
-            tracing::info_span!("safe_browsing")
-                .in_scope(async || {
-                    loop {
-                        let now = Utc::now();
+            loop {
+                let now = Utc::now();
 
-                        let next = (now + TimeDelta::hours(1))
-                            .with_minute(0)
-                            .and_then(|t| t.with_second(0))
-                            .and_then(|t| t.with_nanosecond(0))
-                            .ok_or_else(|| eyre!("could not obtain next run time"))?;
+                let next = (now + TimeDelta::hours(1))
+                    .with_minute(0)
+                    .and_then(|t| t.with_second(0))
+                    .and_then(|t| t.with_nanosecond(0))
+                    .ok_or_else(|| eyre!("could not obtain next run time"))?;
 
-                        tracing::trace!(?next, "next run");
+                tracing::trace!(?next, "next run at");
 
-                        time::sleep((next - now).to_std()?).await;
+                time::sleep((next - now).to_std()?).await;
 
-                        if let Some(safe_browsing) = &data.safe_browsing
-                            && let Err(err) = safe_browsing.update().await
-                        {
-                            tracing::error!("{err:?}");
-                        }
+                if let Some(safe_browsing) = &data.safe_browsing
+                    && let Err(err) = safe_browsing.update().await
+                {
+                    tracing::error!("{err:?}");
+                }
 
-                        time::sleep(Duration::from_secs(1)).await;
-                    }
-                })
-                .await
+                time::sleep(Duration::from_secs(1)).await;
+            }
         }
+        .instrument(tracing::trace_span!("safe_browsing"))
     });
 
     tasks.join_all().await.into_iter().collect::<Result<()>>()?;

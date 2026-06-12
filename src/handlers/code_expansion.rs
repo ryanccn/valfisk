@@ -8,7 +8,6 @@ use reqwest::header;
 
 use eyre::{Result, bail};
 use std::{pin::Pin, sync::LazyLock};
-use tracing::warn;
 
 use crate::{
     analytics,
@@ -481,7 +480,7 @@ pub async fn resolve(content: &str) -> Result<Vec<serenity::CreateComponent<'sta
         .filter_map(|(start, result)| match result {
             Ok(result) => Some((start, result)),
             Err(err) => {
-                warn!("{err:?}");
+                tracing::warn!("{err:?}");
                 None
             }
         })
