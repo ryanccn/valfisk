@@ -53,77 +53,23 @@ pub async fn lighthouse(
     ctx.defer().await?;
 
     if !URL_REGEX.is_match(&url) {
-        ctx.say("Invalid URL provided!").await?;
+        ctx.send(
+            CreateReply::default()
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                .components(&[serenity::CreateComponent::Container(
+                    serenity::CreateContainer::new(&[
+                        serenity::CreateContainerComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new("### Invalid URL provided!"),
+                        ),
+                    ])
+                    .accent_color(0xff6b6b),
+                )]),
+        )
+        .await?;
         return Ok(());
     }
 
-    if let Some(key) = &CONFIG.pagespeed_api_key {
-        let reply_handle = ctx
-            .send(
-                CreateReply::default()
-                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                    .components(&[serenity::CreateComponent::Container(
-                        serenity::CreateContainer::new(&[
-                            serenity::CreateContainerComponent::TextDisplay(
-                                serenity::CreateTextDisplay::new(
-                                    r"### Lighthouse audit in progress
-This could take around a minute.",
-                                ),
-                            ),
-                        ])
-                        .accent_color(0x66d9e8),
-                    )]),
-            )
-            .await?;
-
-        let data: PagespeedResponse = HTTP
-            .get("https://pagespeedonline.googleapis.com/pagespeedonline/v5/runPagespeed")
-            .query(&[
-                ("url", url.as_str()),
-                ("strategy", "MOBILE"),
-                ("category", "PERFORMANCE"),
-                ("category", "ACCESSIBILITY"),
-                ("category", "BEST_PRACTICES"),
-                ("category", "SEO"),
-                ("key", key.as_str()),
-            ])
-            .timeout(Duration::from_secs(90))
-            .send()
-            .await?
-            .error_for_status()?
-            .json()
-            .await?;
-
-        let mut report_components = vec![serenity::CreateContainerComponent::TextDisplay(
-            serenity::CreateTextDisplay::new(format!(
-                "### Lighthouse report\n{url}\n-# {}\n",
-                serenity::FormattedTimestamp::now()
-            )),
-        )];
-
-        for key in ["performance", "accessibility", "best-practices", "seo"] {
-            if let Some(value) = data.lighthouse_result.categories.get(key) {
-                report_components.push(serenity::CreateContainerComponent::TextDisplay(
-                    serenity::CreateTextDisplay::new(format!(
-                        "**{}**\n{:.0}",
-                        value.title,
-                        value.score * 100.
-                    )),
-                ));
-            }
-        }
-
-        reply_handle
-            .edit(
-                ctx,
-                CreateReply::default()
-                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                    .components(&[serenity::CreateComponent::Container(
-                        serenity::CreateContainer::new(report_components).accent_color(0x74c0fc),
-                    )]),
-            )
-            .await?;
-    } else {
+    let Some(key) = &CONFIG.pagespeed_api_key else {
         ctx.send(
             CreateReply::default()
                 .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
@@ -131,7 +77,7 @@ This could take around a minute.",
                     serenity::CreateContainer::new(&[
                         serenity::CreateContainerComponent::TextDisplay(
                             serenity::CreateTextDisplay::new(
-                                r"### PageSpeed API not configured!
+                                "### PageSpeed API not configured!
 Contact the owner of this app if this command is supposed to be working.",
                             ),
                         ),
@@ -140,7 +86,74 @@ Contact the owner of this app if this command is supposed to be working.",
                 )]),
         )
         .await?;
+        return Ok(());
+    };
+
+    let reply_handle = ctx
+        .send(
+            CreateReply::default()
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                .components(&[serenity::CreateComponent::Container(
+                    serenity::CreateContainer::new(&[
+                        serenity::CreateContainerComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(
+                                "### Lighthouse audit in progress
+This could take around a minute.",
+                            ),
+                        ),
+                    ])
+                    .accent_color(0x66d9e8),
+                )]),
+        )
+        .await?;
+
+    let data: PagespeedResponse = HTTP
+        .get("https://pagespeedonline.googleapis.com/pagespeedonline/v5/runPagespeed")
+        .query(&[
+            ("url", url.as_str()),
+            ("strategy", "MOBILE"),
+            ("category", "PERFORMANCE"),
+            ("category", "ACCESSIBILITY"),
+            ("category", "BEST_PRACTICES"),
+            ("category", "SEO"),
+            ("key", key.as_str()),
+        ])
+        .timeout(Duration::from_secs(90))
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+
+    let mut report_components = vec![serenity::CreateContainerComponent::TextDisplay(
+        serenity::CreateTextDisplay::new(format!(
+            "### Lighthouse report\n{url}\n-# {}\n",
+            serenity::FormattedTimestamp::now()
+        )),
+    )];
+
+    for key in ["performance", "accessibility", "best-practices", "seo"] {
+        if let Some(value) = data.lighthouse_result.categories.get(key) {
+            report_components.push(serenity::CreateContainerComponent::TextDisplay(
+                serenity::CreateTextDisplay::new(format!(
+                    "**{}**\n{:.0}",
+                    value.title,
+                    value.score * 100.
+                )),
+            ));
+        }
     }
+
+    reply_handle
+        .edit(
+            ctx,
+            CreateReply::default()
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                .components(&[serenity::CreateComponent::Container(
+                    serenity::CreateContainer::new(report_components).accent_color(0x74c0fc),
+                )]),
+        )
+        .await?;
 
     Ok(())
 }

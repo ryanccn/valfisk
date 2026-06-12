@@ -68,79 +68,78 @@ pub async fn remind(
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
-    if let Ok(duration) = humantime::parse_duration(&duration) {
-        let timestamp = chrono::Utc::now() + duration;
-        let channel = if let Some(member) = ctx.author_member().await
-            && let Some(guild_channel) = ctx.channel().await.and_then(|ch| ch.guild())
-            && !private
-            && ctx.partial_guild().await.is_some_and(|guild| {
-                guild
-                    .user_permissions_in(&guild_channel, &member)
-                    .send_messages()
-            }) {
-            Some(ctx.channel_id())
-        } else {
-            ctx.author()
-                .create_dm_channel(&ctx)
-                .await
-                .ok()
-                .map(|ch| ch.id.widen())
+    let Ok(duration) = humantime::parse_duration(&duration) else {
+        ctx.say("Invalid duration provided!").await?;
+        return Ok(());
+    };
+
+    let timestamp = chrono::Utc::now() + duration;
+    let channel = if let Some(member) = ctx.author_member().await
+        && let Some(guild_channel) = ctx.channel().await.and_then(|ch| ch.guild())
+        && !private
+        && ctx.partial_guild().await.is_some_and(|guild| {
+            guild
+                .user_permissions_in(&guild_channel, &member)
+                .send_messages()
+        }) {
+        Some(ctx.channel_id())
+    } else {
+        ctx.author()
+            .create_dm_channel(&ctx)
+            .await
+            .ok()
+            .map(|ch| ch.id.widen())
+    };
+
+    if let Some(channel) = channel {
+        let reminder = ReminderData {
+            channel,
+            user: ctx.author().id,
+            content: content.clone(),
+            timestamp,
         };
 
-        if let Some(channel) = channel {
-            let reminder = ReminderData {
-                channel,
-                user: ctx.author().id,
-                content: content.clone(),
-                timestamp,
-            };
+        task::spawn({
+            let ctxish = PartialContext::from(ctx.serenity_context());
+            let data = Arc::clone(&ctx.data());
+            let reminder = reminder.clone();
 
-            task::spawn({
-                let ctxish = PartialContext::from(ctx.serenity_context());
-                let data = Arc::clone(&ctx.data());
-                let reminder = reminder.clone();
-
-                async move {
-                    time::sleep(duration).await;
-                    if let Err(err) = dispatch(&ctxish, Some(&data), &reminder).await {
-                        tracing::error!("{err:?}");
-                    }
+            async move {
+                time::sleep(duration).await;
+                if let Err(err) = dispatch(&ctxish, Some(&data), &reminder).await {
+                    tracing::error!("{err:?}");
                 }
-            });
-
-            ctx.send(
-                poise::CreateReply::default()
-                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                    .components(&[serenity::CreateComponent::Container(
-                        serenity::CreateContainer::new(&[
-                            serenity::CreateContainerComponent::TextDisplay(
-                                serenity::CreateTextDisplay::new(format!(
-                                    "### Reminder set\n{}",
-                                    content.as_deref().unwrap_or("*No content*")
-                                )),
-                            ),
-                            serenity::CreateContainerComponent::TextDisplay(
-                                serenity::CreateTextDisplay::new(format!(
-                                    "**Time**\n<t:{0}:F> (<t:{0}:R>)",
-                                    timestamp.timestamp(),
-                                )),
-                            ),
-                        ])
-                        .accent_color(0x3bc9db),
-                    )]),
-            )
-            .await?;
-
-            if let Some(storage) = &ctx.data().storage {
-                storage.add_reminders(&reminder).await?;
-                storage.clean_reminders().await?;
             }
+        });
+
+        ctx.send(
+            poise::CreateReply::default()
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                .components(&[serenity::CreateComponent::Container(
+                    serenity::CreateContainer::new(&[
+                        serenity::CreateContainerComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(format!(
+                                "### Reminder set\n{}",
+                                content.as_deref().unwrap_or("*No content*")
+                            )),
+                        ),
+                        serenity::CreateContainerComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(format!(
+                                "**Time**\n<t:{0}:F> (<t:{0}:R>)",
+                                timestamp.timestamp(),
+                            )),
+                        ),
+                    ])
+                    .accent_color(0x3bc9db),
+                )]),
+        )
+        .await?;
+
+        if let Some(storage) = &ctx.data().storage {
+            storage.add_reminders(&reminder).await?;
+            storage.clean_reminders().await?;
         }
-
-        return Ok(());
     }
-
-    ctx.say("Failed to set reminder!").await?;
 
     Ok(())
 }

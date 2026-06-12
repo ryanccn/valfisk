@@ -59,7 +59,7 @@ pub async fn version(ctx: Context<'_>) -> Result<()> {
                     "## Valfisk{version_suffix}"
                 ))),
                 CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
-                    "**Runtime OS**\n{ARCH}-{OS}"
+                    "**Runtime system**\n{ARCH}-{OS}"
                 ))),
                 CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                     "**Build target**\n{target}"

@@ -25,107 +25,108 @@ pub async fn self_timeout(
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
-    if let Ok(duration) = humantime::parse_duration(&duration) {
-        let mut member = ctx
-            .author_member()
-            .await
-            .ok_or_else(|| eyre!("could not find member for author"))?;
-
-        let start = chrono::Utc::now();
-        let end = start + duration;
-
-        let (confirmed, reply) = utils::serenity::interaction_confirm(
-            &ctx,
-            serenity::CreateContainer::new(&[
-                serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                    "### Requesting self-timeout",
-                )),
-                serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                    format!("**Start**\n<t:{0}:F>", start.timestamp()),
-                )),
-                serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                    format!("**End**\n<t:{0}:F> (<t:{0}:R>)", end.timestamp()),
-                )),
-            ])
-            .accent_color(0xffd43b),
-        )
-        .await?;
-
-        if confirmed {
-            member
-                .to_mut()
-                .edit(
-                    ctx.http(),
-                    serenity::EditMember::default()
-                        .disable_communication_until(end.into())
-                        .audit_log_reason(&format!(
-                            "Requested self timeout{}",
-                            reason
-                                .as_ref()
-                                .map(|r| format!(": {r}"))
-                                .unwrap_or_default()
-                        )),
-                )
-                .await?;
-
-            reply
-                .edit(
-                    ctx,
-                    poise::CreateReply::default()
-                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                        .components(&[serenity::CreateComponent::Container(
-                            serenity::CreateContainer::new(&[
-                                serenity::CreateContainerComponent::TextDisplay(
-                                    serenity::CreateTextDisplay::new("### Self-timeout in effect"),
-                                ),
-                                serenity::CreateContainerComponent::TextDisplay(
-                                    serenity::CreateTextDisplay::new(format!(
-                                        "**Start**\n<t:{0}:F>",
-                                        start.timestamp()
-                                    )),
-                                ),
-                                serenity::CreateContainerComponent::TextDisplay(
-                                    serenity::CreateTextDisplay::new(format!(
-                                        "**End**\n<t:{0}:F> (<t:{0}:R>)",
-                                        end.timestamp()
-                                    )),
-                                ),
-                            ])
-                            .accent_color(0x4ade80),
-                        )]),
-                )
-                .await?;
-        } else {
-            reply
-                .edit(
-                    ctx,
-                    poise::CreateReply::default()
-                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                        .components(&[serenity::CreateComponent::Container(
-                            serenity::CreateContainer::new(&[
-                                serenity::CreateContainerComponent::TextDisplay(
-                                    serenity::CreateTextDisplay::new("### Self-timeout cancelled"),
-                                ),
-                                serenity::CreateContainerComponent::TextDisplay(
-                                    serenity::CreateTextDisplay::new(format!(
-                                        "**Start**\n<t:{0}:F>",
-                                        start.timestamp()
-                                    )),
-                                ),
-                                serenity::CreateContainerComponent::TextDisplay(
-                                    serenity::CreateTextDisplay::new(format!(
-                                        "**End**\n<t:{0}:F> (<t:{0}:R>)",
-                                        end.timestamp()
-                                    )),
-                                ),
-                            ])
-                            .accent_color(0xff6b6b),
-                        )]),
-                )
-                .await?;
-        }
-    } else {
+    let Ok(duration) = humantime::parse_duration(&duration) else {
         ctx.say("Invalid duration!").await?;
+        return Ok(());
+    };
+
+    let mut member = ctx
+        .author_member()
+        .await
+        .ok_or_else(|| eyre!("could not find member for author"))?;
+
+    let start = chrono::Utc::now();
+    let end = start + duration;
+
+    let (confirmed, reply) = utils::serenity::interaction_confirm(
+        &ctx,
+        serenity::CreateContainer::new(&[
+            serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                "### Requesting self-timeout",
+            )),
+            serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                format!("**Start**\n<t:{0}:F>", start.timestamp()),
+            )),
+            serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                format!("**End**\n<t:{0}:F> (<t:{0}:R>)", end.timestamp()),
+            )),
+        ])
+        .accent_color(0xffd43b),
+    )
+    .await?;
+
+    if confirmed {
+        member
+            .to_mut()
+            .edit(
+                ctx.http(),
+                serenity::EditMember::default()
+                    .disable_communication_until(end.into())
+                    .audit_log_reason(&format!(
+                        "Requested self timeout{}",
+                        reason
+                            .as_ref()
+                            .map(|r| format!(": {r}"))
+                            .unwrap_or_default()
+                    )),
+            )
+            .await?;
+
+        reply
+            .edit(
+                ctx,
+                poise::CreateReply::default()
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                    .components(&[serenity::CreateComponent::Container(
+                        serenity::CreateContainer::new(&[
+                            serenity::CreateContainerComponent::TextDisplay(
+                                serenity::CreateTextDisplay::new("### Self-timeout in effect"),
+                            ),
+                            serenity::CreateContainerComponent::TextDisplay(
+                                serenity::CreateTextDisplay::new(format!(
+                                    "**Start**\n<t:{0}:F>",
+                                    start.timestamp()
+                                )),
+                            ),
+                            serenity::CreateContainerComponent::TextDisplay(
+                                serenity::CreateTextDisplay::new(format!(
+                                    "**End**\n<t:{0}:F> (<t:{0}:R>)",
+                                    end.timestamp()
+                                )),
+                            ),
+                        ])
+                        .accent_color(0x4ade80),
+                    )]),
+            )
+            .await?;
+    } else {
+        reply
+            .edit(
+                ctx,
+                poise::CreateReply::default()
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                    .components(&[serenity::CreateComponent::Container(
+                        serenity::CreateContainer::new(&[
+                            serenity::CreateContainerComponent::TextDisplay(
+                                serenity::CreateTextDisplay::new("### Self-timeout cancelled"),
+                            ),
+                            serenity::CreateContainerComponent::TextDisplay(
+                                serenity::CreateTextDisplay::new(format!(
+                                    "**Start**\n<t:{0}:F>",
+                                    start.timestamp()
+                                )),
+                            ),
+                            serenity::CreateContainerComponent::TextDisplay(
+                                serenity::CreateTextDisplay::new(format!(
+                                    "**End**\n<t:{0}:F> (<t:{0}:R>)",
+                                    end.timestamp()
+                                )),
+                            ),
+                        ])
+                        .accent_color(0xff6b6b),
+                    )]),
+            )
+            .await?;
     }
 
     Ok(())
