@@ -168,11 +168,7 @@ impl serenity::EventHandler for EventHandler {
                     }
                 }
 
-                FullEvent::MessageUpdate {
-                    event,
-                    old_if_available,
-                    ..
-                } => {
+                FullEvent::MessageUpdate { event, .. } => {
                     if event.message.guild_id.is_none() {
                         return Ok(());
                     }
@@ -217,12 +213,7 @@ impl serenity::EventHandler for EventHandler {
                         }
                     }
 
-                    if old_if_available
-                        .as_ref()
-                        .is_none_or(|old| old.content != event.message.content)
-                    {
-                        handlers::code_expansion::handle_edit(ctx, &event.message).await?;
-                    }
+                    handlers::code_expansion::handle_edit(ctx, &event.message).await?;
                 }
 
                 FullEvent::MessageDelete {

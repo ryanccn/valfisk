@@ -9,11 +9,13 @@ use redis::{
 };
 use std::{fmt::Debug, time::Duration};
 
+use code_expansion::CodeExpansionData;
 use log::MessageLog;
 use reminder::ReminderData;
 
 use crate::{config::GuildConfig, handlers::intelligence::IntelligenceMessages};
 
+pub mod code_expansion;
 pub mod log;
 pub mod presence;
 mod redis_util;
@@ -128,7 +130,7 @@ mod keys {
     pub const INTELLIGENCE_CONSENT: StorageKey = StorageKey::new("intelligence-consent-v1");
     pub const INTELLIGENCE_CONTEXT: StorageKey = StorageKey::new("intelligence-context-v2");
     pub const WARN_COUNT: StorageKey = StorageKey::new("warn-count-v1");
-    pub const CODE_EXPANSION: StorageKey = StorageKey::new("code-expansion-v1");
+    pub const CODE_EXPANSION: StorageKey = StorageKey::new("code-expansion-v2");
 }
 
 impl Storage {
@@ -371,23 +373,27 @@ impl Storage {
 }
 
 impl Storage {
-    pub async fn get_code_expansion(&self, original: MessageId) -> RedisResult<Option<MessageId>> {
+    pub async fn get_code_expansion(
+        &self,
+        message: MessageId,
+    ) -> RedisResult<Option<CodeExpansionData>> {
         let mut conn = self.conn.clone();
-        let value: Option<u64> = conn.get(keys::CODE_EXPANSION.message(original)).await?;
+        let value: Option<CodeExpansionData> =
+            conn.get(keys::CODE_EXPANSION.message(message)).await?;
 
-        Ok(value.map(|v| v.into()))
+        Ok(value)
     }
 
     pub async fn set_code_expansion(
         &self,
-        original: MessageId,
         message: MessageId,
+        data: CodeExpansionData,
     ) -> RedisResult<()> {
         let mut conn = self.conn.clone();
         () = conn
             .set_options(
-                keys::CODE_EXPANSION.message(original),
-                message.get(),
+                keys::CODE_EXPANSION.message(message),
+                data,
                 redis::SetOptions::default().with_expiration(redis::SetExpiry::EX(300)),
             )
             .await?;

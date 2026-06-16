@@ -20,6 +20,11 @@ pub fn format_bytes(bytes: u64) -> String {
     ByteSize::b(bytes).display().si().to_string()
 }
 
+pub fn sha256(data: &[u8]) -> Vec<u8> {
+    use aws_lc_rs::digest::{SHA256, digest};
+    digest(&SHA256, data).as_ref().to_vec()
+}
+
 pub fn option_strings<'a>(a: Option<&'a str>, b: Option<&'a str>) -> Option<Cow<'a, str>> {
     a.map_or_else(
         || b.map(Cow::Borrowed),

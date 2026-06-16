@@ -4,7 +4,10 @@
 
 use crate::{config::GuildConfig, handlers::intelligence::IntelligenceMessages};
 
-use super::{log::MessageLog, presence::PresenceData, reminder::ReminderData};
+use super::{
+    code_expansion::CodeExpansionData, log::MessageLog, presence::PresenceData,
+    reminder::ReminderData,
+};
 
 macro_rules! impl_redis_serde {
     ($($t: ty),+ $(,)?) => {
@@ -42,5 +45,6 @@ impl_redis_serde!(
     ReminderData,
     MessageLog,
     GuildConfig,
-    IntelligenceMessages
+    IntelligenceMessages,
+    CodeExpansionData,
 );

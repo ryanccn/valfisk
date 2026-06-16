@@ -6,13 +6,15 @@ use poise::serenity_prelude as serenity;
 use regex::Regex;
 use reqwest::header;
 
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use eyre::{Result, bail};
 use std::{pin::Pin, sync::LazyLock};
 
 use crate::{
     analytics,
     http::HTTP,
-    utils::{serenity::suppress_embeds, truncate},
+    storage::code_expansion::CodeExpansionData,
+    utils::{serenity::suppress_embeds, sha256, truncate},
 };
 
 fn dedent(source: &str) -> String {
@@ -49,7 +51,7 @@ static GITHUB: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"https?://github\.com/(?P<repo>[\w\-]+/[\w.\-]+)/blob/(?P<ref>\S+?)/(?P<file>[^\s?]+)(\?\S*)?#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
 });
 
-#[tracing::instrument]
+#[tracing::instrument(skip_all)]
 async fn github(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateComponent<'static>>> {
     tracing::debug!(link = &captures[0], "handling GitHub link");
 
@@ -126,7 +128,7 @@ struct GitHubCommentUser {
     html_url: String,
 }
 
-#[tracing::instrument]
+#[tracing::instrument(skip_all)]
 async fn github_comment(
     captures: regex::Captures<'_>,
 ) -> Result<Vec<serenity::CreateComponent<'static>>> {
@@ -180,7 +182,7 @@ static TANGLED: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"https?://tangled\.org/(?P<repo>@[\w.\-]+/[\w.\-]+)/blob/(?P<ref>\S+?)/(?P<file>[^\s?]+)(\?\S*)?#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
 });
 
-#[tracing::instrument]
+#[tracing::instrument(skip_all)]
 async fn tangled(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateComponent<'static>>> {
     tracing::debug!(link = &captures[0], "handling Tangled link");
 
@@ -242,7 +244,7 @@ static TANGLED_STRINGS: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"https?://tangled\.org/strings/(?P<string>@?[\w.\-]+/\w+)(\?\S*)?#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
 });
 
-#[tracing::instrument]
+#[tracing::instrument(skip_all)]
 async fn tangled_strings(
     captures: regex::Captures<'_>,
 ) -> Result<Vec<serenity::CreateComponent<'static>>> {
@@ -309,7 +311,7 @@ static CODEBERG: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"https?://codeberg\.org/(?P<repo>[\w\-]+/[\w.\-]+)/src/(?P<ref_type>\S+?)/(?P<ref>\S+?)/(?P<file>[^\s?]+)(\?\S*)?#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
 });
 
-#[tracing::instrument]
+#[tracing::instrument(skip_all)]
 async fn codeberg(
     captures: regex::Captures<'_>,
 ) -> Result<Vec<serenity::CreateComponent<'static>>> {
@@ -376,7 +378,7 @@ static GITLAB: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"https?://gitlab\.com/(?P<repo>[\w\-]+/[\w.\-]+)/-/blob/(?P<ref>\S+?)/(?P<file>[^\s?]+)(\?\S*)?#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
 });
 
-#[tracing::instrument]
+#[tracing::instrument(skip_all)]
 async fn gitlab(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateComponent<'static>>> {
     tracing::debug!(link = &captures[0], "handling GitLab link");
 
@@ -438,7 +440,7 @@ static RUST_PLAYGROUND: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"https://play\.rust-lang\.org/\S*[?&]gist=(?P<gist>\w+)").unwrap()
 });
 
-#[tracing::instrument]
+#[tracing::instrument(skip_all)]
 async fn rust_playground(
     captures: regex::Captures<'_>,
 ) -> Result<Vec<serenity::CreateComponent<'static>>> {
@@ -479,7 +481,7 @@ async fn rust_playground(
 static GO_PLAYGROUND: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"https://go\.dev/play/p/(?P<id>[\w-]+)").unwrap());
 
-#[tracing::instrument]
+#[tracing::instrument(skip_all)]
 async fn go_playground(
     captures: regex::Captures<'_>,
 ) -> Result<Vec<serenity::CreateComponent<'static>>> {
@@ -611,6 +613,8 @@ pub async fn handle_message(ctx: &serenity::Context, message: &serenity::Message
     let components = resolve(&message.content).await?;
 
     if !components.is_empty() {
+        let _ = suppress_embeds(ctx, message).await;
+
         let new_message = message
             .channel_id
             .send_message(
@@ -625,11 +629,15 @@ pub async fn handle_message(ctx: &serenity::Context, message: &serenity::Message
             )
             .await?;
 
-        let _ = suppress_embeds(ctx, message).await;
-
         if let Some(storage) = &ctx.data::<crate::Data>().storage {
             storage
-                .set_code_expansion(message.id, new_message.id)
+                .set_code_expansion(
+                    message.id,
+                    CodeExpansionData {
+                        message: new_message.id,
+                        content_hash: BASE64.encode(sha256(message.content.as_bytes())),
+                    },
+                )
                 .await?;
         }
 
@@ -654,13 +662,14 @@ pub async fn handle_edit(ctx: &serenity::Context, message: &serenity::Message) -
 
     if let Some(storage) = &ctx.data::<crate::Data>().storage
         && let Some(existing) = storage.get_code_expansion(message.id).await?
+        && sha256(message.content.as_bytes()) != BASE64.decode(&existing.content_hash)?
     {
         let components = resolve(&message.content).await?;
 
         if components.is_empty() {
             message
                 .channel_id
-                .delete_message(&ctx.http, existing, None)
+                .delete_message(&ctx.http, existing.message, None)
                 .await?;
 
             storage.del_code_expansion(message.id).await?;
@@ -669,13 +678,23 @@ pub async fn handle_edit(ctx: &serenity::Context, message: &serenity::Message) -
                 .channel_id
                 .edit_message(
                     &ctx.http,
-                    existing,
+                    existing.message,
                     serenity::EditMessage::default()
                         .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
                         .allowed_mentions(
                             serenity::CreateAllowedMentions::default().replied_user(false),
                         )
                         .components(components),
+                )
+                .await?;
+
+            storage
+                .set_code_expansion(
+                    message.id,
+                    CodeExpansionData {
+                        message: existing.message,
+                        content_hash: BASE64.encode(sha256(message.content.as_bytes())),
+                    },
                 )
                 .await?;
 
@@ -695,7 +714,9 @@ pub async fn handle_delete(
     if let Some(storage) = &ctx.data::<crate::Data>().storage
         && let Some(existing) = storage.get_code_expansion(message).await?
     {
-        channel.delete_message(&ctx.http, existing, None).await?;
+        channel
+            .delete_message(&ctx.http, existing.message, None)
+            .await?;
         storage.del_code_expansion(message).await?;
     }
 

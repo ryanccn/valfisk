@@ -13,7 +13,7 @@ use std::{
 };
 use tokio::sync::RwLock;
 
-use crate::http::HTTP;
+use crate::{http::HTTP, utils::sha256};
 
 mod canonicalize;
 mod models;
@@ -25,11 +25,6 @@ use models::{
     ThreatInfo, ThreatListConstraints, ThreatListUpdateRequest, ThreatListUpdateResponse,
     ThreatMatch, ThreatType,
 };
-
-fn sha256(data: &[u8]) -> Vec<u8> {
-    use aws_lc_rs::digest::{SHA256, digest};
-    digest(&SHA256, data).as_ref().to_vec()
-}
 
 #[derive(Debug, Clone)]
 struct SafeBrowsingListState {
