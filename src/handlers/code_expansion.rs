@@ -101,7 +101,78 @@ async fn github(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateCom
             &captures[0],
             serenity::FormattedTimestamp::now()
         ))),
-        serenity::CreateComponent::Separator(serenity::CreateSeparator::new().divider(true)),
+        serenity::CreateComponent::Separator(
+            serenity::CreateSeparator::new()
+                .divider(true)
+                .spacing(serenity::SeparatorSpacingSize::Large),
+        ),
+    ])
+}
+
+static GITHUB_COMMENT: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"https?://github\.com/(?P<repo>[\w\-]+/[\w.\-]+)/(?P<type>issues|pull)/(?P<issue>\d+)#issuecomment-(?P<comment>\d+)").unwrap()
+});
+
+#[derive(serde::Deserialize, Debug, Clone)]
+struct GitHubComment {
+    body: String,
+    user: GitHubCommentUser,
+    created_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+struct GitHubCommentUser {
+    login: String,
+    html_url: String,
+}
+
+#[tracing::instrument]
+async fn github_comment(
+    captures: regex::Captures<'_>,
+) -> Result<Vec<serenity::CreateComponent<'static>>> {
+    tracing::debug!(link = &captures[0], "handling GitHub comment link");
+
+    let repo = &captures["repo"];
+    let issue = &captures["issue"];
+    let comment = &captures["comment"];
+
+    let comment: GitHubComment = HTTP
+        .get(format!(
+            "https://api.github.com/repos/{repo}/issues/comments/{comment}"
+        ))
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+
+    Ok(vec![
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+            "### {repo} #{issue}",
+        ))),
+        serenity::CreateComponent::Container(serenity::CreateContainer::new(vec![
+            serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                format!(
+                    "-# [@{}]({}) · {}",
+                    comment.user.login,
+                    comment.user.html_url,
+                    serenity::FormattedTimestamp::new(comment.created_at.into(), None)
+                ),
+            )),
+            serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                comment.body,
+            )),
+        ])),
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+            "-# [GitHub]({}) · {}",
+            &captures[0],
+            serenity::FormattedTimestamp::now()
+        ))),
+        serenity::CreateComponent::Separator(
+            serenity::CreateSeparator::new()
+                .divider(true)
+                .spacing(serenity::SeparatorSpacingSize::Large),
+        ),
     ])
 }
 
@@ -159,7 +230,11 @@ async fn tangled(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateCo
             &captures[0],
             serenity::FormattedTimestamp::now()
         ))),
-        serenity::CreateComponent::Separator(serenity::CreateSeparator::new().divider(true)),
+        serenity::CreateComponent::Separator(
+            serenity::CreateSeparator::new()
+                .divider(true)
+                .spacing(serenity::SeparatorSpacingSize::Large),
+        ),
     ])
 }
 
@@ -222,7 +297,11 @@ async fn tangled_strings(
             &captures[0],
             serenity::FormattedTimestamp::now()
         ))),
-        serenity::CreateComponent::Separator(serenity::CreateSeparator::new().divider(true)),
+        serenity::CreateComponent::Separator(
+            serenity::CreateSeparator::new()
+                .divider(true)
+                .spacing(serenity::SeparatorSpacingSize::Large),
+        ),
     ])
 }
 
@@ -285,7 +364,11 @@ async fn codeberg(
             &captures[0],
             serenity::FormattedTimestamp::now()
         ))),
-        serenity::CreateComponent::Separator(serenity::CreateSeparator::new().divider(true)),
+        serenity::CreateComponent::Separator(
+            serenity::CreateSeparator::new()
+                .divider(true)
+                .spacing(serenity::SeparatorSpacingSize::Large),
+        ),
     ])
 }
 
@@ -343,7 +426,11 @@ async fn gitlab(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateCom
             &captures[0],
             serenity::FormattedTimestamp::now()
         ))),
-        serenity::CreateComponent::Separator(serenity::CreateSeparator::new().divider(true)),
+        serenity::CreateComponent::Separator(
+            serenity::CreateSeparator::new()
+                .divider(true)
+                .spacing(serenity::SeparatorSpacingSize::Large),
+        ),
     ])
 }
 
@@ -381,7 +468,11 @@ async fn rust_playground(
             &captures[0],
             serenity::FormattedTimestamp::now()
         ))),
-        serenity::CreateComponent::Separator(serenity::CreateSeparator::new().divider(true)),
+        serenity::CreateComponent::Separator(
+            serenity::CreateSeparator::new()
+                .divider(true)
+                .spacing(serenity::SeparatorSpacingSize::Large),
+        ),
     ])
 }
 
@@ -417,7 +508,11 @@ async fn go_playground(
             &captures[0],
             serenity::FormattedTimestamp::now()
         ))),
-        serenity::CreateComponent::Separator(serenity::CreateSeparator::new().divider(true)),
+        serenity::CreateComponent::Separator(
+            serenity::CreateSeparator::new()
+                .divider(true)
+                .spacing(serenity::SeparatorSpacingSize::Large),
+        ),
     ])
 }
 
@@ -436,6 +531,13 @@ pub async fn resolve(content: &str) -> Result<Vec<serenity::CreateComponent<'sta
     for captures in GITHUB.captures_iter(content) {
         let start = captures.get_match().start();
         components_tasks.push(Box::pin(async move { (start, github(captures).await) }));
+    }
+
+    for captures in GITHUB_COMMENT.captures_iter(content) {
+        let start = captures.get_match().start();
+        components_tasks.push(Box::pin(
+            async move { (start, github_comment(captures).await) },
+        ));
     }
 
     for captures in TANGLED.captures_iter(content) {
