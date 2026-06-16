@@ -15,6 +15,7 @@ Valfisk is a next-generation general purpose Discord app, built with [Poise](htt
 ## Features
 
 - Expand source code links from GitHub, Tangled, Tangled strings, Codeberg, GitLab, and the Rust and Go playgrounds
+- Expand links to issue and pull request comments from GitHub
 - Fetch [Lighthouse](https://developer.chrome.com/docs/lighthouse) metrics for websites
 - Make DNS queries to a variety of DNS-over-HTTPS resolvers
 - Reminders (public by default when installed in servers, private when not)
