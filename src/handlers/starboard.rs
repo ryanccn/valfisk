@@ -13,10 +13,10 @@ async fn get_starboard_channel(
     ctx: &serenity::Context,
     guild_config: &GuildConfig,
     channel: serenity::GenericChannelId,
-    guild: Option<serenity::GuildId>,
+    guild: serenity::GuildId,
 ) -> Result<Option<serenity::GenericChannelId>> {
     let Some(channel) = channel
-        .to_channel(&ctx, guild)
+        .to_channel(&ctx, Some(guild))
         .await
         .ok()
         .and_then(|ch| ch.guild())
@@ -30,7 +30,7 @@ async fn get_starboard_channel(
         return Ok(guild_config.private_starboard_channel);
     }
 
-    let guild = channel.base.guild_id.to_partial_guild(ctx).await?;
+    let guild = guild.to_partial_guild(ctx).await?;
 
     let everyone_role = guild
         .roles
@@ -170,9 +170,8 @@ fn serialize_reactions(reactions: &[(&serenity::ReactionType, u64)]) -> String {
 async fn make_message_container<'a>(
     ctx: &'a serenity::Context,
     message: &'a serenity::Message,
+    guild: serenity::GuildId,
 ) -> serenity::CreateContainer<'a> {
-    let content = message.content.to_string();
-
     let mut container = serenity::CreateContainer::new(vec![
         serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
             "-# {} *in* {}",
@@ -180,10 +179,10 @@ async fn make_message_container<'a>(
             message.channel_id.mention(),
         ))),
         serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
-            if content.is_empty() {
-                "*No content*".to_owned()
+            if message.content.is_empty() {
+                "*No content*"
             } else {
-                content
+                &message.content
             },
         )),
     ]);
@@ -223,12 +222,7 @@ async fn make_message_container<'a>(
         ))
         .accent_color(0xffd43b);
 
-    if let Some(guild_id) = message
-        .guild_channel(&ctx)
-        .await
-        .ok()
-        .map(|ch| ch.base.guild_id)
-        && let Ok(member) = guild_id.member(&ctx, message.author.id).await
+    if let Ok(member) = guild.member(&ctx, message.author.id).await
         && let Some(mut roles) = member.roles(&ctx.cache)
     {
         roles.retain(|r| r.colour.0 != 0);
@@ -242,6 +236,8 @@ async fn make_message_container<'a>(
     container
 }
 
+const DEFAULT_THRESHOLD: u64 = 3;
+
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
 pub async fn handle(
     ctx: &serenity::Context,
@@ -254,15 +250,17 @@ pub async fn handle(
         let guild_config = storage.get_config(guild_id).await?;
 
         if let Some(starboard) =
-            get_starboard_channel(ctx, &guild_config, message.channel_id, message.guild_id).await?
+            get_starboard_channel(ctx, &guild_config, message.channel_id, guild_id).await?
         {
             let threshold = if Some(starboard) == guild_config.private_starboard_channel {
                 guild_config
                     .private_starboard_threshold
                     .or(guild_config.starboard_threshold)
-                    .unwrap_or(3)
+                    .unwrap_or(DEFAULT_THRESHOLD)
             } else {
-                guild_config.starboard_threshold.unwrap_or(3)
+                guild_config
+                    .starboard_threshold
+                    .unwrap_or(DEFAULT_THRESHOLD)
             };
 
             let guild_emojis = guild_id
@@ -293,7 +291,7 @@ pub async fn handle(
                     );
                 } else {
                     let content = serialize_reactions(&significant_reactions);
-                    let container = make_message_container(ctx, message).await;
+                    let container = make_message_container(ctx, message, guild_id).await;
 
                     let row = serenity::CreateActionRow::Buttons(
                         vec![
@@ -327,7 +325,7 @@ pub async fn handle(
                 }
             } else if !significant_reactions.is_empty() {
                 let content = serialize_reactions(&significant_reactions);
-                let container = make_message_container(ctx, message).await;
+                let container = make_message_container(ctx, message, guild_id).await;
 
                 let row = serenity::CreateActionRow::Buttons(
                     vec![
@@ -382,7 +380,7 @@ pub async fn handle_deletion(
         let guild_config = storage.get_config(guild_id).await?;
 
         if let Some(starboard_channel) =
-            get_starboard_channel(ctx, &guild_config, channel_id, Some(guild_id)).await?
+            get_starboard_channel(ctx, &guild_config, channel_id, guild_id).await?
             && let Some(starboard_id) = storage.get_starboard(deleted_message_id).await?
         {
             storage.del_starboard(deleted_message_id).await?;
