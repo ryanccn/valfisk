@@ -4,6 +4,7 @@
 
 use std::str::FromStr;
 
+use chrono::TimeDelta;
 use eyre::{Result, eyre};
 use poise::serenity_prelude::{self as serenity, Mentionable as _};
 
@@ -244,6 +245,10 @@ pub async fn handle(
     guild_id: Option<serenity::GuildId>,
     message: &serenity::Message,
 ) -> Result<()> {
+    if chrono::Utc::now() - message.timestamp.to_utc() > TimeDelta::weeks(1) {
+        return Ok(());
+    }
+
     if let Some(guild_id) = guild_id
         && let Some(storage) = &ctx.data::<crate::Data>().storage
     {

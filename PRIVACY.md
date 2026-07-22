@@ -6,13 +6,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 # Privacy
 
-Last updated: May 17, 2026
+Last updated: July 22, 2026
 
 ## Data we collect
 
 We automatically collect data for moderation purposes. All messages sent have their content, author ID, and attachments stored for a period of **1 day** before they are deleted; edits and deletes are logged to a channel that is configured per-guild.
 
-Messages that receive enough reactions to be posted to starboards will have their message IDs stored for **1 year** in order to relate the original message to the message on the starboard.
+Messages that receive enough reactions to be posted to starboards will have their message IDs stored for **2 weeks** in order to relate the original message to the message on the starboard.
 
 Guild-level configurations, such as those set using the `/config` and `/autoreply` commands, are stored indefinitely and associated with the guild ID.
 
