@@ -26,7 +26,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Nix
-        uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # ratchet:cachix/install-nix-action@v31.10.6
+        uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # ratchet:cachix/install-nix-action@v31.11.0
 
       - name: Collect checks
         id: checks
@@ -52,14 +52,14 @@ jobs:
           persist-credentials: false
 
       - name: Install Nix
-        uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # ratchet:cachix/install-nix-action@v31
+        uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # ratchet:cachix/install-nix-action@v31
 
       - name: Check
         run: nix build --fallback --print-build-logs '.#checks.x86_64-linux.${{ matrix.check }}'
 
       - name: Upload Clippy results
         if: ${{ matrix.check == 'clippy' }}
-        uses: github/codeql-action/upload-sarif@c35d1b164463ee62a100735382aaaa525c5d3496 # ratchet:github/codeql-action/upload-sarif@codeql-bundle-v2.25.6
+        uses: github/codeql-action/upload-sarif@e58424170fb0262c8d7ed60a2e84b9bffe205c67 # ratchet:github/codeql-action/upload-sarif@codeql-bundle-v2.26.1
         with:
           sarif_file: result
           wait-for-processing: true
