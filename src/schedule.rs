@@ -137,7 +137,9 @@ pub async fn run(http: Arc<Http>, data: Arc<Data>) -> Result<()> {
         .instrument(tracing::trace_span!("safe_browsing"))
     });
 
-    tasks.join_all().await.into_iter().collect::<Result<()>>()?;
+    while let Some(result) = tasks.join_next().await {
+        () = result??;
+    }
 
     Ok(())
 }
