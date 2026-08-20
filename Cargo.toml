@@ -13,15 +13,15 @@ license = "AGPL-3.0-only"
 publish = false
 
 [dependencies]
-aws-lc-rs = "1.17.3"
-base64 = "0.23.0"
-bytesize = "2.4.2"
+aws-lc-rs = "1.18.0"
+base64 = "0.23.1"
+bytesize = "2.7.0"
 chrono = "0.4.45"
 color-eyre = "0.6.5"
 dotenvy = "0.15.7"
 envy = "0.4.2"
-eyre = "0.6.12"
-futures-util = "0.3.33"
+eyre = "0.6.14"
+futures-util = "0.3.34"
 hickory-resolver = { version = "0.26.1", features = ["https-aws-lc-rs", "dnssec-aws-lc-rs", "webpki-roots"] }
 humantime = "2.4.0"
 indexmap = { version = "2.14.0", features = ["serde"] }
@@ -29,15 +29,15 @@ percent-encoding = "2.3.2"
 poise = { git = "https://github.com/serenity-rs/poise.git", branch = "serenity-next" }
 rand = "0.10.2"
 rayon = "1.12.0"
-redis = { version = "1.4.1", features = ["tokio-rustls-comp", "tls-rustls-webpki-roots", "connection-manager"] }
+redis = { version = "1.6.0", features = ["tokio-rustls-comp", "tls-rustls-webpki-roots", "connection-manager"] }
 regex = "1.13.1"
 reqwest = { version = "0.13.4", features = ["query", "json", "deflate", "gzip", "brotli", "zstd"] }
-rustls = "0.23.42"
+rustls = "0.23.43"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 sysinfo = "0.39.6"
 tokio = { version = "1.53.1", features = ["full"] }
-toml = "1.1.3"
+toml = "1.1.4"
 tracing = "0.1.44"
 tracing-error = "0.2.1"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }

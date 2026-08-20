@@ -230,7 +230,6 @@ impl serenity::EventHandler for EventHandler {
                         && let Some(logged_data) =
                             storage.get_message_log(*deleted_message_id).await?
                     {
-                        let timestamp = chrono::Utc::now();
                         handlers::log::delete(
                             ctx,
                             handlers::log::LogMessageIds {
@@ -240,7 +239,7 @@ impl serenity::EventHandler for EventHandler {
                                 author: Some(logged_data.author),
                             },
                             &logged_data,
-                            &timestamp,
+                            &chrono::Utc::now(),
                         )
                         .await?;
 
@@ -257,6 +256,40 @@ impl serenity::EventHandler for EventHandler {
 
                     handlers::code_expansion::handle_delete(ctx, *channel_id, *deleted_message_id)
                         .await?;
+                }
+
+                FullEvent::MessageDeleteBulk {
+                    channel_id,
+                    multiple_deleted_messages_ids,
+                    guild_id,
+                    ..
+                } => {
+                    if guild_id.is_none() {
+                        return Ok(());
+                    }
+
+                    if let Some(storage) = &ctx.data::<crate::Data>().storage {
+                        for deleted_message_id in multiple_deleted_messages_ids {
+                            if let Some(logged_data) =
+                                storage.get_message_log(*deleted_message_id).await?
+                            {
+                                handlers::log::delete(
+                                    ctx,
+                                    handlers::log::LogMessageIds {
+                                        message: *deleted_message_id,
+                                        channel: *channel_id,
+                                        guild: *guild_id,
+                                        author: Some(logged_data.author),
+                                    },
+                                    &logged_data,
+                                    &chrono::Utc::now(),
+                                )
+                                .await?;
+
+                                storage.del_message_log(*deleted_message_id).await?;
+                            }
+                        }
+                    }
                 }
 
                 FullEvent::ReactionAdd { add_reaction, .. } => {

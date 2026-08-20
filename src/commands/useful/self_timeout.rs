@@ -62,7 +62,7 @@ pub async fn self_timeout(
                 ctx.http(),
                 serenity::EditMember::default()
                     .disable_communication_until(end.into())
-                    .audit_log_reason(&format!(
+                    .audit_log_reason(format!(
                         "Requested self timeout{}",
                         reason
                             .as_ref()
