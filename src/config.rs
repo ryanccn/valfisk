@@ -58,6 +58,8 @@ pub struct GuildConfig {
     pub moderator_role: Option<RoleId>,
     #[serde(skip_serializing_if = "HashSet::is_empty", default)]
     pub logs_excluded_channels: HashSet<GenericChannelId>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub honeypot_channel: Option<GenericChannelId>,
 
     #[serde(skip_serializing_if = "HashSet::is_empty", default)]
     pub random_color_roles: HashSet<RoleId>,

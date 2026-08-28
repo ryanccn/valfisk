@@ -12,6 +12,7 @@ pub mod code_expansion;
 pub mod config;
 mod dm;
 mod error;
+mod honeypot;
 pub mod intelligence;
 pub mod log;
 mod safe_browsing;
@@ -22,6 +23,10 @@ pub use error::error;
 #[tracing::instrument(skip_all, fields(id = message.id.get()))]
 pub async fn message_guild(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
     if safe_browsing::handle(ctx, message).await? {
+        return Ok(());
+    }
+
+    if honeypot::handle(ctx, message).await? {
         return Ok(());
     }
 

@@ -67,3 +67,9 @@ pub async fn send_safe_browsing(guild: Option<serenity::GuildId>) {
         tracing::warn!("{err:?}");
     }
 }
+
+pub async fn send_honeypot(guild: Option<serenity::GuildId>) {
+    if let Err(err) = send("honeypot_v1", json!({ "guild": guild })).await {
+        tracing::warn!("{err:?}");
+    }
+}

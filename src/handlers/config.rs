@@ -83,6 +83,13 @@ pub async fn handle(
                     config.member_logs_channel = values.first().map(|ch| ch.widen());
                 }
             }
+            "honeypot_channel" => {
+                if let serenity::ComponentInteractionDataKind::ChannelSelect { values } =
+                    &interaction.data.kind
+                {
+                    config.honeypot_channel = values.first().map(|ch| ch.widen());
+                }
+            }
             "moderator_role" => {
                 if let serenity::ComponentInteractionDataKind::RoleSelect { values } =
                     &interaction.data.kind

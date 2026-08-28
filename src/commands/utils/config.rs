@@ -187,6 +187,23 @@ async fn edit(ctx: Context<'_>) -> Result<()> {
                 )),
 
                 CreateComponent::TextDisplay(CreateTextDisplay::new(
+                    "**Honeypot channel**\n-# Channel in which users sending messages will be timed out",
+                )),
+                CreateComponent::ActionRow(CreateActionRow::SelectMenu(
+                    CreateSelectMenu::new(
+                        "cfg:honeypot_channel",
+                        CreateSelectMenuKind::Channel {
+                            channel_types: Some(vec![ChannelType::Text].into()),
+                            default_channels: Some(
+                                data.honeypot_channel.map_or_else(Vec::new, |c| vec![c])
+                                .into(),
+                            ),
+                        },
+                    )
+                    .min_values(0)
+                )),
+
+                CreateComponent::TextDisplay(CreateTextDisplay::new(
                     "**Moderator role**\n-# Role that moderators are assigned to, used for mentions",
                 )),
                 CreateComponent::ActionRow(CreateActionRow::SelectMenu(

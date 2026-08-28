@@ -30,7 +30,7 @@
 
       cargoLock.outputHashes = {
         "poise-0.6.1" = "sha256-aVf70WF1Hr5ctgw2Gy8Xq9FbYbQh+775QPq07l8B79k=";
-        "serenity-0.12.5" = "sha256-SEuJbFx3f7/aMWZsU5lwUDuz5SoFGm9DTVhRVdA0AmU=";
+        "serenity-0.12.5" = "sha256-Mb+LkDOLSyhpz70kopYhMO1r+PIpnqxXZKJ3j6sfvK4=";
       };
 
       flake.legacyPackages = lib.genAttrs lib.systems.flakeExposed (
