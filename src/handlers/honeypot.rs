@@ -19,22 +19,27 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
         && let Some(honeypot_channel) = config.honeypot_channel
         && honeypot_channel == message.channel_id
     {
-        message.delete(&ctx.http, Some("Honeypot")).await?;
-
-        let timed_out = if let Ok(mut member) = message.member(&ctx).await {
-            member
-                .disable_communication_until(
+        let purged = async {
+            guild_id
+                .ban(
                     &ctx.http,
-                    (chrono::Utc::now() + chrono::TimeDelta::days(1)).into(),
+                    message.author.id,
+                    3600,
+                    Some("Honeypot triggered"),
                 )
-                .await
-                .is_ok()
-        } else {
-            false
-        };
+                .await?;
+
+            guild_id
+                .unban(&ctx.http, message.author.id, Some("Honeypot triggered"))
+                .await?;
+
+            eyre::Ok(())
+        }
+        .await
+        .is_ok();
 
         if let Some(logs_channel) = config.message_logs_channel {
-            let mut components = vec![];
+            let mut components: Vec<serenity::CreateComponent<'_>> = Vec::new();
 
             if let Some(role) = config.moderator_role {
                 components.push(serenity::CreateComponent::TextDisplay(
@@ -42,49 +47,74 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                 ));
             }
 
-            components.push(serenity::CreateComponent::Container(
-                serenity::CreateContainer::new(vec![
-                    serenity::CreateContainerComponent::TextDisplay(
-                        serenity::CreateTextDisplay::new("### Honeypot"),
+            let mut container = serenity::CreateContainer::new(vec![
+                serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                    "### Honeypot",
+                )),
+                serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                    format!(
+                        "**Author**\n{} (*{}*)",
+                        utils::serenity::format_mentionable(Some(message.author.id)),
+                        if purged { "purged" } else { "purge failed" }
                     ),
-                    serenity::CreateContainerComponent::TextDisplay(
-                        serenity::CreateTextDisplay::new(format!(
-                            "**Author**\n{} (*{}*)",
-                            utils::serenity::format_mentionable(Some(message.author.id)),
-                            if timed_out {
-                                "timed out"
-                            } else {
-                                "timeout failed"
-                            }
-                        )),
+                )),
+                serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                    format!(
+                        "**Channel**\n{}",
+                        utils::serenity::format_mentionable(Some(message.channel_id))
                     ),
-                    serenity::CreateContainerComponent::TextDisplay(
-                        serenity::CreateTextDisplay::new(format!(
-                            "**Channel**\n{}",
-                            utils::serenity::format_mentionable(Some(message.channel_id))
-                        )),
-                    ),
-                    serenity::CreateContainerComponent::TextDisplay(
-                        serenity::CreateTextDisplay::new(format!(
-                            "**Content**\n{}",
-                            utils::truncate(&message.content, 1024)
-                        )),
-                    ),
-                    serenity::CreateContainerComponent::TextDisplay(
+                )),
+                serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                    format!("**Content**\n{}", utils::truncate(&message.content, 1024)),
+                )),
+            ])
+            .accent_color(0xff6b6b);
+
+            if !message.attachments.is_empty() {
+                container =
+                    container.add_component(serenity::CreateContainerComponent::TextDisplay(
                         serenity::CreateTextDisplay::new(format!(
                             "**Attachments**\n{}",
                             utils::serenity::format_attachments(&message.attachments),
                         )),
-                    ),
-                    serenity::CreateContainerComponent::TextDisplay(
-                        serenity::CreateTextDisplay::new(format!(
-                            "-# {}",
-                            serenity::FormattedTimestamp::now()
-                        )),
-                    ),
-                ])
-                .accent_color(0xff6b6b),
+                    ));
+            }
+
+            let image_attachments = message
+                .attachments
+                .iter()
+                .filter(|att| {
+                    att.content_type
+                        .as_ref()
+                        .is_some_and(|ct| ct.starts_with("image/"))
+                })
+                .take(10)
+                .collect::<Vec<_>>();
+
+            if !image_attachments.is_empty() {
+                container =
+                    container.add_component(serenity::CreateContainerComponent::MediaGallery(
+                        serenity::CreateMediaGallery::new(
+                            image_attachments
+                                .iter()
+                                .map(|attachment| {
+                                    serenity::CreateMediaGalleryItem::new(
+                                        serenity::CreateUnfurledMediaItem::new(&attachment.url),
+                                    )
+                                })
+                                .collect::<Vec<_>>(),
+                        ),
+                    ));
+            }
+
+            container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
+                serenity::CreateTextDisplay::new(format!(
+                    "-# {}",
+                    serenity::FormattedTimestamp::now()
+                )),
             ));
+
+            components.push(serenity::CreateComponent::Container(container));
 
             logs_channel
                 .send_message(
@@ -97,6 +127,12 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                         )
                         .components(&components),
                 )
+                .await?;
+        }
+
+        if !purged {
+            message
+                .delete(&ctx.http, Some("Honeypot triggered"))
                 .await?;
         }
 
