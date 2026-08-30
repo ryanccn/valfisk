@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 use eyre::Result;
-use poise::serenity_prelude::{self as serenity, Mentionable as _};
+use poise::serenity_prelude as serenity;
 
 use crate::{analytics, utils};
 
@@ -41,11 +41,11 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
         if let Some(logs_channel) = config.message_logs_channel {
             let mut components: Vec<serenity::CreateComponent<'_>> = Vec::new();
 
-            if let Some(role) = config.moderator_role {
-                components.push(serenity::CreateComponent::TextDisplay(
-                    serenity::CreateTextDisplay::new(role.mention().to_string()),
-                ));
-            }
+            // if let Some(role) = config.moderator_role {
+            //     components.push(serenity::CreateComponent::TextDisplay(
+            //         serenity::CreateTextDisplay::new(role.mention().to_string()),
+            //     ));
+            // }
 
             let mut container = serenity::CreateContainer::new(vec![
                 serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
