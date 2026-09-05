@@ -70,13 +70,16 @@ async fn is_excluded_message(
 }
 
 #[tracing::instrument(skip_all, fields(id = message.id.get()))]
-pub async fn handle_message(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
-    if let Some(guild_id) = message.guild_id
+pub async fn handle_message(
+    ctx: &serenity::Context,
+    guild_config: Option<&GuildConfig>,
+    message: &serenity::Message,
+) -> Result<()> {
+    if message.guild_id.is_some()
         && let Some(storage) = &ctx.data::<crate::Data>().storage
+        && let Some(guild_config) = guild_config
     {
-        let guild_config = storage.get_config(guild_id).await?;
-
-        if is_excluded_message(ctx, &guild_config, message.into()).await {
+        if is_excluded_message(ctx, guild_config, message.into()).await {
             return Ok(());
         }
 

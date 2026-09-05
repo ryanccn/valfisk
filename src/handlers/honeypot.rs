@@ -5,17 +5,20 @@
 use eyre::Result;
 use poise::serenity_prelude as serenity;
 
-use crate::{analytics, utils};
+use crate::{analytics, config::GuildConfig, utils};
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
-pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Result<bool> {
+pub async fn handle(
+    ctx: &serenity::Context,
+    guild_config: Option<&GuildConfig>,
+    message: &serenity::Message,
+) -> Result<bool> {
     if message.author.id == ctx.cache.current_user().id {
         return Ok(false);
     }
 
     if let Some(guild_id) = message.guild_id
-        && let Some(storage) = &ctx.data::<crate::Data>().storage
-        && let Ok(config) = storage.get_config(guild_id).await
+        && let Some(config) = guild_config
         && let Some(honeypot_channel) = config.honeypot_channel
         && honeypot_channel == message.channel_id
     {
@@ -121,10 +124,7 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                     &ctx.http,
                     serenity::CreateMessage::default()
                         .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                        .allowed_mentions(
-                            serenity::CreateAllowedMentions::new()
-                                .roles(config.moderator_role.iter().copied().collect::<Vec<_>>()),
-                        )
+                        .allowed_mentions(serenity::CreateAllowedMentions::new())
                         .components(&components),
                 )
                 .await?;

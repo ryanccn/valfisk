@@ -8,7 +8,7 @@ use std::sync::LazyLock;
 
 use eyre::Result;
 
-use crate::{analytics, utils};
+use crate::{analytics, config::GuildConfig, utils};
 
 static URL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"https?:\/\/[-a-zA-Z0-9@:%._\+~#=]+\.[a-zA-Z0-9()]+\b[-a-zA-Z0-9()@:%_\+.~#?&//=]*")
@@ -16,7 +16,11 @@ static URL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 #[tracing::instrument(skip_all, fields(message_id = message.id.get()))]
-pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Result<bool> {
+pub async fn handle(
+    ctx: &serenity::Context,
+    guild_config: Option<&GuildConfig>,
+    message: &serenity::Message,
+) -> Result<bool> {
     if message.author.id == ctx.cache.current_user().id {
         return Ok(false);
     }
@@ -50,83 +54,79 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                 false
             };
 
-            if let Some(guild_id) = message.guild_id
-                && let Some(storage) = &ctx.data::<crate::Data>().storage
+            if let Some(guild_config) = guild_config
+                && let Some(logs_channel) = guild_config.message_logs_channel
             {
-                let guild_config = storage.get_config(guild_id).await?;
+                let mut components = vec![];
 
-                if let Some(logs_channel) = guild_config.message_logs_channel {
-                    let mut components = vec![];
-
-                    if let Some(role) = guild_config.moderator_role {
-                        components.push(serenity::CreateComponent::TextDisplay(
-                            serenity::CreateTextDisplay::new(role.mention().to_string()),
-                        ));
-                    }
-
-                    components.push(serenity::CreateComponent::Container(
-                        serenity::CreateContainer::new(vec![
-                            serenity::CreateContainerComponent::TextDisplay(
-                                serenity::CreateTextDisplay::new(format!(
-                                    "### Safe Browsing\n{}",
-                                    matches
-                                        .iter()
-                                        .map(|m| format!("`{}` → {}", m.0, m.1.threat_type))
-                                        .collect::<Vec<_>>()
-                                        .join("\n")
-                                )),
-                            ),
-                            serenity::CreateContainerComponent::TextDisplay(
-                                serenity::CreateTextDisplay::new(format!(
-                                    "**Author**\n{} (*{}*)",
-                                    utils::serenity::format_mentionable(Some(message.author.id)),
-                                    if timed_out {
-                                        "timed out"
-                                    } else {
-                                        "timeout failed"
-                                    }
-                                )),
-                            ),
-                            serenity::CreateContainerComponent::TextDisplay(
-                                serenity::CreateTextDisplay::new(format!(
-                                    "**Channel**\n{}",
-                                    utils::serenity::format_mentionable(Some(message.channel_id))
-                                )),
-                            ),
-                            serenity::CreateContainerComponent::TextDisplay(
-                                serenity::CreateTextDisplay::new(format!(
-                                    "**Content**\n{}",
-                                    utils::truncate(&message.content, 1024)
-                                )),
-                            ),
-                            serenity::CreateContainerComponent::TextDisplay(
-                                serenity::CreateTextDisplay::new(format!(
-                                    "-# {}",
-                                    serenity::FormattedTimestamp::now()
-                                )),
-                            ),
-                        ])
-                        .accent_color(0xff6b6b),
+                if let Some(role) = guild_config.moderator_role {
+                    components.push(serenity::CreateComponent::TextDisplay(
+                        serenity::CreateTextDisplay::new(role.mention().to_string()),
                     ));
-
-                    logs_channel
-                        .send_message(
-                            &ctx.http,
-                            serenity::CreateMessage::default()
-                                .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                                .allowed_mentions(
-                                    serenity::CreateAllowedMentions::new().roles(
-                                        guild_config
-                                            .moderator_role
-                                            .iter()
-                                            .copied()
-                                            .collect::<Vec<_>>(),
-                                    ),
-                                )
-                                .components(&components),
-                        )
-                        .await?;
                 }
+
+                components.push(serenity::CreateComponent::Container(
+                    serenity::CreateContainer::new(vec![
+                        serenity::CreateContainerComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(format!(
+                                "### Safe Browsing\n{}",
+                                matches
+                                    .iter()
+                                    .map(|m| format!("`{}` → {}", m.0, m.1.threat_type))
+                                    .collect::<Vec<_>>()
+                                    .join("\n")
+                            )),
+                        ),
+                        serenity::CreateContainerComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(format!(
+                                "**Author**\n{} (*{}*)",
+                                utils::serenity::format_mentionable(Some(message.author.id)),
+                                if timed_out {
+                                    "timed out"
+                                } else {
+                                    "timeout failed"
+                                }
+                            )),
+                        ),
+                        serenity::CreateContainerComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(format!(
+                                "**Channel**\n{}",
+                                utils::serenity::format_mentionable(Some(message.channel_id))
+                            )),
+                        ),
+                        serenity::CreateContainerComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(format!(
+                                "**Content**\n{}",
+                                utils::truncate(&message.content, 1024)
+                            )),
+                        ),
+                        serenity::CreateContainerComponent::TextDisplay(
+                            serenity::CreateTextDisplay::new(format!(
+                                "-# {}",
+                                serenity::FormattedTimestamp::now()
+                            )),
+                        ),
+                    ])
+                    .accent_color(0xff6b6b),
+                ));
+
+                logs_channel
+                    .send_message(
+                        &ctx.http,
+                        serenity::CreateMessage::default()
+                            .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                            .allowed_mentions(
+                                serenity::CreateAllowedMentions::new().roles(
+                                    guild_config
+                                        .moderator_role
+                                        .iter()
+                                        .copied()
+                                        .collect::<Vec<_>>(),
+                                ),
+                            )
+                            .components(&components),
+                    )
+                    .await?;
             }
 
             analytics::send_safe_browsing(message.guild_id).await;

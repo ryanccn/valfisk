@@ -22,16 +22,24 @@ pub use error::error;
 
 #[tracing::instrument(skip_all, fields(id = message.id.get()))]
 pub async fn message_guild(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
-    if safe_browsing::handle(ctx, message).await? {
+    let guild_config = if let Some(guild_id) = message.guild_id
+        && let Some(storage) = &ctx.data::<crate::Data>().storage
+    {
+        Some(storage.get_config(guild_id).await?)
+    } else {
+        None
+    };
+
+    if safe_browsing::handle(ctx, guild_config.as_ref(), message).await? {
         return Ok(());
     }
 
-    if honeypot::handle(ctx, message).await? {
+    if honeypot::handle(ctx, guild_config.as_ref(), message).await? {
         return Ok(());
     }
 
     tokio::try_join!(
-        log::handle_message(ctx, message),
+        log::handle_message(ctx, guild_config.as_ref(), message),
         autoreply::handle(ctx, message),
         code_expansion::handle_message(ctx, message),
         intelligence::handle(ctx, message),
