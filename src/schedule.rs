@@ -17,23 +17,21 @@ pub async fn rotate_color_role(
     http: &Http,
     guild: GuildId,
     role: RoleId,
-) -> Result<HashSet<RoleId>> {
-    if let Ok(mut role) = guild.role(http, role).await {
-        let color: u32 = rand::random_range(0x000000..=0xffffff);
+) -> Result<Option<RoleId>> {
+    let Ok(mut role) = guild.role(http, role).await else {
+        return Ok(None);
+    };
 
-        role.edit(http, EditRole::default().colour(color)).await?;
-        tracing::debug!(
-            role = ?role.id,
-            color = format!("{color:#x}"),
-            "rotated role color"
-        );
+    let color: u32 = rand::random_range(0x000000..=0xffffff);
 
-        let mut ret = HashSet::new();
-        ret.insert(role.id);
-        Ok(ret)
-    } else {
-        Ok(HashSet::new())
-    }
+    role.edit(http, EditRole::default().colour(color)).await?;
+    tracing::debug!(
+        role = ?role.id,
+        color = format!("{color:#x}"),
+        "rotated role color"
+    );
+
+    Ok(Some(role.id))
 }
 
 pub async fn rotate_color_roles_guild(
@@ -41,18 +39,18 @@ pub async fn rotate_color_roles_guild(
     data: &Data,
     guild: GuildId,
 ) -> Result<HashSet<RoleId>> {
-    if let Some(storage) = &data.storage {
-        let guild_config = storage.get_config(guild).await?;
-        let mut ret = HashSet::new();
+    let Some(storage) = &data.storage else {
+        return Ok(HashSet::new());
+    };
 
-        for role in &guild_config.random_color_roles {
-            ret.extend(rotate_color_role(http, guild, *role).await?);
-        }
+    let guild_config = storage.get_config(guild).await?;
+    let mut ret = HashSet::new();
 
-        return Ok(ret);
+    for role in &guild_config.random_color_roles {
+        ret.extend(rotate_color_role(http, guild, *role).await?);
     }
 
-    Ok(HashSet::new())
+    Ok(ret)
 }
 
 pub async fn rotate_color_roles_global(http: &Http, data: &Data) -> Result<()> {

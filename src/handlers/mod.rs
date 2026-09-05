@@ -38,14 +38,20 @@ pub async fn message_guild(ctx: &serenity::Context, message: &serenity::Message)
         return Ok(());
     }
 
-    tokio::try_join!(
+    let results = tokio::join!(
         log::handle_message(ctx, guild_config.as_ref(), message),
         autoreply::handle(ctx, message),
         code_expansion::handle_message(ctx, message),
         intelligence::handle(ctx, message),
-    )?;
+    );
 
-    analytics::send_message(message.guild_id).await;
+    for result in [results.0, results.1, results.2, results.3] {
+        if let Err(err) = result {
+            tracing::error!("{err:?}");
+        }
+    }
+
+    analytics::send_event("message_v1", message.guild_id);
 
     Ok(())
 }

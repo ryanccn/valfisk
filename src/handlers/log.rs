@@ -35,38 +35,60 @@ impl From<&serenity::Message> for LogMessageIds {
     }
 }
 
-async fn is_excluded_message(
+pub async fn is_excluded(
     ctx: &serenity::Context,
-    guild_config: &GuildConfig,
+    guild_config: Option<&GuildConfig>,
     ids: LogMessageIds,
-) -> bool {
+) -> Result<bool> {
     if ids.author == Some(ctx.cache.current_user().id) {
-        return true;
+        return Ok(true);
     }
+
+    let Some(guild) = ids.guild else {
+        return Ok(false);
+    };
+
+    let guild_config = match guild_config {
+        Some(guild_config) => Cow::Borrowed(guild_config),
+        None => match &ctx.data::<crate::Data>().storage {
+            Some(storage) => Cow::Owned(storage.get_config(guild).await?),
+            None => return Ok(false),
+        },
+    };
 
     if guild_config.logs_excluded_channels.contains(&ids.channel) {
-        return true;
+        return Ok(true);
     }
 
-    if let (Some(guild), Some(author)) = (ids.guild, ids.author)
-        && let Ok(member) = guild.member(&ctx, author).await
+    let Some(author) = ids.author else {
+        return Ok(false);
+    };
+
+    if ctx
+        .cache
+        .guild(guild)
+        .is_some_and(|guild| guild.owner_id == author)
+    {
+        return Ok(true);
+    }
+
+    if let Ok(member) = guild.member(&ctx, author).await
         && member.roles(&ctx.cache).is_some_and(|roles| {
             roles
                 .iter()
                 .any(|role| role.has_permission(serenity::Permissions::ADMINISTRATOR))
         })
     {
-        return true;
+        return Ok(true);
     }
 
-    if let (Some(guild), Some(author)) = (ids.guild, ids.author)
-        && let Ok(guild) = guild.to_partial_guild(&ctx).await
+    if let Ok(guild) = guild.to_partial_guild(&ctx).await
         && guild.owner_id == author
     {
-        return true;
+        return Ok(true);
     }
 
-    false
+    Ok(false)
 }
 
 #[tracing::instrument(skip_all, fields(id = message.id.get()))]
@@ -79,7 +101,7 @@ pub async fn handle_message(
         && let Some(storage) = &ctx.data::<crate::Data>().storage
         && let Some(guild_config) = guild_config
     {
-        if is_excluded_message(ctx, guild_config, message.into()).await {
+        if is_excluded(ctx, Some(guild_config), message.into()).await? {
             return Ok(());
         }
 
@@ -109,7 +131,7 @@ pub async fn edit(
     {
         let guild_config = storage.get_config(guild_id).await?;
 
-        if is_excluded_message(ctx, &guild_config, ids).await {
+        if is_excluded(ctx, Some(&guild_config), ids).await? {
             return Ok(());
         }
 
@@ -193,7 +215,7 @@ pub async fn delete(
     {
         let guild_config = storage.get_config(guild_id).await?;
 
-        if is_excluded_message(ctx, &guild_config, ids).await {
+        if is_excluded(ctx, Some(&guild_config), ids).await? {
             return Ok(());
         }
 

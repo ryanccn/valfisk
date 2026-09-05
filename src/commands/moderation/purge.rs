@@ -33,39 +33,50 @@ pub async fn purge(
 
     let mut count_remaining = count;
     let mut count_success = 0usize;
+    let mut before: Option<serenity::MessageId> = None;
 
     while count_remaining > 0 {
         let count_current: u8 = count_remaining.min(100).try_into()?;
 
-        let messages = channel
-            .messages(ctx, serenity::GetMessages::new().limit(count_current))
-            .await?
+        let mut request = serenity::GetMessages::new().limit(count_current);
+        if let Some(before) = before {
+            request = request.before(before);
+        }
+
+        let fetched = channel.messages(ctx, request).await?;
+
+        if fetched.is_empty() {
+            break;
+        }
+
+        before = fetched.last().map(|m| m.id);
+
+        let messages = fetched
             .iter()
             .filter(|m| {
                 *m.timestamp >= chrono::Utc::now() - chrono::Duration::weeks(2)
                     && m.kind != serenity::MessageType::ThreadStarterMessage
             })
             .map(|m| m.id)
-            .take(count_current.into())
             .collect::<Vec<_>>();
 
         if messages.is_empty() {
-            break;
+            continue;
         }
 
-        channel
-            .delete_messages(
-                ctx.http(),
-                &messages,
-                Some(&format!(
-                    "Purge by @{} ({})",
-                    ctx.author().name,
-                    ctx.author().id
-                )),
-            )
-            .await?;
+        let reason = format!("Purge by @{} ({})", ctx.author().name, ctx.author().id);
 
-        count_remaining -= u64::from(count_current);
+        if messages.len() == 1 {
+            channel
+                .delete_message(ctx.http(), messages[0], Some(&reason))
+                .await?;
+        } else {
+            channel
+                .delete_messages(ctx.http(), &messages, Some(&reason))
+                .await?;
+        }
+
+        count_remaining -= u64::try_from(messages.len())?;
         count_success += messages.len();
     }
 

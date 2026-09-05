@@ -47,6 +47,117 @@ fn escape_backticks(source: &str) -> String {
     source.replace("```", "`\u{200D}``")
 }
 
+const MAX_LINES: usize = 256;
+
+fn line_range(captures: &regex::Captures<'_>) -> Result<(usize, Option<usize>)> {
+    let start = captures["start"].parse::<usize>()?;
+
+    if start == 0 {
+        bail!("line number must be at least 1");
+    }
+
+    let end = captures
+        .name("end")
+        .and_then(|end| end.as_str().parse::<usize>().ok());
+
+    if let Some(end) = end
+        && end < start
+    {
+        bail!("end line number precedes start line number");
+    }
+
+    Ok((start, end))
+}
+
+fn select_lines(source: &str, start: usize, end: Option<usize>) -> Result<String> {
+    let count = end.unwrap_or(start) - start + 1;
+
+    if count > MAX_LINES {
+        bail!("requested line range exceeds {MAX_LINES} lines");
+    }
+
+    let selected = source
+        .lines()
+        .skip(start - 1)
+        .take(count)
+        .collect::<Vec<_>>();
+
+    if selected.len() < count {
+        bail!("out of bounds line indexes");
+    }
+
+    Ok(selected.join("\n"))
+}
+
+fn render_snippet(
+    heading: &str,
+    language: &str,
+    body: &str,
+    source_label: &str,
+    link: &str,
+) -> Vec<serenity::CreateComponent<'static>> {
+    vec![
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+            "### {heading}"
+        ))),
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
+            "```".to_owned()
+                + language
+                + "\n"
+                + truncate(&escape_backticks(&dedent(body)), 2048)
+                + "\n```",
+        )),
+        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
+            "-# [{source_label}]({link}) · {}",
+            serenity::FormattedTimestamp::now()
+        ))),
+        serenity::CreateComponent::Separator(
+            serenity::CreateSeparator::new()
+                .divider(true)
+                .spacing(serenity::SeparatorSpacingSize::Large),
+        ),
+    ]
+}
+
+fn heading_with_range(prefix: &str, start: usize, end: Option<usize>) -> String {
+    format!(
+        "{prefix} L{start}{}",
+        end.map(|end| format!("-{end}")).unwrap_or_default()
+    )
+}
+
+async fn expand_file(
+    raw_url: String,
+    prefix: &str,
+    language: &str,
+    source_label: &str,
+    link: &str,
+    start: usize,
+    end: Option<usize>,
+) -> Result<Vec<serenity::CreateComponent<'static>>> {
+    let source = HTTP
+        .get(raw_url)
+        .send()
+        .await?
+        .error_for_status()?
+        .text()
+        .await?;
+
+    let body = select_lines(&source, start, end)?;
+
+    Ok(render_snippet(
+        &heading_with_range(prefix, start, end),
+        language,
+        &body,
+        source_label,
+        link,
+    ))
+}
+
+fn extension_of(file: &str) -> &str {
+    file.split('.').next_back().unwrap_or_default()
+}
+
 static GITHUB: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"https?://github\.com/(?P<repo>[\w\-]+/[\w.\-]+)/blob/(?P<ref>\S+?)/(?P<file>[^\s?]+)(\?\S*)?#L(?P<start>\d+)(?:[~-]L?(?P<end>\d+)?)?").unwrap()
 });
@@ -59,60 +170,18 @@ async fn github(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateCom
     let r#ref = &captures["ref"];
     let file = &captures["file"];
 
-    let language = file.split('.').next_back().unwrap_or_default();
+    let (start, end) = line_range(&captures)?;
 
-    let start = captures["start"].parse::<usize>()?;
-    let end = captures
-        .name("end")
-        .and_then(|end| end.as_str().parse::<usize>().ok());
-
-    let lines: Vec<String> = HTTP
-        .get(format!(
-            "https://raw.githubusercontent.com/{repo}/{ref}/{file}"
-        ))
-        .send()
-        .await?
-        .error_for_status()?
-        .text()
-        .await?
-        .lines()
-        .map(|s| s.to_owned())
-        .collect();
-
-    if start == 0 {
-        bail!("line number must be at least 1");
-    }
-
-    let Some(selected_lines) = lines
-        .get((start - 1)..(end.unwrap_or(start)))
-        .map(|l| l.join("\n"))
-    else {
-        bail!("out of bounds line indexes");
-    };
-
-    Ok(vec![
-        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "### {repo} {file} L{start}{}",
-            end.map(|end| format!("-{end}")).unwrap_or_default()
-        ))),
-        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
-            "```".to_owned()
-                + language
-                + "\n"
-                + &truncate(&escape_backticks(&dedent(&selected_lines)), 2048)
-                + "\n```",
-        )),
-        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "-# [GitHub]({}) · {}",
-            &captures[0],
-            serenity::FormattedTimestamp::now()
-        ))),
-        serenity::CreateComponent::Separator(
-            serenity::CreateSeparator::new()
-                .divider(true)
-                .spacing(serenity::SeparatorSpacingSize::Large),
-        ),
-    ])
+    expand_file(
+        format!("https://raw.githubusercontent.com/{repo}/{ref}/{file}"),
+        &format!("{repo} {file}"),
+        extension_of(file),
+        "GitHub",
+        &captures[0],
+        start,
+        end,
+    )
+    .await
 }
 
 static GITHUB_COMMENT: LazyLock<Regex> = LazyLock::new(|| {
@@ -194,58 +263,18 @@ async fn tangled(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateCo
     let r#ref = &captures["ref"];
     let file = &captures["file"];
 
-    let language = file.split('.').next_back().unwrap_or_default();
+    let (start, end) = line_range(&captures)?;
 
-    let start = captures["start"].parse::<usize>()?;
-    let end = captures
-        .name("end")
-        .and_then(|end| end.as_str().parse::<usize>().ok());
-
-    let lines: Vec<String> = HTTP
-        .get(format!("https://tangled.org/{repo}/raw/{ref}/{file}"))
-        .send()
-        .await?
-        .error_for_status()?
-        .text()
-        .await?
-        .lines()
-        .map(|s| s.to_owned())
-        .collect();
-
-    if start == 0 {
-        bail!("line number must be at least 1");
-    }
-
-    let Some(selected_lines) = lines
-        .get((start - 1)..(end.unwrap_or(start)))
-        .map(|l| l.join("\n"))
-    else {
-        bail!("out of bounds line indexes");
-    };
-
-    Ok(vec![
-        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "### {repo} {file} L{start}{}",
-            end.map(|end| format!("-{end}")).unwrap_or_default()
-        ))),
-        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
-            "```".to_owned()
-                + language
-                + "\n"
-                + &truncate(&escape_backticks(&dedent(&selected_lines)), 2048)
-                + "\n```",
-        )),
-        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "-# [Tangled]({}) · {}",
-            &captures[0],
-            serenity::FormattedTimestamp::now()
-        ))),
-        serenity::CreateComponent::Separator(
-            serenity::CreateSeparator::new()
-                .divider(true)
-                .spacing(serenity::SeparatorSpacingSize::Large),
-        ),
-    ])
+    expand_file(
+        format!("https://tangled.org/{repo}/raw/{ref}/{file}"),
+        &format!("{repo} {file}"),
+        extension_of(file),
+        "Tangled",
+        &captures[0],
+        start,
+        end,
+    )
+    .await
 }
 
 static TANGLED_STRINGS: LazyLock<Regex> = LazyLock::new(|| {
@@ -260,10 +289,7 @@ async fn tangled_strings(
 
     let string = &captures["string"];
 
-    let start = captures["start"].parse::<usize>()?;
-    let end = captures
-        .name("end")
-        .and_then(|end| end.as_str().parse::<usize>().ok());
+    let (start, end) = line_range(&captures)?;
 
     let resp = HTTP
         .get(format!("https://tangled.org/strings/{string}/raw"))
@@ -277,46 +303,19 @@ async fn tangled_strings(
         .and_then(|v| v.to_str().ok())
         .and_then(|s| s.strip_prefix("inline; filename=\""))
         .and_then(|s| s.strip_suffix("\""))
-        .and_then(|s| s.split('.').next_back())
-        .map(|s| s.to_owned())
+        .map(|s| extension_of(s).to_owned())
         .unwrap_or_default();
 
-    let lines: Vec<String> = resp.text().await?.lines().map(|s| s.to_owned()).collect();
+    let source = resp.text().await?;
+    let body = select_lines(&source, start, end)?;
 
-    if start == 0 {
-        bail!("line number must be at least 1");
-    }
-
-    let Some(selected_lines) = lines
-        .get((start - 1)..(end.unwrap_or(start)))
-        .map(|l| l.join("\n"))
-    else {
-        bail!("out of bounds line indexes");
-    };
-
-    Ok(vec![
-        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "### {string} L{start}{}",
-            end.map(|end| format!("-{end}")).unwrap_or_default()
-        ))),
-        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
-            "```".to_owned()
-                + &language
-                + "\n"
-                + &truncate(&escape_backticks(&dedent(&selected_lines)), 2048)
-                + "\n```",
-        )),
-        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "-# [Tangled Strings]({}) · {}",
-            &captures[0],
-            serenity::FormattedTimestamp::now()
-        ))),
-        serenity::CreateComponent::Separator(
-            serenity::CreateSeparator::new()
-                .divider(true)
-                .spacing(serenity::SeparatorSpacingSize::Large),
-        ),
-    ])
+    Ok(render_snippet(
+        &heading_with_range(string, start, end),
+        &language,
+        &body,
+        "Tangled Strings",
+        &captures[0],
+    ))
 }
 
 static CODEBERG: LazyLock<Regex> = LazyLock::new(|| {
@@ -334,60 +333,18 @@ async fn codeberg(
     let r#ref = &captures["ref"];
     let file = &captures["file"];
 
-    let language = file.split('.').next_back().unwrap_or_default();
+    let (start, end) = line_range(&captures)?;
 
-    let start = captures["start"].parse::<usize>()?;
-    let end = captures
-        .name("end")
-        .and_then(|end| end.as_str().parse::<usize>().ok());
-
-    let lines: Vec<String> = HTTP
-        .get(format!(
-            "https://codeberg.org/{repo}/raw/{ref_type}/{ref}/{file}"
-        ))
-        .send()
-        .await?
-        .error_for_status()?
-        .text()
-        .await?
-        .lines()
-        .map(|s| s.to_owned())
-        .collect();
-
-    if start == 0 {
-        bail!("line number must be at least 1");
-    }
-
-    let Some(selected_lines) = lines
-        .get((start - 1)..(end.unwrap_or(start)))
-        .map(|l| l.join("\n"))
-    else {
-        bail!("out of bounds line indexes");
-    };
-
-    Ok(vec![
-        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "### {repo} {file} L{start}{}",
-            end.map(|end| format!("-{end}")).unwrap_or_default()
-        ))),
-        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
-            "```".to_owned()
-                + language
-                + "\n"
-                + &truncate(&escape_backticks(&dedent(&selected_lines)), 2048)
-                + "\n```",
-        )),
-        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "-# [Codeberg]({}) · {}",
-            &captures[0],
-            serenity::FormattedTimestamp::now()
-        ))),
-        serenity::CreateComponent::Separator(
-            serenity::CreateSeparator::new()
-                .divider(true)
-                .spacing(serenity::SeparatorSpacingSize::Large),
-        ),
-    ])
+    expand_file(
+        format!("https://codeberg.org/{repo}/raw/{ref_type}/{ref}/{file}"),
+        &format!("{repo} {file}"),
+        extension_of(file),
+        "Codeberg",
+        &captures[0],
+        start,
+        end,
+    )
+    .await
 }
 
 static GITLAB: LazyLock<Regex> = LazyLock::new(|| {
@@ -402,58 +359,18 @@ async fn gitlab(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateCom
     let r#ref = &captures["ref"];
     let file = &captures["file"];
 
-    let language = file.split('.').next_back().unwrap_or_default();
+    let (start, end) = line_range(&captures)?;
 
-    let start = captures["start"].parse::<usize>()?;
-    let end = captures
-        .name("end")
-        .and_then(|end| end.as_str().parse::<usize>().ok());
-
-    let lines: Vec<String> = HTTP
-        .get(format!("https://gitlab.com/{repo}/-/raw/{ref}/{file}"))
-        .send()
-        .await?
-        .error_for_status()?
-        .text()
-        .await?
-        .lines()
-        .map(|s| s.to_owned())
-        .collect();
-
-    if start == 0 {
-        bail!("line number must be at least 1");
-    }
-
-    let Some(selected_lines) = lines
-        .get((start - 1)..(end.unwrap_or(start)))
-        .map(|l| l.join("\n"))
-    else {
-        bail!("out of bounds line indexes");
-    };
-
-    Ok(vec![
-        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "### {repo} {file} L{start}{}",
-            end.map(|end| format!("-{end}")).unwrap_or_default()
-        ))),
-        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
-            "```".to_owned()
-                + language
-                + "\n"
-                + &truncate(&escape_backticks(&dedent(&selected_lines)), 2048)
-                + "\n```",
-        )),
-        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "-# [GitLab]({}) · {}",
-            &captures[0],
-            serenity::FormattedTimestamp::now()
-        ))),
-        serenity::CreateComponent::Separator(
-            serenity::CreateSeparator::new()
-                .divider(true)
-                .spacing(serenity::SeparatorSpacingSize::Large),
-        ),
-    ])
+    expand_file(
+        format!("https://gitlab.com/{repo}/-/raw/{ref}/{file}"),
+        &format!("{repo} {file}"),
+        extension_of(file),
+        "GitLab",
+        &captures[0],
+        start,
+        end,
+    )
+    .await
 }
 
 static RUST_PLAYGROUND: LazyLock<Regex> = LazyLock::new(|| {
@@ -478,24 +395,13 @@ async fn rust_playground(
         .text()
         .await?;
 
-    Ok(vec![
-        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "### {gist_id}",
-        ))),
-        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
-            "```rust\n".to_owned() + &truncate(&escape_backticks(&dedent(&gist)), 2048) + "\n```",
-        )),
-        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "-# [play.rust-lang.org]({}) · {}",
-            &captures[0],
-            serenity::FormattedTimestamp::now()
-        ))),
-        serenity::CreateComponent::Separator(
-            serenity::CreateSeparator::new()
-                .divider(true)
-                .spacing(serenity::SeparatorSpacingSize::Large),
-        ),
-    ])
+    Ok(render_snippet(
+        gist_id,
+        "rust",
+        &gist,
+        "play.rust-lang.org",
+        &captures[0],
+    ))
 }
 
 static GO_PLAYGROUND: LazyLock<Regex> =
@@ -518,24 +424,7 @@ async fn go_playground(
         .text()
         .await?;
 
-    Ok(vec![
-        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "### {id}",
-        ))),
-        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
-            "```go\n".to_owned() + &truncate(&escape_backticks(&dedent(&code)), 2048) + "\n```",
-        )),
-        serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "-# [go.dev/play]({}) · {}",
-            &captures[0],
-            serenity::FormattedTimestamp::now()
-        ))),
-        serenity::CreateComponent::Separator(
-            serenity::CreateSeparator::new()
-                .divider(true)
-                .spacing(serenity::SeparatorSpacingSize::Large),
-        ),
-    ])
+    Ok(render_snippet(id, "go", &code, "go.dev/play", &captures[0]))
 }
 
 #[expect(clippy::type_complexity)]
@@ -550,53 +439,28 @@ pub async fn resolve(content: &str) -> Result<Vec<serenity::CreateComponent<'sta
         >,
     > = Vec::new();
 
-    for captures in GITHUB.captures_iter(content) {
-        let start = captures.get_match().start();
-        components_tasks.push(Box::pin(async move { (start, github(captures).await) }));
+    macro_rules! collect_expansions {
+        ($($regex:ident => $handler:ident),+ $(,)?) => {
+            $(
+                for captures in $regex.captures_iter(content) {
+                    let start = captures.get_match().start();
+                    components_tasks
+                        .push(Box::pin(async move { (start, $handler(captures).await) }));
+                }
+            )+
+        };
     }
 
-    for captures in GITHUB_COMMENT.captures_iter(content) {
-        let start = captures.get_match().start();
-        components_tasks.push(Box::pin(
-            async move { (start, github_comment(captures).await) },
-        ));
-    }
-
-    for captures in TANGLED.captures_iter(content) {
-        let start = captures.get_match().start();
-        components_tasks.push(Box::pin(async move { (start, tangled(captures).await) }));
-    }
-
-    for captures in TANGLED_STRINGS.captures_iter(content) {
-        let start = captures.get_match().start();
-        components_tasks.push(Box::pin(
-            async move { (start, tangled_strings(captures).await) },
-        ));
-    }
-
-    for captures in CODEBERG.captures_iter(content) {
-        let start = captures.get_match().start();
-        components_tasks.push(Box::pin(async move { (start, codeberg(captures).await) }));
-    }
-
-    for captures in GITLAB.captures_iter(content) {
-        let start = captures.get_match().start();
-        components_tasks.push(Box::pin(async move { (start, gitlab(captures).await) }));
-    }
-
-    for captures in RUST_PLAYGROUND.captures_iter(content) {
-        let start = captures.get_match().start();
-        components_tasks.push(Box::pin(
-            async move { (start, rust_playground(captures).await) },
-        ));
-    }
-
-    for captures in GO_PLAYGROUND.captures_iter(content) {
-        let start = captures.get_match().start();
-        components_tasks.push(Box::pin(
-            async move { (start, go_playground(captures).await) },
-        ));
-    }
+    collect_expansions!(
+        GITHUB => github,
+        GITHUB_COMMENT => github_comment,
+        TANGLED => tangled,
+        TANGLED_STRINGS => tangled_strings,
+        CODEBERG => codeberg,
+        GITLAB => gitlab,
+        RUST_PLAYGROUND => rust_playground,
+        GO_PLAYGROUND => go_playground,
+    );
 
     let mut results = futures_util::future::join_all(components_tasks)
         .await
@@ -661,7 +525,7 @@ pub async fn handle_message(ctx: &serenity::Context, message: &serenity::Message
                 .await?;
         }
 
-        analytics::send_code_expansion(message.guild_id).await;
+        analytics::send_event("code_expansion_v1", message.guild_id);
     }
 
     Ok(())
@@ -718,7 +582,7 @@ pub async fn handle_edit(ctx: &serenity::Context, message: &serenity::Message) -
                 )
                 .await?;
 
-            analytics::send_code_expansion(message.guild_id).await;
+            analytics::send_event("code_expansion_v1", message.guild_id);
         }
     }
 
@@ -757,5 +621,27 @@ mod tests {
         assert_eq!(dedent("  a\n    b\n  c"), "a\n  b\nc");
         assert_eq!(dedent("a  \n  b  \nc  "), "a  \n  b  \nc  ");
         assert_eq!(dedent("  a  \n    b  \n  c  "), "a  \n  b  \nc  ");
+    }
+
+    #[test]
+    fn select_lines_works() {
+        let source = "a\nb\nc\nd";
+
+        assert_eq!(select_lines(source, 1, None).unwrap(), "a");
+        assert_eq!(select_lines(source, 2, Some(3)).unwrap(), "b\nc");
+        assert_eq!(select_lines(source, 1, Some(4)).unwrap(), "a\nb\nc\nd");
+        assert_eq!(select_lines(source, 4, Some(4)).unwrap(), "d");
+
+        assert!(select_lines(source, 5, None).is_err());
+        assert!(select_lines(source, 3, Some(9)).is_err());
+    }
+
+    #[test]
+    fn select_lines_rejects_oversized_ranges() {
+        let source = "a\n".repeat(MAX_LINES * 4);
+
+        assert!(select_lines(&source, 1, Some(MAX_LINES)).is_ok());
+        assert!(select_lines(&source, 1, Some(MAX_LINES + 1)).is_err());
+        assert!(select_lines(&source, 1, Some(usize::MAX)).is_err());
     }
 }

@@ -165,7 +165,9 @@ impl Template {
                                     )),
                                 ]);
 
-                                if let Some(color) = data.colors.get(idx % data.colors.len()) {
+                                if !data.colors.is_empty()
+                                    && let Some(color) = data.colors.get(idx % data.colors.len())
+                                {
                                     container = container.accent_color(*color);
                                 }
 

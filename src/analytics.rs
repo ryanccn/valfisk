@@ -50,26 +50,10 @@ pub async fn send_command(ctx: Context<'_>) {
     }
 }
 
-pub async fn send_message(guild: Option<serenity::GuildId>) {
-    if let Err(err) = send("message_v1", json!({ "guild": guild })).await {
-        tracing::warn!("{err:?}");
-    }
-}
-
-pub async fn send_code_expansion(guild: Option<serenity::GuildId>) {
-    if let Err(err) = send("code_expansion_v1", json!({ "guild": guild })).await {
-        tracing::warn!("{err:?}");
-    }
-}
-
-pub async fn send_safe_browsing(guild: Option<serenity::GuildId>) {
-    if let Err(err) = send("safe_browsing_v1", json!({ "guild": guild })).await {
-        tracing::warn!("{err:?}");
-    }
-}
-
-pub async fn send_honeypot(guild: Option<serenity::GuildId>) {
-    if let Err(err) = send("honeypot_v1", json!({ "guild": guild })).await {
-        tracing::warn!("{err:?}");
-    }
+pub fn send_event(name: &'static str, guild: Option<serenity::GuildId>) {
+    tokio::spawn(async move {
+        if let Err(err) = send(name, json!({ "guild": guild })).await {
+            tracing::warn!("{err:?}");
+        }
+    });
 }

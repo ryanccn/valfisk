@@ -32,7 +32,10 @@ pub async fn rotate_color_roles(
         .ok_or_else(|| eyre!("could not obtain guild ID"))?;
 
     let roles = if let Some(role) = role {
-        schedule::rotate_color_role(ctx.http(), guild_id, role).await?
+        schedule::rotate_color_role(ctx.http(), guild_id, role)
+            .await?
+            .into_iter()
+            .collect()
     } else {
         schedule::rotate_color_roles_guild(ctx.http(), &ctx.data(), guild_id).await?
     };

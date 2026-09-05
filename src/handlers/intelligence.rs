@@ -92,21 +92,15 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
         return Ok(());
     }
 
-    if CONFIG.anthropic_api_key.is_some()
-        && let Ok(member) = message.member(&ctx).await
-    {
-        let self_mention = ctx.cache.current_user().mention().to_string();
-
-        if !CONFIG
-            .intelligence_allowed_roles
-            .as_ref()
-            .is_none_or(|h| member.roles.iter().any(|r| h.contains(r)))
-            || message
-                .flags
-                .is_some_and(|f| f.contains(serenity::MessageFlags::SUPPRESS_NOTIFICATIONS))
+    if CONFIG.anthropic_api_key.is_some() {
+        if message
+            .flags
+            .is_some_and(|f| f.contains(serenity::MessageFlags::SUPPRESS_NOTIFICATIONS))
         {
             return Ok(());
         }
+
+        let self_mention = ctx.cache.current_user().mention().to_string();
 
         if let Some(content) = message
             .content
@@ -114,6 +108,16 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
             .map(|s| s.trim())
             .filter(|s| !s.is_empty())
         {
+            if let Some(allowed_roles) = &CONFIG.intelligence_allowed_roles {
+                let Ok(member) = message.member(&ctx).await else {
+                    return Ok(());
+                };
+
+                if !member.roles.iter().any(|r| allowed_roles.contains(r)) {
+                    return Ok(());
+                }
+            }
+
             let mut messages: Vec<IntelligenceMessage> = Vec::new();
 
             if let Some(storage) = &ctx.data::<crate::Data>().storage {
@@ -173,7 +177,9 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
             .await?;
 
             if let Some(content) = data.content.first() {
-                message.reply(&ctx.http, &content.text).await?;
+                message
+                    .reply(&ctx.http, utils::truncate(&content.text, 2000))
+                    .await?;
 
                 if let Some(storage) = &ctx.data::<crate::Data>().storage {
                     messages.push(IntelligenceMessage {

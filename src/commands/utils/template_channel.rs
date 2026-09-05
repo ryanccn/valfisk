@@ -7,11 +7,39 @@ use poise::{
     CreateReply,
     serenity_prelude::{
         CreateComponent, CreateContainer, CreateContainerComponent, CreateTextDisplay,
-        GenericChannelId, Mentionable as _, MessageFlags, futures::StreamExt as _,
+        GenericChannelId, Mentionable as _, Message, MessageFlags, futures::StreamExt as _,
     },
 };
 
 use crate::{Context, http::HTTP, template_channel::Template};
+
+/// Bulk-deletes messages where possible, falling back to individual deletion for
+/// messages older than Discord's 14-day bulk-delete cutoff. Failures are logged and
+/// skipped rather than aborting the whole clear operation.
+async fn delete_batch(ctx: Context<'_>, channel: GenericChannelId, batch: Vec<Message>) {
+    let (bulk_eligible, too_old): (Vec<_>, Vec<_>) = batch
+        .into_iter()
+        .partition(|m| *m.timestamp >= chrono::Utc::now() - chrono::Duration::weeks(2));
+
+    if bulk_eligible.len() >= 2 {
+        let ids = bulk_eligible.iter().map(|m| m.id).collect::<Vec<_>>();
+        if let Err(err) = channel.delete_messages(ctx.http(), &ids, None).await {
+            tracing::warn!("{err:?}");
+        }
+    } else {
+        for message in bulk_eligible {
+            if let Err(err) = message.delete(ctx.http(), None).await {
+                tracing::warn!("{err:?}");
+            }
+        }
+    }
+
+    for message in too_old {
+        if let Err(err) = message.delete(ctx.http(), None).await {
+            tracing::warn!("{err:?}");
+        }
+    }
+}
 
 /// Apply a channel template from a URL to a channel
 #[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
@@ -48,10 +76,20 @@ pub async fn template_channel(
 
     if clear {
         let mut message_iter = channel.messages_iter(&ctx).boxed();
+        let mut batch = Vec::new();
+
         while let Some(message) = message_iter.next().await {
             if let Ok(message) = message {
-                message.delete(ctx.http(), None).await?;
+                batch.push(message);
             }
+
+            if batch.len() >= 100 {
+                delete_batch(ctx, channel, std::mem::take(&mut batch)).await;
+            }
+        }
+
+        if !batch.is_empty() {
+            delete_batch(ctx, channel, batch).await;
         }
     }
 

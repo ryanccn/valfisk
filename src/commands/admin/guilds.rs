@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use futures_util::future::try_join_all;
+use futures_util::{StreamExt as _, TryStreamExt as _, stream};
 use poise::{CreateReply, serenity_prelude as serenity};
 
 use eyre::Result;
@@ -31,23 +31,20 @@ struct RichGuildInfo {
 pub async fn guilds(ctx: Context<'_>) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
-    let guilds = try_join_all(
-        ctx.http()
-            .get_guilds(None, Some(200.try_into()?))
-            .await?
-            .iter()
-            .map(|guild| async move {
-                let partial = guild.id.to_partial_guild_with_counts(ctx.http()).await?;
+    let guilds = stream::iter(ctx.http().get_guilds(None, Some(200.try_into()?)).await?)
+        .map(|guild| async move {
+            let partial = guild.id.to_partial_guild_with_counts(ctx.http()).await?;
 
-                eyre::Ok(RichGuildInfo {
-                    id: guild.id,
-                    name: guild.name.to_string(),
-                    owner: partial.owner_id,
-                    members: partial.approximate_member_count.map(|c| c.get()),
-                })
-            }),
-    )
-    .await?;
+            eyre::Ok(RichGuildInfo {
+                id: guild.id,
+                name: guild.name.to_string(),
+                owner: partial.owner_id,
+                members: partial.approximate_member_count.map(|c| c.get()),
+            })
+        })
+        .buffer_unordered(10)
+        .try_collect::<Vec<_>>()
+        .await?;
 
     ctx.send(
         CreateReply::default()

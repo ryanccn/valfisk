@@ -37,8 +37,6 @@ impl From<&serenity::Context> for PartialContext {
 
 pub async fn suppress_embeds(ctx: &serenity::Context, message: &serenity::Message) -> Result<()> {
     use futures_util::StreamExt as _;
-    use std::time::Duration;
-    use tokio::time::timeout;
 
     let mut message_updates = serenity::collect(ctx, {
         let id = message.id;

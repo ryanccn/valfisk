@@ -174,42 +174,46 @@ impl serenity::EventHandler for EventHandler {
                     }
 
                     if let Some(storage) = &ctx.data::<crate::Data>().storage {
-                        let edited_timestamp = event
-                            .message
-                            .edited_timestamp
-                            .map_or_else(chrono::Utc::now, |ts| ts.to_utc());
+                        let ids = handlers::log::LogMessageIds {
+                            message: event.message.id,
+                            channel: event.message.channel_id,
+                            guild: event.message.guild_id,
+                            author: Some(event.message.author.id),
+                        };
 
-                        let prev_data = storage.get_message_log(event.message.id).await?;
+                        if !handlers::log::is_excluded(ctx, None, ids).await? {
+                            let edited_timestamp = event
+                                .message
+                                .edited_timestamp
+                                .map_or_else(chrono::Utc::now, |ts| ts.to_utc());
 
-                        let new_content = event.message.content.as_str();
-                        let attachments = event.message.attachments.to_vec();
+                            let prev_data = storage.get_message_log(event.message.id).await?;
 
-                        storage
-                            .set_message_log(
-                                event.message.id,
-                                &MessageLog {
-                                    content: new_content.to_owned(),
-                                    author: event.message.author.id,
-                                    attachments: attachments.clone(),
-                                },
-                            )
-                            .await?;
+                            let new_content = event.message.content.as_str();
+                            let attachments = event.message.attachments.to_vec();
 
-                        if let Some(prev_content) = &prev_data.map(|p| p.content) {
-                            handlers::log::edit(
-                                ctx,
-                                handlers::log::LogMessageIds {
-                                    message: event.message.id,
-                                    channel: event.message.channel_id,
-                                    guild: event.message.guild_id,
-                                    author: Some(event.message.author.id),
-                                },
-                                prev_content,
-                                new_content,
-                                &attachments,
-                                &edited_timestamp,
-                            )
-                            .await?;
+                            storage
+                                .set_message_log(
+                                    event.message.id,
+                                    &MessageLog {
+                                        content: new_content.to_owned(),
+                                        author: event.message.author.id,
+                                        attachments: attachments.clone(),
+                                    },
+                                )
+                                .await?;
+
+                            if let Some(prev_content) = &prev_data.map(|p| p.content) {
+                                handlers::log::edit(
+                                    ctx,
+                                    ids,
+                                    prev_content,
+                                    new_content,
+                                    &attachments,
+                                    &edited_timestamp,
+                                )
+                                .await?;
+                            }
                         }
                     }
 

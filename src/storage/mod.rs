@@ -61,52 +61,47 @@ mod keys {
     use poise::serenity_prelude::{GenericChannelId, GuildId, MessageId, UserId};
 
     pub struct StorageKey {
-        base: &'static str,
-        parts: Option<Vec<String>>,
+        key: Cow<'static, str>,
     }
 
     impl StorageKey {
         pub const fn new(base: &'static str) -> Self {
-            Self { base, parts: None }
+            Self {
+                key: Cow::Borrowed(base),
+            }
         }
 
-        pub fn part<'a>(self, s: impl Into<Cow<'a, str>>) -> Self {
-            let mut parts = self.parts.clone().unwrap_or_default();
-            parts.push(s.into().into_owned());
+        fn part(self, tag: char, id: u64) -> Self {
+            use fmt::Write as _;
+
+            let mut key = self.key.into_owned();
+            let _ = write!(key, ":{tag}{id}");
 
             Self {
-                base: self.base,
-                parts: Some(parts),
+                key: Cow::Owned(key),
             }
         }
 
         pub fn guild(self, id: GuildId) -> Self {
-            self.part(format!("g{id}"))
+            self.part('g', id.get())
         }
 
         pub fn channel(self, id: GenericChannelId) -> Self {
-            self.part(format!("c{id}"))
+            self.part('c', id.get())
         }
 
         pub fn message(self, id: MessageId) -> Self {
-            self.part(format!("m{id}"))
+            self.part('m', id.get())
         }
 
         pub fn user(self, id: UserId) -> Self {
-            self.part(format!("u{id}"))
+            self.part('u', id.get())
         }
     }
 
     impl fmt::Display for StorageKey {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(
-                f,
-                "{}{}",
-                self.base,
-                self.parts
-                    .as_ref()
-                    .map_or_else(String::new, |parts| format!(":{}", parts.join(":")))
-            )
+            f.write_str(&self.key)
         }
     }
 
@@ -115,7 +110,7 @@ mod keys {
         where
             W: ?Sized + redis::RedisWrite,
         {
-            out.write_arg(self.to_string().as_bytes());
+            out.write_arg(self.key.as_bytes());
         }
     }
 

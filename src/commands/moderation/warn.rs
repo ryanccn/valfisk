@@ -2,10 +2,10 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use eyre::{Result, eyre};
-use poise::serenity_prelude::{self as serenity, Mentionable as _};
+use eyre::Result;
+use poise::serenity_prelude as serenity;
 
-use crate::{Context, utils};
+use crate::{Context, commands::moderation::ModerationAction};
 
 /// Warn a user
 #[tracing::instrument(skip(ctx, user), fields(user = user.id.get(), ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
@@ -25,113 +25,26 @@ pub async fn warn(
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
-    let partial_guild = ctx
-        .partial_guild()
-        .await
-        .ok_or_else(|| eyre!("failed to obtain partial guild"))?;
+    let mut action = ModerationAction::new(ctx, "Warn", user.id, 0xfacc15).await?;
 
     let warn_count = if let Some(storage) = &ctx.data().storage {
-        Some(storage.incr_warn_count(user.id, partial_guild.id).await?)
+        Some(storage.incr_warn_count(user.id, action.guild().id).await?)
     } else {
         None
     };
 
-    let mut container =
-        serenity::CreateContainer::new(vec![serenity::CreateContainerComponent::TextDisplay(
-            serenity::CreateTextDisplay::new(format!(
-                "### Warn\n{}",
-                utils::serenity::format_mentionable(Some(user.id)),
-            )),
-        )])
-        .accent_color(0xfacc15);
-
     if let Some(reason) = &reason {
-        container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
-            serenity::CreateTextDisplay::new(format!("**Reason**\n{reason}")),
-        ));
+        action = action.field("Reason", reason);
     }
 
     if let Some(warn_count) = &warn_count {
-        container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
-            serenity::CreateTextDisplay::new(format!("**Warn count**\n{warn_count}")),
-        ));
+        action = action.field("Warn count", warn_count);
     }
 
-    if dm.unwrap_or(true) {
-        let dm_container =
-            container
-                .clone()
-                .add_component(serenity::CreateContainerComponent::TextDisplay(
-                    serenity::CreateTextDisplay::new(format!(
-                        "-# {} \u{00B7} {}",
-                        partial_guild.name,
-                        serenity::FormattedTimestamp::now()
-                    )),
-                ));
+    action = action.notify(&user, dm.unwrap_or(true)).await;
 
-        if let Ok(dm) = user.create_dm_channel(ctx).await
-            && dm
-                .id
-                .widen()
-                .send_message(
-                    ctx.http(),
-                    serenity::CreateMessage::default()
-                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                        .allowed_mentions(serenity::CreateAllowedMentions::new())
-                        .components(vec![serenity::CreateComponent::Container(dm_container)]),
-                )
-                .await
-                .is_ok()
-        {
-            container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
-                serenity::CreateTextDisplay::new("**User notified**\nYes"),
-            ));
-        } else {
-            container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
-                serenity::CreateTextDisplay::new("**User notified**\nFailed"),
-            ));
-        }
-    } else {
-        container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
-            serenity::CreateTextDisplay::new("**User notified**\nNo"),
-        ));
-    }
-
-    let reply_container = container.clone();
-
-    if let Some(storage) = &ctx.data().storage {
-        let guild_config = storage.get_config(partial_guild.id).await?;
-
-        if let Some(logs_channel) = guild_config.moderation_logs_channel {
-            let log_container =
-                container.add_component(serenity::CreateContainerComponent::TextDisplay(
-                    serenity::CreateTextDisplay::new(format!(
-                        "-# {} \u{00B7} {}",
-                        ctx.author().mention(),
-                        serenity::FormattedTimestamp::now()
-                    )),
-                ));
-
-            logs_channel
-                .send_message(
-                    ctx.http(),
-                    serenity::CreateMessage::default()
-                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                        .allowed_mentions(serenity::CreateAllowedMentions::new())
-                        .components(vec![serenity::CreateComponent::Container(log_container)]),
-                )
-                .await?;
-        }
-    }
-
-    ctx.send(
-        poise::CreateReply::default()
-            .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-            .components(vec![serenity::CreateComponent::Container(reply_container)]),
-    )
-    .await?;
-
-    Ok(())
+    action.log().await?;
+    action.reply().await
 }
 
 /// Reset a user's warn count to zero
@@ -151,59 +64,14 @@ pub async fn warn_reset(
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
-    let partial_guild = ctx
-        .partial_guild()
-        .await
-        .ok_or_else(|| eyre!("failed to obtain partial guild"))?;
+    let action = ModerationAction::new(ctx, "Warn reset", user.id, 0xfacc15).await?;
 
     if let Some(storage) = &ctx.data().storage {
-        storage.del_warn_count(user.id, partial_guild.id).await?;
+        storage.del_warn_count(user.id, action.guild().id).await?;
     }
 
-    let container = serenity::CreateContainer::new(vec![
-        serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(format!(
-            "### Warn reset\n{}",
-            utils::serenity::format_mentionable(Some(user.id)),
-        ))),
-        serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
-            "**Warn count**\n0".to_string(),
-        )),
-    ])
-    .accent_color(0xfacc15);
+    let action = action.field("Warn count", 0);
 
-    let reply_container = container.clone();
-
-    if let Some(storage) = &ctx.data().storage {
-        let guild_config = storage.get_config(partial_guild.id).await?;
-
-        if let Some(logs_channel) = guild_config.moderation_logs_channel {
-            let log_container =
-                container.add_component(serenity::CreateContainerComponent::TextDisplay(
-                    serenity::CreateTextDisplay::new(format!(
-                        "-# {} \u{00B7} {}",
-                        ctx.author().mention(),
-                        serenity::FormattedTimestamp::now()
-                    )),
-                ));
-
-            logs_channel
-                .send_message(
-                    ctx.http(),
-                    serenity::CreateMessage::default()
-                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                        .allowed_mentions(serenity::CreateAllowedMentions::new())
-                        .components(vec![serenity::CreateComponent::Container(log_container)]),
-                )
-                .await?;
-        }
-    }
-
-    ctx.send(
-        poise::CreateReply::default()
-            .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-            .components(vec![serenity::CreateComponent::Container(reply_container)]),
-    )
-    .await?;
-
-    Ok(())
+    action.log().await?;
+    action.reply().await
 }

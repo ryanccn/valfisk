@@ -22,9 +22,7 @@ use crate::Context;
     interaction_context = "Guild | BotDm | PrivateChannel"
 )]
 pub async fn version(ctx: Context<'_>) -> Result<()> {
-    let version_suffix = option_env!("CARGO_PKG_VERSION")
-        .map(|v| format!(" v{v}"))
-        .unwrap_or_default();
+    let version_suffix = concat!(" v", env!("CARGO_PKG_VERSION"));
 
     let target = option_env!("METADATA_TARGET")
         .map_or_else(|| "*Unknown*".to_owned(), |target| format!("`{target}`"));

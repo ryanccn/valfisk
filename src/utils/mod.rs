@@ -12,8 +12,11 @@ mod nanoid;
 pub use nanoid::nanoid;
 pub mod serenity;
 
-pub fn truncate(s: &str, new_len: usize) -> String {
-    s.chars().take(new_len).collect()
+pub fn truncate(s: &str, new_len: usize) -> &str {
+    match s.char_indices().nth(new_len) {
+        Some((idx, _)) => &s[..idx],
+        None => s,
+    }
 }
 
 pub fn format_bytes(bytes: u64) -> String {
