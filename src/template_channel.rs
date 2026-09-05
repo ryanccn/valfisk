@@ -11,10 +11,6 @@ use poise::serenity_prelude::{
 };
 use serde::Deserialize;
 
-// const fn default_to_false() -> bool {
-//     false
-// }
-
 #[derive(Deserialize, Debug, Clone)]
 pub struct Template {
     #[serde(default)]

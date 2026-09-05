@@ -13,17 +13,6 @@ use poise::{
 
 use crate::Context;
 
-// fn parse_id_set<T>(s: &str) -> Result<HashSet<T>>
-// where
-//     T: FromStr + Eq + Hash,
-//     <T as FromStr>::Err: std::error::Error + Send + Sync + 'static,
-// {
-//     s.split([','])
-//         .map(|f| f.trim().parse::<T>())
-//         .collect::<Result<HashSet<_>, _>>()
-//         .map_err(|err| err.into())
-// }
-
 #[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
     slash_command,

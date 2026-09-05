@@ -30,7 +30,7 @@
 
       cargoLock.outputHashes = {
         "poise-0.6.1" = "sha256-aVf70WF1Hr5ctgw2Gy8Xq9FbYbQh+775QPq07l8B79k=";
-        "serenity-0.12.5" = "sha256-Mb+LkDOLSyhpz70kopYhMO1r+PIpnqxXZKJ3j6sfvK4=";
+        "serenity-0.12.5" = "sha256-YHi8i/F82kao8TsFXloIyXayg/65k/zI1C8i3LBidHA=";
       };
 
       flake.legacyPackages = lib.genAttrs lib.systems.flakeExposed (
@@ -66,10 +66,9 @@
               config.Cmd = [ (lib.getExe (pkgFor arch)) ];
             };
         in
-        {
-          docker-image-x86_64 = dockerImageFor "x86_64";
-          docker-image-aarch64 = dockerImageFor "aarch64";
-        }
+        lib.genAttrs' (builtins.attrNames dockerArchFor) (
+          arch: lib.nameValuePair "docker-image-${arch}" (dockerImageFor arch)
+        )
       );
     };
 }

@@ -79,6 +79,10 @@ async fn github(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateCom
         .map(|s| s.to_owned())
         .collect();
 
+    if start == 0 {
+        bail!("line number must be at least 1");
+    }
+
     let Some(selected_lines) = lines
         .get((start - 1)..(end.unwrap_or(start)))
         .map(|l| l.join("\n"))
@@ -208,6 +212,10 @@ async fn tangled(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateCo
         .map(|s| s.to_owned())
         .collect();
 
+    if start == 0 {
+        bail!("line number must be at least 1");
+    }
+
     let Some(selected_lines) = lines
         .get((start - 1)..(end.unwrap_or(start)))
         .map(|l| l.join("\n"))
@@ -274,6 +282,10 @@ async fn tangled_strings(
         .unwrap_or_default();
 
     let lines: Vec<String> = resp.text().await?.lines().map(|s| s.to_owned()).collect();
+
+    if start == 0 {
+        bail!("line number must be at least 1");
+    }
 
     let Some(selected_lines) = lines
         .get((start - 1)..(end.unwrap_or(start)))
@@ -342,6 +354,10 @@ async fn codeberg(
         .map(|s| s.to_owned())
         .collect();
 
+    if start == 0 {
+        bail!("line number must be at least 1");
+    }
+
     let Some(selected_lines) = lines
         .get((start - 1)..(end.unwrap_or(start)))
         .map(|l| l.join("\n"))
@@ -403,6 +419,10 @@ async fn gitlab(captures: regex::Captures<'_>) -> Result<Vec<serenity::CreateCom
         .lines()
         .map(|s| s.to_owned())
         .collect();
+
+    if start == 0 {
+        bail!("line number must be at least 1");
+    }
 
     let Some(selected_lines) = lines
         .get((start - 1)..(end.unwrap_or(start)))
