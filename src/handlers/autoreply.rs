@@ -9,7 +9,7 @@ use regex::{Regex, RegexBuilder};
 
 use std::{
     collections::HashMap,
-    sync::{LazyLock, PoisonError, RwLock},
+    sync::{LazyLock, RwLock},
 };
 
 type CompiledCache = HashMap<serenity::GuildId, HashMap<String, Regex>>;
@@ -21,7 +21,7 @@ static COMPILED: LazyLock<RwLock<CompiledCache>> =
 /// entries the guild no longer configures. Returns one entry per pattern, in order,
 /// with [`None`] for patterns that do not compile.
 fn compile(guild: serenity::GuildId, patterns: &[(String, String)]) -> Vec<Option<Regex>> {
-    let mut cache = COMPILED.write().unwrap_or_else(PoisonError::into_inner);
+    let mut cache = COMPILED.write().unwrap();
     let guild_cache = cache.entry(guild).or_default();
 
     guild_cache.retain(|cached, _| patterns.iter().any(|(pattern, _)| pattern == cached));
