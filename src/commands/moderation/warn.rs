@@ -42,7 +42,6 @@ pub async fn warn(
     }
 
     action = action.notify(&user, dm.unwrap_or(true)).await;
-
     action.log().await?;
     action.reply().await
 }
@@ -61,6 +60,7 @@ pub async fn warn(
 pub async fn warn_reset(
     ctx: Context<'_>,
     #[description = "The user to reset warns for"] user: serenity::User,
+    #[description = "Notify with a direct message (default: true)"] dm: Option<bool>,
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
@@ -70,8 +70,9 @@ pub async fn warn_reset(
         storage.del_warn_count(user.id, action.guild().id).await?;
     }
 
-    let action = action.field("Warn count", 0);
+    let mut action = action.field("Warn count", 0);
 
+    action = action.notify(&user, dm.unwrap_or(true)).await;
     action.log().await?;
     action.reply().await
 }

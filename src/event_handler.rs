@@ -169,19 +169,19 @@ impl serenity::EventHandler for EventHandler {
                 }
 
                 FullEvent::MessageUpdate { event, .. } => {
-                    if event.message.guild_id.is_none() {
-                        return Ok(());
-                    }
+                    if let Some(guild_id) = event.message.guild_id
+                        && let Some(storage) = &ctx.data::<crate::Data>().storage
+                    {
+                        let guild_config = storage.get_config(guild_id).await?;
 
-                    if let Some(storage) = &ctx.data::<crate::Data>().storage {
                         let ids = handlers::log::LogMessageIds {
                             message: event.message.id,
                             channel: event.message.channel_id,
-                            guild: event.message.guild_id,
-                            author: Some(event.message.author.id),
+                            guild: guild_id,
+                            author: event.message.author.id,
                         };
 
-                        if !handlers::log::is_excluded(ctx, None, ids).await? {
+                        if !handlers::log::is_excluded(ctx, &guild_config, ids).await? {
                             let edited_timestamp = event
                                 .message
                                 .edited_timestamp
@@ -226,11 +226,8 @@ impl serenity::EventHandler for EventHandler {
                     guild_id,
                     ..
                 } => {
-                    if guild_id.is_none() {
-                        return Ok(());
-                    }
-
-                    if let Some(storage) = &ctx.data::<crate::Data>().storage
+                    if let Some(guild_id) = guild_id
+                        && let Some(storage) = &ctx.data::<crate::Data>().storage
                         && let Some(logged_data) =
                             storage.get_message_log(*deleted_message_id).await?
                     {
@@ -240,7 +237,7 @@ impl serenity::EventHandler for EventHandler {
                                 message: *deleted_message_id,
                                 channel: *channel_id,
                                 guild: *guild_id,
-                                author: Some(logged_data.author),
+                                author: logged_data.author,
                             },
                             &logged_data,
                             &chrono::Utc::now(),
@@ -268,11 +265,9 @@ impl serenity::EventHandler for EventHandler {
                     guild_id,
                     ..
                 } => {
-                    if guild_id.is_none() {
-                        return Ok(());
-                    }
-
-                    if let Some(storage) = &ctx.data::<crate::Data>().storage {
+                    if let Some(guild_id) = guild_id
+                        && let Some(storage) = &ctx.data::<crate::Data>().storage
+                    {
                         for deleted_message_id in multiple_deleted_messages_ids {
                             if let Some(logged_data) =
                                 storage.get_message_log(*deleted_message_id).await?
@@ -283,7 +278,7 @@ impl serenity::EventHandler for EventHandler {
                                         message: *deleted_message_id,
                                         channel: *channel_id,
                                         guild: *guild_id,
-                                        author: Some(logged_data.author),
+                                        author: logged_data.author,
                                     },
                                     &logged_data,
                                     &chrono::Utc::now(),

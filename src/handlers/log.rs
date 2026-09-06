@@ -14,65 +14,51 @@ use crate::{config::GuildConfig, storage::log::MessageLog, utils};
 pub struct LogMessageIds {
     pub message: serenity::MessageId,
     pub channel: serenity::GenericChannelId,
-    pub guild: Option<serenity::GuildId>,
-    pub author: Option<serenity::UserId>,
+    pub guild: serenity::GuildId,
+    pub author: serenity::UserId,
 }
 
 impl LogMessageIds {
     fn link(&self) -> String {
-        self.message.link(self.channel, self.guild).to_string()
+        self.message
+            .link(self.channel, Some(self.guild))
+            .to_string()
     }
 }
 
-impl From<&serenity::Message> for LogMessageIds {
-    fn from(value: &serenity::Message) -> Self {
+impl LogMessageIds {
+    fn from_message(message: &serenity::Message, guild_id: serenity::GuildId) -> Self {
         Self {
-            message: value.id,
-            channel: value.channel_id,
-            guild: value.guild_id,
-            author: Some(value.author.id),
+            message: message.id,
+            channel: message.channel_id,
+            guild: guild_id,
+            author: message.author.id,
         }
     }
 }
 
 pub async fn is_excluded(
     ctx: &serenity::Context,
-    guild_config: Option<&GuildConfig>,
+    guild_config: &GuildConfig,
     ids: LogMessageIds,
 ) -> Result<bool> {
-    if ids.author == Some(ctx.cache.current_user().id) {
+    if ids.author == ctx.cache.current_user().id {
         return Ok(true);
     }
-
-    let Some(guild) = ids.guild else {
-        return Ok(false);
-    };
-
-    let guild_config = match guild_config {
-        Some(guild_config) => Cow::Borrowed(guild_config),
-        None => match &ctx.data::<crate::Data>().storage {
-            Some(storage) => Cow::Owned(storage.get_config(guild).await?),
-            None => return Ok(false),
-        },
-    };
 
     if guild_config.logs_excluded_channels.contains(&ids.channel) {
         return Ok(true);
     }
 
-    let Some(author) = ids.author else {
-        return Ok(false);
-    };
-
     if ctx
         .cache
-        .guild(guild)
-        .is_some_and(|guild| guild.owner_id == author)
+        .guild(ids.guild)
+        .is_some_and(|guild| guild.owner_id == ids.author)
     {
         return Ok(true);
     }
 
-    if let Ok(member) = guild.member(&ctx, author).await
+    if let Ok(member) = ids.guild.member(&ctx, ids.author).await
         && member.roles(&ctx.cache).is_some_and(|roles| {
             roles
                 .iter()
@@ -82,8 +68,8 @@ pub async fn is_excluded(
         return Ok(true);
     }
 
-    if let Ok(guild) = guild.to_partial_guild(&ctx).await
-        && guild.owner_id == author
+    if let Ok(guild) = ids.guild.to_partial_guild(&ctx).await
+        && guild.owner_id == ids.author
     {
         return Ok(true);
     }
@@ -97,11 +83,17 @@ pub async fn handle_message(
     guild_config: Option<&GuildConfig>,
     message: &serenity::Message,
 ) -> Result<()> {
-    if message.guild_id.is_some()
-        && let Some(storage) = &ctx.data::<crate::Data>().storage
+    if let Some(guild_id) = message.guild_id
         && let Some(guild_config) = guild_config
+        && let Some(storage) = &ctx.data::<crate::Data>().storage
     {
-        if is_excluded(ctx, Some(guild_config), message.into()).await? {
+        if is_excluded(
+            ctx,
+            guild_config,
+            LogMessageIds::from_message(message, guild_id),
+        )
+        .await?
+        {
             return Ok(());
         }
 
@@ -126,12 +118,10 @@ pub async fn edit(
     attachments: &[serenity::Attachment],
     timestamp: &chrono::DateTime<chrono::Utc>,
 ) -> Result<()> {
-    if let Some(guild_id) = ids.guild
-        && let Some(storage) = &ctx.data::<crate::Data>().storage
-    {
-        let guild_config = storage.get_config(guild_id).await?;
+    if let Some(storage) = &ctx.data::<crate::Data>().storage {
+        let guild_config = storage.get_config(ids.guild).await?;
 
-        if is_excluded(ctx, Some(&guild_config), ids).await? {
+        if is_excluded(ctx, &guild_config, ids).await? {
             return Ok(());
         }
 
@@ -153,7 +143,7 @@ pub async fn edit(
                 serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
                     format!(
                         "**Author**\n{}",
-                        utils::serenity::format_mentionable(ids.author)
+                        utils::serenity::format_mentionable(Some(ids.author))
                     ),
                 )),
                 serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
@@ -210,12 +200,10 @@ pub async fn delete(
     log: &MessageLog,
     timestamp: &chrono::DateTime<chrono::Utc>,
 ) -> Result<()> {
-    if let Some(guild_id) = ids.guild
-        && let Some(storage) = &ctx.data::<crate::Data>().storage
-    {
-        let guild_config = storage.get_config(guild_id).await?;
+    if let Some(storage) = &ctx.data::<crate::Data>().storage {
+        let guild_config = storage.get_config(ids.guild).await?;
 
-        if is_excluded(ctx, Some(&guild_config), ids).await? {
+        if is_excluded(ctx, &guild_config, ids).await? {
             return Ok(());
         }
 
@@ -233,7 +221,7 @@ pub async fn delete(
                 serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
                     format!(
                         "**Author**\n{}",
-                        utils::serenity::format_mentionable(ids.author)
+                        utils::serenity::format_mentionable(Some(ids.author))
                     ),
                 )),
                 serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(

@@ -43,9 +43,9 @@ pub async fn ban(
         action = action.field("Reason", reason);
     }
 
-    action = action.notify(&user, dm.unwrap_or(true)).await;
     action = action.field("Days of messages deleted", delete_message_days);
 
+    action = action.notify(&user, dm.unwrap_or(true)).await;
     action.log().await?;
 
     action

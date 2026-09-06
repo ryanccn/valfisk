@@ -49,8 +49,8 @@ pub async fn timeout(
     }
 
     action = action.field("Duration", humantime::format_duration(duration));
-    action = action.notify(&user, dm.unwrap_or(true)).await;
 
+    action = action.notify(&user, dm.unwrap_or(true)).await;
     action.log().await?;
 
     let mut edit_member = serenity::EditMember::default().disable_communication_until(end.into());

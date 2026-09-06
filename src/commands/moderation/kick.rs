@@ -36,7 +36,6 @@ pub async fn kick(
     }
 
     action = action.notify(&user, dm.unwrap_or(true)).await;
-
     action.log().await?;
 
     action
