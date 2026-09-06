@@ -50,10 +50,8 @@ pub async fn is_excluded(
         return Ok(true);
     }
 
-    if ctx
-        .cache
-        .guild(ids.guild)
-        .is_some_and(|guild| guild.owner_id == ids.author)
+    if let Ok(guild) = ids.guild.to_partial_guild(&ctx).await
+        && guild.owner_id == ids.author
     {
         return Ok(true);
     }
@@ -64,12 +62,6 @@ pub async fn is_excluded(
                 .iter()
                 .any(|role| role.has_permission(serenity::Permissions::ADMINISTRATOR))
         })
-    {
-        return Ok(true);
-    }
-
-    if let Ok(guild) = ids.guild.to_partial_guild(&ctx).await
-        && guild.owner_id == ids.author
     {
         return Ok(true);
     }
@@ -112,82 +104,72 @@ fn make_link_component<'a>(link: impl Into<Cow<'a, str>>) -> serenity::CreateCom
 #[tracing::instrument(skip_all, fields(id = ids.message.get()))]
 pub async fn edit(
     ctx: &serenity::Context,
+    guild_config: &GuildConfig,
     ids: LogMessageIds,
     prev_content: &str,
     new_content: &str,
     attachments: &[serenity::Attachment],
     timestamp: &chrono::DateTime<chrono::Utc>,
 ) -> Result<()> {
-    if let Some(storage) = &ctx.data::<crate::Data>().storage {
-        let guild_config = storage.get_config(ids.guild).await?;
+    if prev_content != new_content
+        && let Some(logs_channel) = guild_config.message_logs_channel
+    {
+        let mut container = serenity::CreateContainer::new(vec![
+            serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                "### Message Edited",
+            )),
+            serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                format!(
+                    "**Channel**\n{}",
+                    utils::serenity::format_mentionable(Some(ids.channel))
+                ),
+            )),
+            serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                format!(
+                    "**Author**\n{}",
+                    utils::serenity::format_mentionable(Some(ids.author))
+                ),
+            )),
+            serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                format!(
+                    "**Previous content**\n{}",
+                    utils::truncate(prev_content, 1024)
+                ),
+            )),
+            serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                format!("**New content**\n{}", utils::truncate(new_content, 1024)),
+            )),
+        ])
+        .accent_color(0xffd43b);
 
-        if is_excluded(ctx, &guild_config, ids).await? {
-            return Ok(());
-        }
-
-        if prev_content == new_content {
-            return Ok(());
-        }
-
-        if let Some(logs_channel) = guild_config.message_logs_channel {
-            let mut container = serenity::CreateContainer::new(vec![
-                serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                    "### Message Edited",
-                )),
-                serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                    format!(
-                        "**Channel**\n{}",
-                        utils::serenity::format_mentionable(Some(ids.channel))
-                    ),
-                )),
-                serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                    format!(
-                        "**Author**\n{}",
-                        utils::serenity::format_mentionable(Some(ids.author))
-                    ),
-                )),
-                serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                    format!(
-                        "**Previous content**\n{}",
-                        utils::truncate(prev_content, 1024)
-                    ),
-                )),
-                serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                    format!("**New content**\n{}", utils::truncate(new_content, 1024)),
-                )),
-            ])
-            .accent_color(0xffd43b);
-
-            if !attachments.is_empty() {
-                container =
-                    container.add_component(serenity::CreateContainerComponent::TextDisplay(
-                        serenity::CreateTextDisplay::new(format!(
-                            "**Attachments**\n{}",
-                            utils::serenity::format_attachments(attachments)
-                        )),
-                    ));
-            }
-
+        if !attachments.is_empty() {
             container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
                 serenity::CreateTextDisplay::new(format!(
-                    "-# {}",
-                    serenity::FormattedTimestamp::new((*timestamp).into(), None),
+                    "**Attachments**\n{}",
+                    utils::serenity::format_attachments(attachments)
                 )),
             ));
-
-            logs_channel
-                .send_message(
-                    &ctx.http,
-                    serenity::CreateMessage::default()
-                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                        .allowed_mentions(serenity::CreateAllowedMentions::new())
-                        .components(&[
-                            serenity::CreateComponent::Container(container),
-                            make_link_component(ids.link()),
-                        ]),
-                )
-                .await?;
         }
+
+        container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
+            serenity::CreateTextDisplay::new(format!(
+                "-# {}",
+                serenity::FormattedTimestamp::new((*timestamp).into(), None),
+            )),
+        ));
+
+        logs_channel
+            .send_message(
+                &ctx.http,
+                serenity::CreateMessage::default()
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                    .allowed_mentions(serenity::CreateAllowedMentions::new())
+                    .components(&[
+                        serenity::CreateComponent::Container(container),
+                        make_link_component(ids.link()),
+                    ]),
+            )
+            .await?;
     }
 
     Ok(())
@@ -196,70 +178,62 @@ pub async fn edit(
 #[tracing::instrument(skip_all, fields(id = ids.message.get()))]
 pub async fn delete(
     ctx: &serenity::Context,
+    guild_config: &GuildConfig,
     ids: LogMessageIds,
     log: &MessageLog,
     timestamp: &chrono::DateTime<chrono::Utc>,
 ) -> Result<()> {
-    if let Some(storage) = &ctx.data::<crate::Data>().storage {
-        let guild_config = storage.get_config(ids.guild).await?;
+    if let Some(logs_channel) = guild_config.message_logs_channel {
+        let mut container = serenity::CreateContainer::new(vec![
+            serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                "### Message Deleted",
+            )),
+            serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                format!(
+                    "**Channel**\n{}",
+                    utils::serenity::format_mentionable(Some(ids.channel))
+                ),
+            )),
+            serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                format!(
+                    "**Author**\n{}",
+                    utils::serenity::format_mentionable(Some(ids.author))
+                ),
+            )),
+            serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                format!("**Content**\n{}", utils::truncate(&log.content, 1024)),
+            )),
+        ])
+        .accent_color(0xff6b6b);
 
-        if is_excluded(ctx, &guild_config, ids).await? {
-            return Ok(());
-        }
-
-        if let Some(logs_channel) = guild_config.message_logs_channel {
-            let mut container = serenity::CreateContainer::new(vec![
-                serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                    "### Message Deleted",
-                )),
-                serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                    format!(
-                        "**Channel**\n{}",
-                        utils::serenity::format_mentionable(Some(ids.channel))
-                    ),
-                )),
-                serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                    format!(
-                        "**Author**\n{}",
-                        utils::serenity::format_mentionable(Some(ids.author))
-                    ),
-                )),
-                serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                    format!("**Content**\n{}", utils::truncate(&log.content, 1024)),
-                )),
-            ])
-            .accent_color(0xff6b6b);
-
-            if !log.attachments.is_empty() {
-                container =
-                    container.add_component(serenity::CreateContainerComponent::TextDisplay(
-                        serenity::CreateTextDisplay::new(format!(
-                            "**Attachments**\n{}",
-                            utils::serenity::format_attachments(&log.attachments)
-                        )),
-                    ));
-            }
-
+        if !log.attachments.is_empty() {
             container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
                 serenity::CreateTextDisplay::new(format!(
-                    "-# {}",
-                    serenity::FormattedTimestamp::new((*timestamp).into(), None),
+                    "**Attachments**\n{}",
+                    utils::serenity::format_attachments(&log.attachments)
                 )),
             ));
-
-            logs_channel
-                .send_message(
-                    &ctx.http,
-                    serenity::CreateMessage::default()
-                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                        .allowed_mentions(serenity::CreateAllowedMentions::new())
-                        .components(&[
-                            serenity::CreateComponent::Container(container),
-                            make_link_component(ids.link()),
-                        ]),
-                )
-                .await?;
         }
+
+        container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
+            serenity::CreateTextDisplay::new(format!(
+                "-# {}",
+                serenity::FormattedTimestamp::new((*timestamp).into(), None),
+            )),
+        ));
+
+        logs_channel
+            .send_message(
+                &ctx.http,
+                serenity::CreateMessage::default()
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                    .allowed_mentions(serenity::CreateAllowedMentions::new())
+                    .components(&[
+                        serenity::CreateComponent::Container(container),
+                        make_link_component(ids.link()),
+                    ]),
+            )
+            .await?;
     }
 
     Ok(())

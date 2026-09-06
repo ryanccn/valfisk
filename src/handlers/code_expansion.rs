@@ -18,27 +18,26 @@ use crate::{
 };
 
 fn dedent(source: &str) -> String {
-    let mut cur_indent: Option<String> = None;
+    let indent_of = |line: &str| line.len() - line.trim_start().len();
 
-    for line in source.lines().filter(|l| !l.trim().is_empty()) {
-        let whitespace = line
-            .chars()
-            .take_while(|c| c.is_whitespace())
-            .collect::<String>();
+    let indent = source
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .map(|line| &line[..indent_of(line)])
+        .reduce(|common, indent| {
+            let shared = common
+                .char_indices()
+                .zip(indent.chars())
+                .find(|((_, a), b)| a != b)
+                .map_or_else(|| common.len().min(indent.len()), |((i, _), _)| i);
 
-        cur_indent = if cur_indent
-            .as_ref()
-            .is_none_or(|s| s.starts_with(&whitespace))
-        {
-            Some(whitespace)
-        } else {
-            cur_indent
-        };
-    }
+            &common[..shared]
+        })
+        .unwrap_or_default();
 
     source
         .lines()
-        .map(|l| l.replacen(cur_indent.as_deref().unwrap_or_default(), "", 1))
+        .map(|l| l.strip_prefix(indent).unwrap_or(l))
         .collect::<Vec<_>>()
         .join("\n")
 }
@@ -544,9 +543,11 @@ pub async fn handle_edit(ctx: &serenity::Context, message: &serenity::Message) -
         return Ok(());
     }
 
+    let content_hash = BASE64.encode(sha256(message.content.as_bytes()));
+
     if let Some(storage) = &ctx.data::<crate::Data>().storage
         && let Some(existing) = storage.get_code_expansion(message.id).await?
-        && sha256(message.content.as_bytes()) != BASE64.decode(&existing.content_hash)?
+        && content_hash != existing.content_hash
     {
         let components = resolve(&message.content).await?;
 
@@ -577,7 +578,7 @@ pub async fn handle_edit(ctx: &serenity::Context, message: &serenity::Message) -
                     message.id,
                     CodeExpansionData {
                         message: existing.message,
-                        content_hash: BASE64.encode(sha256(message.content.as_bytes())),
+                        content_hash,
                     },
                 )
                 .await?;
@@ -621,6 +622,12 @@ mod tests {
         assert_eq!(dedent("  a\n    b\n  c"), "a\n  b\nc");
         assert_eq!(dedent("a  \n  b  \nc  "), "a  \n  b  \nc  ");
         assert_eq!(dedent("  a  \n    b  \n  c  "), "a  \n  b  \nc  ");
+    }
+
+    #[test]
+    fn dedent_leaves_mismatched_indentation() {
+        assert_eq!(dedent("  a\n\t\tb"), "  a\n\t\tb");
+        assert_eq!(dedent("\t a\n\t b"), "a\nb");
     }
 
     #[test]

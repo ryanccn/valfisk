@@ -139,7 +139,7 @@ fn get_significant_reactions<'a>(
         .map(|r| (&r.reaction_type, r.count))
         .collect();
 
-    collected_reactions.sort_by_key(|i| match &i.0 {
+    collected_reactions.sort_by_cached_key(|i| match &i.0 {
         serenity::ReactionType::Custom { id, .. } => id.get().to_string(),
         serenity::ReactionType::Unicode(str) => str.to_string(),
         _ => "unknown".to_owned(),
@@ -356,13 +356,13 @@ pub async fn handle_deletion(
 ) -> Result<()> {
     if let Some(guild_id) = guild_id
         && let Some(storage) = &ctx.data::<crate::Data>().storage
+        && let Some(starboard_id) = storage.get_starboard(deleted_message_id).await?
     {
         let guild_config = storage.get_config(guild_id).await?;
         let partial_guild = guild_id.to_partial_guild(&ctx).await?;
 
         if let Some(starboard_channel) =
             get_starboard_channel(ctx, &guild_config, channel_id, &partial_guild).await?
-            && let Some(starboard_id) = storage.get_starboard(deleted_message_id).await?
         {
             storage.del_starboard(deleted_message_id).await?;
 

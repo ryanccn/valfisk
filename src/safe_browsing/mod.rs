@@ -16,6 +16,7 @@ use crate::{http::HTTP, utils::sha256};
 
 mod canonicalize;
 mod models;
+mod prefix_set;
 mod rice;
 
 use canonicalize::canonicalize;
@@ -24,37 +25,105 @@ use models::{
     ThreatInfo, ThreatListConstraints, ThreatListUpdateRequest, ThreatListUpdateResponse,
     ThreatMatch, ThreatType,
 };
+use prefix_set::PrefixSet;
+
+const MAX_UPDATE_ATTEMPTS: usize = 4;
+
+/// There is only ever one set of removals, and its indices address the list as it
+/// stood before the update, so all of them are decoded before any are applied.
+fn decode_removals(removals: &[models::ListUpdateRemovals]) -> eyre::Result<Vec<usize>> {
+    let mut indices = Vec::new();
+
+    for removal in removals {
+        if let Some(raw) = &removal.raw_indices {
+            indices.extend(raw.indices.iter().copied());
+        } else if let Some(rice) = &removal.rice_indices {
+            let data = BASE64.decode(&rice.encoded_data)?;
+
+            indices.extend(
+                rice::decode(
+                    rice.first_value,
+                    rice.rice_parameter,
+                    rice.num_entries,
+                    &data,
+                )?
+                .into_iter()
+                .map(|v| v as usize),
+            );
+        } else {
+            return Err(eyre!("list update removal had no raw or rice indices"));
+        }
+    }
+
+    indices.sort_unstable();
+    indices.dedup();
+
+    Ok(indices)
+}
+
+/// Added hash prefixes, decoded into one flat buffer instead of one allocation each.
+struct Additions {
+    data: Vec<u8>,
+    offsets: Vec<usize>,
+}
+
+impl Additions {
+    fn decode(additions: &[models::ListUpdateAdditions]) -> eyre::Result<Self> {
+        let mut data = Vec::new();
+        let mut offsets = vec![0];
+
+        for addition in additions {
+            if let Some(raw) = &addition.raw_hashes {
+                if raw.prefix_size == 0 {
+                    return Err(eyre!("list update addition had a zero prefix size"));
+                }
+
+                let hashes = BASE64.decode(&raw.raw_hashes)?;
+                let mut chunks = hashes.chunks_exact(raw.prefix_size);
+
+                for chunk in chunks.by_ref() {
+                    data.extend_from_slice(chunk);
+                    offsets.push(data.len());
+                }
+
+                if !chunks.remainder().is_empty() {
+                    return Err(eyre!(
+                        "list update addition was not a multiple of its prefix size"
+                    ));
+                }
+            } else if let Some(rice) = &addition.rice_hashes {
+                let encoded = BASE64.decode(&rice.encoded_data)?;
+
+                for value in rice::decode(
+                    rice.first_value,
+                    rice.rice_parameter,
+                    rice.num_entries,
+                    &encoded,
+                )? {
+                    data.extend_from_slice(&value.to_le_bytes());
+                    offsets.push(data.len());
+                }
+            } else {
+                return Err(eyre!("list update addition had no raw or rice hashes"));
+            }
+        }
+
+        Ok(Self { data, offsets })
+    }
+
+    fn len(&self) -> usize {
+        self.offsets.len() - 1
+    }
+
+    fn iter(&self) -> impl Iterator<Item = &[u8]> {
+        self.offsets.windows(2).map(|w| &self.data[w[0]..w[1]])
+    }
+}
 
 #[derive(Debug, Clone)]
 struct SafeBrowsingListState {
     state: String,
-    prefixes: Vec<Vec<u8>>,
-    lookup: HashSet<Vec<u8>>,
-    lengths: Vec<usize>,
-}
-
-impl SafeBrowsingListState {
-    fn new(state: String, prefixes: Vec<Vec<u8>>) -> Self {
-        let lookup: HashSet<Vec<u8>> = prefixes.iter().cloned().collect();
-
-        let mut lengths: Vec<usize> = lookup.iter().map(Vec::len).collect();
-        lengths.sort_unstable();
-        lengths.dedup();
-
-        Self {
-            state,
-            prefixes,
-            lookup,
-            lengths,
-        }
-    }
-
-    fn matching_prefix<'a>(&self, hash: &'a [u8]) -> Option<&'a [u8]> {
-        self.lengths
-            .iter()
-            .filter_map(|&len| hash.get(..len))
-            .find(|prefix| self.lookup.contains(*prefix))
-    }
+    prefixes: PrefixSet,
 }
 
 #[derive(Debug, Clone)]
@@ -73,7 +142,7 @@ impl SafeBrowsing {
 
     #[tracing::instrument(skip_all)]
     pub async fn update(&self) -> eyre::Result<()> {
-        loop {
+        for attempt in 1..=MAX_UPDATE_ATTEMPTS {
             let mut failed = false;
 
             let current_states: HashMap<ThreatType, String> = {
@@ -90,8 +159,8 @@ impl SafeBrowsing {
                 list_update_requests: ThreatType::VARIANTS
                     .map(|threat_type| ListUpdateRequest {
                         threat_type,
-                        platform_type: "ANY_PLATFORM".to_owned(),
-                        threat_entry_type: "URL".to_owned(),
+                        platform_type: "ANY_PLATFORM",
+                        threat_entry_type: "URL",
 
                         state: current_states
                             .get(&threat_type)
@@ -101,8 +170,8 @@ impl SafeBrowsing {
                         constraints: ThreatListConstraints {
                             max_update_entries: 50000,
                             max_database_entries: 100000,
-                            region: "US".to_owned(),
-                            supported_compressions: vec!["RAW".to_owned(), "RICE".to_owned()],
+                            region: "US",
+                            supported_compressions: vec!["RAW", "RICE"],
                         },
                     })
                     .to_vec(),
@@ -119,75 +188,42 @@ impl SafeBrowsing {
                 .await?;
 
             for list_update in response.list_update_responses {
-                let mut current_prefixes = self
-                    .states
-                    .read()
-                    .await
-                    .get(&list_update.threat_type)
-                    .map(|s| s.prefixes.clone())
-                    .unwrap_or_default();
+                let removals = decode_removals(&list_update.removals)?;
+                let additions = Additions::decode(&list_update.additions)?;
 
-                for removal in &list_update.removals {
-                    let indices: HashSet<usize> = if let Some(raw) = &removal.raw_indices {
-                        raw.indices.iter().copied().collect()
-                    } else if let Some(rice) = &removal.rice_indices {
-                        let data = BASE64.decode(&rice.encoded_data)?;
-                        rice::decode(
-                            rice.first_value,
-                            rice.rice_parameter,
-                            rice.num_entries,
-                            &data,
-                        )?
-                        .into_iter()
-                        .map(|v| v as usize)
-                        .collect()
-                    } else {
-                        return Err(eyre!("list update removal had no raw or rice indices"));
-                    };
+                let prefixes = {
+                    let states = self.states.read().await;
+                    let existing = states.get(&list_update.threat_type).map(|s| &s.prefixes);
 
-                    let mut idx = 0;
-                    current_prefixes.retain(|_| {
-                        let keep = !indices.contains(&idx);
-                        idx += 1;
-                        keep
-                    });
-                }
+                    let mut surviving =
+                        Vec::with_capacity(existing.map_or(0, PrefixSet::len) + additions.len());
 
-                for addition in &list_update.additions {
-                    if let Some(raw) = &addition.raw_hashes {
-                        let hashes = BASE64.decode(&raw.raw_hashes)?;
-                        current_prefixes.extend(hashes.chunks(raw.prefix_size).map(|c| c.to_vec()));
-                    } else if let Some(rice) = &addition.rice_hashes {
-                        let data = BASE64.decode(&rice.encoded_data)?;
-                        current_prefixes.extend(
-                            rice::decode(
-                                rice.first_value,
-                                rice.rice_parameter,
-                                rice.num_entries,
-                                &data,
-                            )?
-                            .into_iter()
-                            .map(|v| v.to_le_bytes().to_vec()),
-                        );
-                    } else {
-                        return Err(eyre!("list update addition had no raw or rice hashes"));
+                    if let Some(existing) = existing {
+                        let mut next_removal = removals.iter().peekable();
+
+                        for index in 0..existing.len() {
+                            if next_removal.peek() == Some(&&index) {
+                                next_removal.next();
+                            } else {
+                                surviving.push(existing.get(index));
+                            }
+                        }
                     }
-                }
 
-                current_prefixes.sort_unstable();
+                    surviving.extend(additions.iter());
 
-                let checksum = BASE64.encode(sha256(
-                    &current_prefixes
-                        .iter()
-                        .flatten()
-                        .copied()
-                        .collect::<Vec<_>>(),
-                ));
+                    PrefixSet::build(surviving)
+                };
+
+                let checksum = BASE64.encode(sha256(prefixes.as_bytes()));
 
                 if checksum == list_update.checksum.sha256 {
                     self.states.write().await.insert(
                         list_update.threat_type,
-                        SafeBrowsingListState::new(list_update.new_client_state, current_prefixes),
+                        SafeBrowsingListState {
+                            state: list_update.new_client_state,
+                            prefixes,
+                        },
                     );
                 } else {
                     tracing::error!(
@@ -213,7 +249,13 @@ impl SafeBrowsing {
             tracing::info!(prefixes, "updated Safe Browsing database");
 
             if !failed {
-                break;
+                return Ok(());
+            }
+
+            if attempt == MAX_UPDATE_ATTEMPTS {
+                return Err(eyre!(
+                    "Safe Browsing list checksums kept drifting after {MAX_UPDATE_ATTEMPTS} attempts"
+                ));
             }
         }
 
@@ -228,39 +270,50 @@ impl SafeBrowsing {
 
         let bench_start = Instant::now();
 
-        let mut url_hashes: HashMap<String, HashSet<Vec<u8>>> = HashMap::new();
+        let mut candidates = Vec::with_capacity(urls.len() * 2);
 
         for url in urls {
-            for url_prefix in Self::generate_url_prefixes(url)? {
-                url_hashes
-                    .entry((*url).to_string())
-                    .or_default()
-                    .insert(sha256(url_prefix.as_bytes()));
-            }
+            candidates.push(*url);
 
-            if let Some(url_without_end_parens) = url.strip_suffix([')', ']']) {
-                for url_prefix in Self::generate_url_prefixes(url_without_end_parens)? {
-                    url_hashes
-                        .entry(url_without_end_parens.to_string())
-                        .or_default()
-                        .insert(sha256(url_prefix.as_bytes()));
-                }
+            if let Some(trimmed) = url.strip_suffix([')', ']']) {
+                candidates.push(trimmed);
+            }
+        }
+
+        candidates.sort_unstable();
+        candidates.dedup();
+
+        let mut url_hashes: Vec<(&str, HashSet<[u8; 32]>)> = Vec::with_capacity(candidates.len());
+
+        for candidate in candidates {
+            match Self::url_expressions(candidate) {
+                Ok(expressions) => url_hashes.push((
+                    candidate,
+                    expressions
+                        .iter()
+                        .map(|expression| sha256(expression.as_bytes()))
+                        .collect(),
+                )),
+
+                // A malformed link must not stop the rest of the message being scanned.
+                Err(err) => tracing::debug!(url = candidate, "could not expand URL: {err}"),
             }
         }
 
         let (matched_hash_prefixes, client_states) = {
             let states = self.states.read().await;
 
-            let matched = states
-                .values()
-                .flat_map(|list_state| {
-                    url_hashes
-                        .values()
-                        .flatten()
-                        .filter_map(|hash| list_state.matching_prefix(hash))
-                        .map(<[u8]>::to_vec)
-                })
-                .collect::<HashSet<_>>();
+            let mut matched = HashSet::new();
+
+            for (_, hashes) in &url_hashes {
+                for hash in hashes {
+                    for list_state in states.values() {
+                        if let Some(prefix) = list_state.prefixes.matching_prefix(hash) {
+                            matched.insert(prefix.to_vec());
+                        }
+                    }
+                }
+            }
 
             let client_states = states.values().map(|s| s.state.clone()).collect::<Vec<_>>();
 
@@ -274,9 +327,9 @@ impl SafeBrowsing {
                 client_states,
 
                 threat_info: ThreatInfo {
-                    threat_types: ThreatType::VARIANTS.map(|v| v.to_string()).to_vec(),
-                    platform_types: vec!["ANY_PLATFORM".to_owned()],
-                    threat_entry_types: vec!["URL".to_owned()],
+                    threat_types: ThreatType::VARIANTS.map(ThreatType::as_str).to_vec(),
+                    platform_types: vec!["ANY_PLATFORM"],
+                    threat_entry_types: vec!["URL"],
                     threat_entries: matched_hash_prefixes
                         .iter()
                         .map(|hash| ThreatEntry {
@@ -300,15 +353,14 @@ impl SafeBrowsing {
                 .matches
                 .into_iter()
                 .filter_map(|m| {
-                    if let Ok(raw_threat_hash) = BASE64.decode(&m.threat.hash)
-                        && let Some((url, _)) = url_hashes
-                            .iter()
-                            .find(|(_, h)| h.contains(&raw_threat_hash))
-                    {
-                        return Some((url.to_owned(), m));
-                    }
+                    // A returned hash is 4-32 bytes, so it may be a prefix.
+                    let threat_hash = BASE64.decode(&m.threat.hash).ok()?;
 
-                    None
+                    let (url, _) = url_hashes
+                        .iter()
+                        .find(|(_, hashes)| hashes.iter().any(|h| h.starts_with(&threat_hash)))?;
+
+                    Some(((*url).to_owned(), m))
                 })
                 .collect::<Vec<_>>();
 
@@ -335,21 +387,30 @@ impl SafeBrowsing {
     /// at most 5 hostnames are checked: the exact host, and up to 4 more formed from its last 5
     /// components by successively removing the leading one (down to 2 components). IP-literal
     /// hosts are only ever checked as themselves.
-    fn host_suffixes(host: &str) -> HashSet<String> {
+    fn host_suffixes(host: &str) -> Vec<String> {
         let components = host.split('.').collect::<Vec<_>>();
         let n = components.len();
 
-        let mut suffixes = HashSet::new();
-        suffixes.insert(host.to_owned());
+        let mut suffixes = Vec::with_capacity(5);
+        suffixes.push(host.to_owned());
 
         for len in 2..=n.min(5) {
-            suffixes.insert(components[n - len..].join("."));
+            let suffix = components[n - len..].join(".");
+
+            if suffix != host {
+                suffixes.push(suffix);
+            }
         }
 
         suffixes
     }
 
-    fn generate_url_prefixes(url: &str) -> eyre::Result<impl Iterator<Item = String>> {
+    /// Per <https://developers.google.com/safe-browsing/v4/urls-hashing#suffixprefix-expressions>,
+    /// each host is combined with at most 6 paths: the exact path with and without the query,
+    /// and up to 4 paths formed by starting at the root and successively appending a path
+    /// component, each keeping its trailing slash. The scheme, credentials and port are
+    /// discarded.
+    fn url_expressions(url: &str) -> eyre::Result<Vec<String>> {
         let canonical_url = canonicalize(url)?;
 
         let hosts = match canonical_url
@@ -357,37 +418,146 @@ impl SafeBrowsing {
             .ok_or_else(|| eyre!("URL has no host"))?
         {
             url::Host::Domain(host) => Self::host_suffixes(host),
-            ip_host => HashSet::from([ip_host.to_string()]),
+            ip_host => vec![ip_host.to_string()],
         };
 
-        let mut prefixes = HashSet::new();
+        let path = canonical_url.path();
+        let query = canonical_url.query();
 
-        for host in hosts {
-            let mut url = canonical_url.clone();
-            url.set_host(Some(&host))?;
+        let mut paths = Vec::with_capacity(5);
+        paths.push(path);
+        paths.extend(path.match_indices('/').take(4).map(|(i, _)| &path[..=i]));
 
-            prefixes.insert(url.to_string());
+        paths.sort_unstable();
+        paths.dedup();
 
-            if url.query().is_some() {
-                url.set_query(None);
-                prefixes.insert(url.to_string());
+        let mut expressions = Vec::with_capacity(hosts.len() * (paths.len() + 1));
+
+        for host in &hosts {
+            if let Some(query) = query {
+                expressions.push(format!("{host}{path}?{query}"));
             }
 
-            while url.path() != "/" {
-                url.path_segments_mut()
-                    .map_err(|()| eyre!("could not obtain path segments"))?
-                    .pop();
-
-                prefixes.insert(url.to_string());
+            for path in &paths {
+                expressions.push(format!("{host}{path}"));
             }
         }
 
-        Ok(prefixes.into_iter().map(|v| {
-            v.strip_prefix("http://")
-                .unwrap_or(&v)
-                .strip_prefix("https://")
-                .unwrap_or(&v)
-                .to_owned()
-        }))
+        Ok(expressions)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SafeBrowsing;
+
+    fn expressions(url: &str) -> Vec<String> {
+        let mut expressions = SafeBrowsing::url_expressions(url).unwrap();
+        expressions.sort();
+        expressions
+    }
+
+    fn sorted(values: &[&str]) -> Vec<String> {
+        let mut values = values.iter().map(|v| (*v).to_owned()).collect::<Vec<_>>();
+        values.sort();
+        values
+    }
+
+    #[test]
+    fn host_suffixes_follow_the_spec() {
+        assert_eq!(SafeBrowsing::host_suffixes("b.c"), ["b.c"]);
+        assert_eq!(SafeBrowsing::host_suffixes("a.b.c"), ["a.b.c", "b.c"]);
+        assert_eq!(
+            SafeBrowsing::host_suffixes("a.b.c.d.e.f.g"),
+            ["a.b.c.d.e.f.g", "f.g", "e.f.g", "d.e.f.g", "c.d.e.f.g"]
+        );
+    }
+
+    /// The worked examples from
+    /// <https://developers.google.com/safe-browsing/v4/urls-hashing#suffixprefix-expressions>.
+    #[test]
+    fn url_expressions_match_the_spec_examples() {
+        assert_eq!(
+            expressions("http://a.b.c/1/2.html?param=1"),
+            sorted(&[
+                "a.b.c/1/2.html?param=1",
+                "a.b.c/1/2.html",
+                "a.b.c/",
+                "a.b.c/1/",
+                "b.c/1/2.html?param=1",
+                "b.c/1/2.html",
+                "b.c/",
+                "b.c/1/",
+            ])
+        );
+
+        assert_eq!(
+            expressions("http://a.b.c.d.e.f.g/1.html"),
+            sorted(&[
+                "a.b.c.d.e.f.g/1.html",
+                "a.b.c.d.e.f.g/",
+                "c.d.e.f.g/1.html",
+                "c.d.e.f.g/",
+                "d.e.f.g/1.html",
+                "d.e.f.g/",
+                "e.f.g/1.html",
+                "e.f.g/",
+                "f.g/1.html",
+                "f.g/",
+            ])
+        );
+
+        assert_eq!(
+            expressions("http://1.2.3.4/1/"),
+            sorted(&["1.2.3.4/1/", "1.2.3.4/"])
+        );
+    }
+
+    #[test]
+    fn url_expressions_cap_root_anchored_paths() {
+        assert_eq!(
+            expressions("http://a.b.c/1/2/3/4/5.html"),
+            sorted(&[
+                "a.b.c/1/2/3/4/5.html",
+                "a.b.c/",
+                "a.b.c/1/",
+                "a.b.c/1/2/",
+                "a.b.c/1/2/3/",
+                "b.c/1/2/3/4/5.html",
+                "b.c/",
+                "b.c/1/",
+                "b.c/1/2/",
+                "b.c/1/2/3/",
+            ])
+        );
+    }
+
+    #[test]
+    fn url_expressions_drop_the_scheme() {
+        assert_eq!(expressions("http://example.com/"), ["example.com/"]);
+        assert_eq!(expressions("https://example.com/"), ["example.com/"]);
+    }
+
+    #[test]
+    fn url_expressions_drop_credentials_and_port() {
+        assert_eq!(
+            expressions("http://user:pass@example.com:8080/"),
+            ["example.com/"]
+        );
+    }
+
+    #[test]
+    fn url_expressions_keep_empty_queries() {
+        assert_eq!(
+            expressions("http://www.google.com/q?"),
+            sorted(&[
+                "www.google.com/q?",
+                "www.google.com/q",
+                "www.google.com/",
+                "google.com/q?",
+                "google.com/q",
+                "google.com/",
+            ])
+        );
     }
 }

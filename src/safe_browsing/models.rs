@@ -43,15 +43,19 @@ impl ThreatType {
         Self::SocialEngineering,
         Self::UnwantedSoftware,
     ];
+
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Malware => "MALWARE",
+            Self::SocialEngineering => "SOCIAL_ENGINEERING",
+            Self::UnwantedSoftware => "UNWANTED_SOFTWARE",
+        }
+    }
 }
 
 impl Display for ThreatType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(match self {
-            Self::Malware => "MALWARE",
-            Self::SocialEngineering => "SOCIAL_ENGINEERING",
-            Self::UnwantedSoftware => "UNWANTED_SOFTWARE",
-        })
+        f.write_str(self.as_str())
     }
 }
 
@@ -72,7 +76,7 @@ impl Serialize for ThreatType {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_str(&self.to_string())
+        serializer.serialize_str(self.as_str())
     }
 }
 
@@ -90,8 +94,8 @@ impl<'de> Deserialize<'de> for ThreatType {
 #[serde(rename_all = "camelCase")]
 pub struct ListUpdateRequest {
     pub threat_type: ThreatType,
-    pub platform_type: String,
-    pub threat_entry_type: String,
+    pub platform_type: &'static str,
+    pub threat_entry_type: &'static str,
     pub state: String,
     pub constraints: ThreatListConstraints,
 }
@@ -101,8 +105,8 @@ pub struct ListUpdateRequest {
 pub struct ThreatListConstraints {
     pub max_update_entries: u32,
     pub max_database_entries: u32,
-    pub region: String,
-    pub supported_compressions: Vec<String>,
+    pub region: &'static str,
+    pub supported_compressions: Vec<&'static str>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -187,9 +191,9 @@ pub struct FindFullHashesRequest {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ThreatInfo {
-    pub threat_types: Vec<String>,
-    pub platform_types: Vec<String>,
-    pub threat_entry_types: Vec<String>,
+    pub threat_types: Vec<&'static str>,
+    pub platform_types: Vec<&'static str>,
+    pub threat_entry_types: Vec<&'static str>,
     pub threat_entries: Vec<ThreatEntry>,
 }
 

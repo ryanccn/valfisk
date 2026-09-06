@@ -68,7 +68,9 @@ pub async fn rotate_color_roles_global(http: &Http, data: &Data) -> Result<()> {
         cursor = guilds.last().map(|g| g.id);
 
         for guild in guilds {
-            rotate_color_roles_guild(http, data, guild.id).await?;
+            if let Err(err) = rotate_color_roles_guild(http, data, guild.id).await {
+                tracing::error!(guild = guild.id.get(), "{err:?}");
+            }
         }
     }
 

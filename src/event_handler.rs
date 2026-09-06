@@ -192,28 +192,29 @@ impl serenity::EventHandler for EventHandler {
                             let new_content = event.message.content.as_str();
                             let attachments = event.message.attachments.to_vec();
 
-                            storage
-                                .set_message_log(
-                                    event.message.id,
-                                    &MessageLog {
-                                        content: new_content.to_owned(),
-                                        author: event.message.author.id,
-                                        attachments: attachments.clone(),
-                                    },
-                                )
-                                .await?;
-
-                            if let Some(prev_content) = &prev_data.map(|p| p.content) {
+                            if let Some(prev) = &prev_data {
                                 handlers::log::edit(
                                     ctx,
+                                    &guild_config,
                                     ids,
-                                    prev_content,
+                                    &prev.content,
                                     new_content,
                                     &attachments,
                                     &edited_timestamp,
                                 )
                                 .await?;
                             }
+
+                            storage
+                                .set_message_log(
+                                    event.message.id,
+                                    &MessageLog {
+                                        content: new_content.to_owned(),
+                                        author: event.message.author.id,
+                                        attachments,
+                                    },
+                                )
+                                .await?;
                         }
                     }
 
@@ -231,18 +232,25 @@ impl serenity::EventHandler for EventHandler {
                         && let Some(logged_data) =
                             storage.get_message_log(*deleted_message_id).await?
                     {
-                        handlers::log::delete(
-                            ctx,
-                            handlers::log::LogMessageIds {
-                                message: *deleted_message_id,
-                                channel: *channel_id,
-                                guild: *guild_id,
-                                author: logged_data.author,
-                            },
-                            &logged_data,
-                            &chrono::Utc::now(),
-                        )
-                        .await?;
+                        let guild_config = storage.get_config(*guild_id).await?;
+
+                        let ids = handlers::log::LogMessageIds {
+                            message: *deleted_message_id,
+                            channel: *channel_id,
+                            guild: *guild_id,
+                            author: logged_data.author,
+                        };
+
+                        if !handlers::log::is_excluded(ctx, &guild_config, ids).await? {
+                            handlers::log::delete(
+                                ctx,
+                                &guild_config,
+                                ids,
+                                &logged_data,
+                                &chrono::Utc::now(),
+                            )
+                            .await?;
+                        }
 
                         storage.del_message_log(*deleted_message_id).await?;
                     }
@@ -268,22 +276,29 @@ impl serenity::EventHandler for EventHandler {
                     if let Some(guild_id) = guild_id
                         && let Some(storage) = &ctx.data::<crate::Data>().storage
                     {
+                        let guild_config = storage.get_config(*guild_id).await?;
+
                         for deleted_message_id in multiple_deleted_messages_ids {
                             if let Some(logged_data) =
                                 storage.get_message_log(*deleted_message_id).await?
                             {
-                                handlers::log::delete(
-                                    ctx,
-                                    handlers::log::LogMessageIds {
-                                        message: *deleted_message_id,
-                                        channel: *channel_id,
-                                        guild: *guild_id,
-                                        author: logged_data.author,
-                                    },
-                                    &logged_data,
-                                    &chrono::Utc::now(),
-                                )
-                                .await?;
+                                let ids = handlers::log::LogMessageIds {
+                                    message: *deleted_message_id,
+                                    channel: *channel_id,
+                                    guild: *guild_id,
+                                    author: logged_data.author,
+                                };
+
+                                if !handlers::log::is_excluded(ctx, &guild_config, ids).await? {
+                                    handlers::log::delete(
+                                        ctx,
+                                        &guild_config,
+                                        ids,
+                                        &logged_data,
+                                        &chrono::Utc::now(),
+                                    )
+                                    .await?;
+                                }
 
                                 storage.del_message_log(*deleted_message_id).await?;
                             }
