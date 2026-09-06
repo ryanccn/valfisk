@@ -12,17 +12,24 @@ mod nanoid;
 pub use nanoid::nanoid;
 pub mod serenity;
 
-pub fn truncate(s: &str, new_len: usize) -> String {
-    s.chars().take(new_len).collect()
+pub fn truncate(s: &str, new_len: usize) -> &str {
+    match s.char_indices().nth(new_len) {
+        Some((idx, _)) => &s[..idx],
+        None => s,
+    }
 }
 
 pub fn format_bytes(bytes: u64) -> String {
     ByteSize::b(bytes).display().si().to_string()
 }
 
-pub fn sha256(data: &[u8]) -> Vec<u8> {
+pub fn sha256(data: &[u8]) -> [u8; 32] {
     use aws_lc_rs::digest::{SHA256, digest};
-    digest(&SHA256, data).as_ref().to_vec()
+
+    digest(&SHA256, data)
+        .as_ref()
+        .try_into()
+        .expect("SHA-256 digests are 32 bytes")
 }
 
 pub fn option_strings<'a>(a: Option<&'a str>, b: Option<&'a str>) -> Option<Cow<'a, str>> {

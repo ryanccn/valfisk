@@ -139,6 +139,8 @@ pub async fn remind(
             storage.add_reminders(&reminder).await?;
             storage.clean_reminders().await?;
         }
+    } else {
+        ctx.say("Failed to set reminder.").await?;
     }
 
     Ok(())

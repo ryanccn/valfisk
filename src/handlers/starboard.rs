@@ -14,10 +14,10 @@ async fn get_starboard_channel(
     ctx: &serenity::Context,
     guild_config: &GuildConfig,
     channel: serenity::GenericChannelId,
-    guild: serenity::GuildId,
+    guild: &serenity::PartialGuild,
 ) -> Result<Option<serenity::GenericChannelId>> {
     let Some(channel) = channel
-        .to_channel(&ctx, Some(guild))
+        .to_channel(&ctx, Some(guild.id))
         .await
         .ok()
         .and_then(|ch| ch.guild())
@@ -30,8 +30,6 @@ async fn get_starboard_channel(
     {
         return Ok(guild_config.private_starboard_channel);
     }
-
-    let guild = guild.to_partial_guild(ctx).await?;
 
     let everyone_role = guild
         .roles
@@ -121,35 +119,27 @@ impl<'de> serde::Deserialize<'de> for StarboardEmojis {
     }
 }
 
-fn is_significant_reaction(
-    guild_config: &GuildConfig,
-    guild_emojis: &[serenity::EmojiId],
-    reaction: &serenity::MessageReaction,
-    threshold: u64,
-) -> bool {
-    guild_config
-        .starboard_emojis
-        .as_deref()
-        .unwrap_or_default()
-        .parse::<StarboardEmojis>()
-        .is_ok_and(|r| r.allow(guild_emojis, reaction))
-        && reaction.count >= threshold
-}
-
 fn get_significant_reactions<'a>(
     guild_config: &GuildConfig,
     guild_emojis: &[serenity::EmojiId],
     message: &'a serenity::Message,
     threshold: u64,
 ) -> Vec<(&'a serenity::ReactionType, u64)> {
+    let allowed_emojis = guild_config
+        .starboard_emojis
+        .as_deref()
+        .unwrap_or_default()
+        .parse::<StarboardEmojis>()
+        .unwrap_or_default();
+
     let mut collected_reactions: Vec<(&serenity::ReactionType, u64)> = message
         .reactions
         .iter()
-        .filter(|r| is_significant_reaction(guild_config, guild_emojis, r, threshold))
+        .filter(|r| r.count >= threshold && allowed_emojis.allow(guild_emojis, r))
         .map(|r| (&r.reaction_type, r.count))
         .collect();
 
-    collected_reactions.sort_by_key(|i| match &i.0 {
+    collected_reactions.sort_by_cached_key(|i| match &i.0 {
         serenity::ReactionType::Custom { id, .. } => id.get().to_string(),
         serenity::ReactionType::Unicode(str) => str.to_string(),
         _ => "unknown".to_owned(),
@@ -253,9 +243,10 @@ pub async fn handle(
         && let Some(storage) = &ctx.data::<crate::Data>().storage
     {
         let guild_config = storage.get_config(guild_id).await?;
+        let partial_guild = guild_id.to_partial_guild(&ctx).await?;
 
         if let Some(starboard) =
-            get_starboard_channel(ctx, &guild_config, message.channel_id, guild_id).await?
+            get_starboard_channel(ctx, &guild_config, message.channel_id, &partial_guild).await?
         {
             let threshold = if Some(starboard) == guild_config.private_starboard_channel {
                 guild_config
@@ -268,9 +259,7 @@ pub async fn handle(
                     .unwrap_or(DEFAULT_THRESHOLD)
             };
 
-            let guild_emojis = guild_id
-                .to_partial_guild(&ctx)
-                .await?
+            let guild_emojis = partial_guild
                 .emojis
                 .iter()
                 .map(|e| e.id)
@@ -279,10 +268,10 @@ pub async fn handle(
             let significant_reactions =
                 get_significant_reactions(&guild_config, &guild_emojis, message, threshold);
 
-            if let Some(existing_starboard_message) =
-                storage.get_starboard(message.id).await?.map(|s| s.into())
-            {
-                if significant_reactions.is_empty() {
+            let existing = storage.get_starboard(message.id).await?.map(|s| s.into());
+
+            if significant_reactions.is_empty() {
+                if let Some(existing_starboard_message) = existing {
                     storage.del_starboard(message.id).await?;
 
                     let _ = starboard
@@ -294,65 +283,51 @@ pub async fn handle(
                         message_id = message.id.get(),
                         "deleted starboard message"
                     );
-                } else {
-                    let content = serialize_reactions(&significant_reactions);
-                    let container = make_message_container(ctx, message, guild_id).await;
-
-                    let row = serenity::CreateActionRow::Buttons(
-                        vec![
-                            serenity::CreateButton::new_link(message.link().to_string())
-                                .label("Go to message"),
-                        ]
-                        .into(),
-                    );
-
-                    starboard
-                        .edit_message(
-                            &ctx.http,
-                            existing_starboard_message,
-                            serenity::EditMessage::default()
-                                .allowed_mentions(serenity::CreateAllowedMentions::new())
-                                .components(&[
-                                    serenity::CreateComponent::TextDisplay(
-                                        serenity::CreateTextDisplay::new(content),
-                                    ),
-                                    serenity::CreateComponent::Container(container),
-                                    serenity::CreateComponent::ActionRow(row),
-                                ]),
-                        )
-                        .await?;
-
-                    tracing::debug!(
-                        starboard_id = existing_starboard_message.get(),
-                        message_id = message.id.get(),
-                        "edited starboard message"
-                    );
                 }
-            } else if !significant_reactions.is_empty() {
-                let content = serialize_reactions(&significant_reactions);
-                let container = make_message_container(ctx, message, guild_id).await;
 
-                let row = serenity::CreateActionRow::Buttons(
+                return Ok(());
+            }
+
+            let components = [
+                serenity::CreateComponent::TextDisplay(serenity::CreateTextDisplay::new(
+                    serialize_reactions(&significant_reactions),
+                )),
+                serenity::CreateComponent::Container(
+                    make_message_container(ctx, message, guild_id).await,
+                ),
+                serenity::CreateComponent::ActionRow(serenity::CreateActionRow::Buttons(
                     vec![
                         serenity::CreateButton::new_link(message.link().to_string())
                             .label("Go to message"),
                     ]
                     .into(),
-                );
+                )),
+            ];
 
+            if let Some(existing_starboard_message) = existing {
+                starboard
+                    .edit_message(
+                        &ctx.http,
+                        existing_starboard_message,
+                        serenity::EditMessage::default()
+                            .allowed_mentions(serenity::CreateAllowedMentions::new())
+                            .components(&components),
+                    )
+                    .await?;
+
+                tracing::debug!(
+                    starboard_id = existing_starboard_message.get(),
+                    message_id = message.id.get(),
+                    "edited starboard message"
+                );
+            } else {
                 let starboard_message = starboard
                     .send_message(
                         &ctx.http,
                         serenity::CreateMessage::default()
                             .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
                             .allowed_mentions(serenity::CreateAllowedMentions::new())
-                            .components(&[
-                                serenity::CreateComponent::TextDisplay(
-                                    serenity::CreateTextDisplay::new(content),
-                                ),
-                                serenity::CreateComponent::Container(container),
-                                serenity::CreateComponent::ActionRow(row),
-                            ]),
+                            .components(&components),
                     )
                     .await?;
 
@@ -381,12 +356,13 @@ pub async fn handle_deletion(
 ) -> Result<()> {
     if let Some(guild_id) = guild_id
         && let Some(storage) = &ctx.data::<crate::Data>().storage
+        && let Some(starboard_id) = storage.get_starboard(deleted_message_id).await?
     {
         let guild_config = storage.get_config(guild_id).await?;
+        let partial_guild = guild_id.to_partial_guild(&ctx).await?;
 
         if let Some(starboard_channel) =
-            get_starboard_channel(ctx, &guild_config, channel_id, guild_id).await?
-            && let Some(starboard_id) = storage.get_starboard(deleted_message_id).await?
+            get_starboard_channel(ctx, &guild_config, channel_id, &partial_guild).await?
         {
             storage.del_starboard(deleted_message_id).await?;
 

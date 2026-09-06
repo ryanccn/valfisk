@@ -40,78 +40,51 @@ pub async fn handle(
 
         let mut config = storage.get_config(guild_id).await?;
 
+        let channels = match &interaction.data.kind {
+            serenity::ComponentInteractionDataKind::ChannelSelect { values } => Some(values),
+            _ => None,
+        };
+
+        let roles = match &interaction.data.kind {
+            serenity::ComponentInteractionDataKind::RoleSelect { values } => Some(values),
+            _ => None,
+        };
+
+        macro_rules! set_first_channel {
+            ($field:expr) => {
+                if let Some(values) = channels {
+                    $field = values.first().map(|ch| ch.widen());
+                }
+            };
+        }
+
         match config_key {
-            "private_category" => {
-                if let serenity::ComponentInteractionDataKind::ChannelSelect { values } =
-                    &interaction.data.kind
-                {
-                    config.private_category = values.first().map(|ch| ch.widen());
-                }
-            }
-            "private_starboard_channel" => {
-                if let serenity::ComponentInteractionDataKind::ChannelSelect { values } =
-                    &interaction.data.kind
-                {
-                    config.private_starboard_channel = values.first().map(|ch| ch.widen());
-                }
-            }
-            "starboard_channel" => {
-                if let serenity::ComponentInteractionDataKind::ChannelSelect { values } =
-                    &interaction.data.kind
-                {
-                    config.starboard_channel = values.first().map(|ch| ch.widen());
-                }
-            }
-            "moderation_logs_channel" => {
-                if let serenity::ComponentInteractionDataKind::ChannelSelect { values } =
-                    &interaction.data.kind
-                {
-                    config.moderation_logs_channel = values.first().map(|ch| ch.widen());
-                }
-            }
-            "message_logs_channel" => {
-                if let serenity::ComponentInteractionDataKind::ChannelSelect { values } =
-                    &interaction.data.kind
-                {
-                    config.message_logs_channel = values.first().map(|ch| ch.widen());
-                }
-            }
-            "member_logs_channel" => {
-                if let serenity::ComponentInteractionDataKind::ChannelSelect { values } =
-                    &interaction.data.kind
-                {
-                    config.member_logs_channel = values.first().map(|ch| ch.widen());
-                }
-            }
-            "honeypot_channel" => {
-                if let serenity::ComponentInteractionDataKind::ChannelSelect { values } =
-                    &interaction.data.kind
-                {
-                    config.honeypot_channel = values.first().map(|ch| ch.widen());
-                }
-            }
+            "private_category" => set_first_channel!(config.private_category),
+            "private_starboard_channel" => set_first_channel!(config.private_starboard_channel),
+            "starboard_channel" => set_first_channel!(config.starboard_channel),
+            "moderation_logs_channel" => set_first_channel!(config.moderation_logs_channel),
+            "message_logs_channel" => set_first_channel!(config.message_logs_channel),
+            "member_logs_channel" => set_first_channel!(config.member_logs_channel),
+            "honeypot_channel" => set_first_channel!(config.honeypot_channel),
+
             "moderator_role" => {
-                if let serenity::ComponentInteractionDataKind::RoleSelect { values } =
-                    &interaction.data.kind
-                {
+                if let Some(values) = roles {
                     config.moderator_role = values.first().copied();
                 }
             }
+
             "logs_excluded_channels" => {
-                if let serenity::ComponentInteractionDataKind::ChannelSelect { values } =
-                    &interaction.data.kind
-                {
+                if let Some(values) = channels {
                     config.logs_excluded_channels =
                         values.iter().map(|ch| ch.widen()).collect::<HashSet<_>>();
                 }
             }
             "random_color_roles" => {
-                if let serenity::ComponentInteractionDataKind::RoleSelect { values } =
-                    &interaction.data.kind
-                {
+                if let Some(values) = roles {
                     config.random_color_roles = values.iter().copied().collect::<HashSet<_>>();
                 }
             }
+
             &_ => {
                 bail!("invalid config key in interaction: {config_key}")
             }

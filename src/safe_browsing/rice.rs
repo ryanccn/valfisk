@@ -55,15 +55,13 @@ pub fn decode(
     data: &[u8],
 ) -> eyre::Result<Vec<u32>> {
     let mut reader = BitReader::new(data);
-    let mut values = Vec::with_capacity(num_entries as usize + 1);
+
+    // `num_entries` comes off the wire; every entry needs at least one bit.
+    let mut values = Vec::with_capacity((num_entries as usize).min(data.len() * 8) + 1);
 
     #[expect(clippy::cast_possible_truncation)]
     let first = first_value as u32;
     values.push(first);
-
-    if num_entries == 0 {
-        return Ok(values);
-    }
 
     let mut prev = first;
     for _ in 0..num_entries {
@@ -77,4 +75,68 @@ pub fn decode(
     }
 
     Ok(values)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn encode(values: &[u32], k: u32) -> Vec<u8> {
+        let (mut data, mut bit_pos) = (Vec::new(), 0usize);
+
+        let mut write_bit = |bit: bool| {
+            if bit_pos % 8 == 0 {
+                data.push(0);
+            }
+            if bit {
+                data[bit_pos / 8] |= 1 << (bit_pos % 8);
+            }
+            bit_pos += 1;
+        };
+
+        for delta in values.windows(2).map(|w| w[1] - w[0]) {
+            for _ in 0..delta >> k {
+                write_bit(true);
+            }
+            write_bit(false);
+
+            for i in 0..k {
+                write_bit(delta >> i & 1 != 0);
+            }
+        }
+
+        data
+    }
+
+    #[test]
+    fn decode_round_trips() {
+        let values = [10, 15, 100, 1000, 1001, 70000];
+
+        for k in 0..8 {
+            let decoded = decode(
+                u64::from(values[0]),
+                k,
+                u32::try_from(values.len() - 1).unwrap(),
+                &encode(&values, k),
+            )
+            .unwrap();
+
+            assert_eq!(decoded, values, "k = {k}");
+        }
+    }
+
+    #[test]
+    fn decode_without_entries_yields_the_first_value() {
+        assert_eq!(decode(42, 2, 0, &[]).unwrap(), [42]);
+    }
+
+    #[test]
+    fn decode_rejects_truncated_data() {
+        assert!(decode(0, 5, 100, &[0xff, 0xff]).is_err());
+    }
+
+    #[test]
+    fn decode_does_not_over_reserve_on_a_large_entry_count() {
+        assert!(decode(0, 5, u32::MAX, &[0x00]).is_err());
+    }
 }

@@ -60,16 +60,7 @@ async fn translate_call(src: &str) -> Result<TranslateResult> {
     Ok(data)
 }
 
-/// Translates a message
-#[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
-#[poise::command(
-    context_menu_command = "Translate",
-    install_context = "Guild | User",
-    interaction_context = "Guild | BotDm | PrivateChannel"
-)]
-pub async fn translate(ctx: Context<'_>, message: serenity::Message) -> Result<()> {
-    ctx.defer().await?;
-
+async fn run(ctx: Context<'_>, message: &serenity::Message) -> Result<()> {
     if CONFIG.anthropic_api_key.is_none() {
         ctx.send(
             CreateReply::default()
@@ -156,6 +147,18 @@ There is no content to translate.",
 /// Translates a message
 #[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
 #[poise::command(
+    context_menu_command = "Translate",
+    install_context = "Guild | User",
+    interaction_context = "Guild | BotDm | PrivateChannel"
+)]
+pub async fn translate(ctx: Context<'_>, message: serenity::Message) -> Result<()> {
+    ctx.defer().await?;
+    run(ctx, &message).await
+}
+
+/// Translates a message
+#[tracing::instrument(skip(ctx), fields(ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
+#[poise::command(
     context_menu_command = "Translate (ephemeral)",
     rename = "translate-ephemeral",
     ephemeral,
@@ -164,86 +167,5 @@ There is no content to translate.",
 )]
 pub async fn translate_ephemeral(ctx: Context<'_>, message: serenity::Message) -> Result<()> {
     ctx.defer_ephemeral().await?;
-
-    if CONFIG.anthropic_api_key.is_none() {
-        ctx.send(
-            CreateReply::default()
-                .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                .components(&[serenity::CreateComponent::Container(
-                    serenity::CreateContainer::new(&[
-                        serenity::CreateContainerComponent::TextDisplay(
-                            serenity::CreateTextDisplay::new(
-                                r"### Anthropic API not configured!
-Contact the owner of this app if this command is supposed to be working.",
-                            ),
-                        ),
-                    ])
-                    .accent_color(0xff6b6b),
-                )]),
-        )
-        .await?;
-
-        return Ok(());
-    }
-
-    let content = match message.content.as_str().trim() {
-        s if !s.is_empty() => Some(s),
-        _ => match message
-            .message_snapshots
-            .first()
-            .map(|ms| ms.content.as_str().trim())
-        {
-            Some(s) if !s.is_empty() => Some(s),
-            _ => None,
-        },
-    };
-
-    let Some(content) = content else {
-        ctx.send(
-            CreateReply::default()
-                .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                .components(&[serenity::CreateComponent::Container(
-                    serenity::CreateContainer::new(&[
-                        serenity::CreateContainerComponent::TextDisplay(
-                            serenity::CreateTextDisplay::new(
-                                r"### Translation unavailable!
-There is no content to translate.",
-                            ),
-                        ),
-                    ])
-                    .accent_color(0xffd43b),
-                )]),
-        )
-        .await?;
-
-        return Ok(());
-    };
-
-    let resp = translate_call(content).await?;
-
-    ctx.send(
-        CreateReply::default()
-            .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-            .allowed_mentions(serenity::CreateAllowedMentions::new())
-            .components(&[serenity::CreateComponent::Container(
-                serenity::CreateContainer::new(&[
-                    serenity::CreateContainerComponent::TextDisplay(
-                        serenity::CreateTextDisplay::new(format!(
-                            "### Translation\n{}",
-                            resp.translated_text
-                        )),
-                    ),
-                    serenity::CreateContainerComponent::TextDisplay(
-                        serenity::CreateTextDisplay::new(format!(
-                            "-# *{}* → English",
-                            resp.detected_source_language
-                        )),
-                    ),
-                ])
-                .accent_color(0x34d399),
-            )]),
-    )
-    .await?;
-
-    Ok(())
+    run(ctx, &message).await
 }

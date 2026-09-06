@@ -20,8 +20,11 @@ pub async fn code_expand(
     #[description = "A link, or multiple links"] content: String,
 ) -> Result<()> {
     ctx.defer().await?;
+    run(ctx, &content).await
+}
 
-    let components = code_expansion::resolve(&content).await?;
+async fn run(ctx: Context<'_>, content: &str) -> Result<()> {
+    let components = code_expansion::resolve(content).await?;
 
     if components.is_empty() {
         ctx.say("No supported code links detected!").await?;
@@ -47,20 +50,5 @@ pub async fn code_expand(
 )]
 pub async fn code_expand_context_menu(ctx: Context<'_>, message: serenity::Message) -> Result<()> {
     ctx.defer().await?;
-
-    let components = code_expansion::resolve(&message.content).await?;
-
-    if components.is_empty() {
-        ctx.say("No supported code links detected!").await?;
-    } else {
-        ctx.send(
-            CreateReply::default()
-                .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                .allowed_mentions(serenity::CreateAllowedMentions::new())
-                .components(components),
-        )
-        .await?;
-    }
-
-    Ok(())
+    run(ctx, &message.content).await
 }

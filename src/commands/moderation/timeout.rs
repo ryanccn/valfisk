@@ -2,10 +2,10 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use eyre::{Result, eyre};
-use poise::serenity_prelude::{self as serenity, Mentionable as _};
+use eyre::Result;
+use poise::serenity_prelude as serenity;
 
-use crate::{Context, utils};
+use crate::{Context, commands::moderation::ModerationAction, utils};
 
 /// Timeout a user
 #[tracing::instrument(skip(ctx, user), fields(user = user.id.get(), ctx.channel = ctx.channel_id().get(), ctx.author = ctx.author().id.get()))]
@@ -26,113 +26,32 @@ pub async fn timeout(
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
-    let partial_guild = ctx
-        .partial_guild()
-        .await
-        .ok_or_else(|| eyre!("failed to obtain partial guild"))?;
-
     let Ok(duration) = humantime::parse_duration(&duration) else {
         ctx.say("Invalid duration provided!").await?;
         return Ok(());
     };
 
+    if duration > std::time::Duration::from_hours(28 * 24) {
+        ctx.say("Duration must not exceed 28 days!").await?;
+        return Ok(());
+    }
+
     let end = chrono::Utc::now() + duration;
 
-    let mut container =
-        serenity::CreateContainer::new(vec![serenity::CreateContainerComponent::TextDisplay(
-            serenity::CreateTextDisplay::new(format!(
-                "### Timeout\n{}",
-                utils::serenity::format_mentionable(Some(user.id)),
-            )),
-        )])
-        .accent_color(0x9775fa);
+    let mut action = ModerationAction::new(ctx, "Timeout", user.id, 0x9775fa).await?;
 
-    let extra_message = if let Some(storage) = &ctx.data().storage {
-        let guild_config = storage.get_config(partial_guild.id).await?;
-        guild_config.moderation_extra_message_timeout
-    } else {
-        None
-    };
+    let extra_message = action
+        .guild_config()
+        .and_then(|c| c.moderation_extra_message_timeout.clone());
 
     if let Some(reason) = utils::option_strings(reason.as_deref(), extra_message.as_deref()) {
-        container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
-            serenity::CreateTextDisplay::new(format!("**Reason**\n{reason}")),
-        ));
+        action = action.field("Reason", reason);
     }
 
-    container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
-        serenity::CreateTextDisplay::new(format!(
-            "**Duration**\n{}",
-            humantime::format_duration(duration)
-        )),
-    ));
+    action = action.field("Duration", humantime::format_duration(duration));
 
-    if dm.unwrap_or(true) {
-        let dm_container =
-            container
-                .clone()
-                .add_component(serenity::CreateContainerComponent::TextDisplay(
-                    serenity::CreateTextDisplay::new(format!(
-                        "-# {} \u{00B7} {}",
-                        partial_guild.name,
-                        serenity::FormattedTimestamp::now()
-                    )),
-                ));
-
-        if let Ok(dm) = user.create_dm_channel(ctx).await
-            && dm
-                .id
-                .widen()
-                .send_message(
-                    ctx.http(),
-                    serenity::CreateMessage::default()
-                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                        .allowed_mentions(serenity::CreateAllowedMentions::new())
-                        .components(vec![serenity::CreateComponent::Container(dm_container)]),
-                )
-                .await
-                .is_ok()
-        {
-            container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
-                serenity::CreateTextDisplay::new("**User notified**\nYes"),
-            ));
-        } else {
-            container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
-                serenity::CreateTextDisplay::new("**User notified**\nFailed"),
-            ));
-        }
-    } else {
-        container = container.add_component(serenity::CreateContainerComponent::TextDisplay(
-            serenity::CreateTextDisplay::new("**User notified**\nNo"),
-        ));
-    }
-
-    let reply_container = container.clone();
-
-    if let Some(storage) = &ctx.data().storage {
-        let guild_config = storage.get_config(partial_guild.id).await?;
-
-        if let Some(logs_channel) = guild_config.moderation_logs_channel {
-            let log_container =
-                container.add_component(serenity::CreateContainerComponent::TextDisplay(
-                    serenity::CreateTextDisplay::new(format!(
-                        "-# {} \u{00B7} {}",
-                        ctx.author().mention(),
-                        serenity::FormattedTimestamp::now()
-                    )),
-                ));
-
-            logs_channel
-                .send_message(
-                    ctx.http(),
-                    serenity::CreateMessage::default()
-                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                        .allowed_mentions(serenity::CreateAllowedMentions::new())
-                        .components(vec![serenity::CreateComponent::Container(log_container)]),
-                )
-                .await?;
-        }
-    }
+    action = action.notify(&user, dm.unwrap_or(true)).await;
+    action.log().await?;
 
     let mut edit_member = serenity::EditMember::default().disable_communication_until(end.into());
 
@@ -140,19 +59,13 @@ pub async fn timeout(
         edit_member = edit_member.audit_log_reason(reason);
     }
 
-    partial_guild
+    action
+        .guild()
         .id
         .member(&ctx, user.id)
         .await?
         .edit(ctx.http(), edit_member)
         .await?;
 
-    ctx.send(
-        poise::CreateReply::default()
-            .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-            .components(vec![serenity::CreateComponent::Container(reply_container)]),
-    )
-    .await?;
-
-    Ok(())
+    action.reply().await
 }

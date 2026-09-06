@@ -26,12 +26,10 @@ pub async fn handle(
     }
 
     if let Some(safe_browsing) = &ctx.data::<crate::Data>().safe_browsing {
-        let content = message.content.to_string();
-
         let matches = safe_browsing
             .check(
                 &URL_REGEX
-                    .find_iter(&content)
+                    .find_iter(&message.content)
                     .map(|u| u.as_str())
                     .collect::<Vec<_>>(),
             )
@@ -129,7 +127,7 @@ pub async fn handle(
                     .await?;
             }
 
-            analytics::send_safe_browsing(message.guild_id).await;
+            analytics::send_event("safe_browsing_v1", message.guild_id);
 
             return Ok(true);
         }

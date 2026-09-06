@@ -14,9 +14,7 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
         return Ok(());
     }
 
-    if message.channel(&ctx).await?.private().is_some()
-        && let Some(logs_channel) = CONFIG.dm_logs_channel
-    {
+    if let Some(logs_channel) = CONFIG.dm_logs_channel {
         let mut container =
             serenity::CreateContainer::new(vec![serenity::CreateContainerComponent::TextDisplay(
                 serenity::CreateTextDisplay::new(format!(

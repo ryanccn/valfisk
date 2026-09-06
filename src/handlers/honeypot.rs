@@ -42,14 +42,6 @@ pub async fn handle(
         .is_ok();
 
         if let Some(logs_channel) = config.message_logs_channel {
-            let mut components: Vec<serenity::CreateComponent<'_>> = Vec::new();
-
-            // if let Some(role) = config.moderator_role {
-            //     components.push(serenity::CreateComponent::TextDisplay(
-            //         serenity::CreateTextDisplay::new(role.mention().to_string()),
-            //     ));
-            // }
-
             let mut container = serenity::CreateContainer::new(vec![
                 serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
                     "### Honeypot",
@@ -117,15 +109,13 @@ pub async fn handle(
                 )),
             ));
 
-            components.push(serenity::CreateComponent::Container(container));
-
             logs_channel
                 .send_message(
                     &ctx.http,
                     serenity::CreateMessage::default()
                         .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
                         .allowed_mentions(serenity::CreateAllowedMentions::new())
-                        .components(&components),
+                        .components(&[serenity::CreateComponent::Container(container)]),
                 )
                 .await?;
         }
@@ -136,7 +126,7 @@ pub async fn handle(
                 .await?;
         }
 
-        analytics::send_honeypot(message.guild_id).await;
+        analytics::send_event("honeypot_v1", message.guild_id);
 
         return Ok(true);
     }

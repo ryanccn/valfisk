@@ -2,6 +2,9 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
+mod action;
+use action::ModerationAction;
+
 pub mod ban;
 pub mod ban_reason;
 pub mod kick;

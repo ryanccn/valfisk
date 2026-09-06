@@ -169,47 +169,52 @@ impl serenity::EventHandler for EventHandler {
                 }
 
                 FullEvent::MessageUpdate { event, .. } => {
-                    if event.message.guild_id.is_none() {
-                        return Ok(());
-                    }
+                    if let Some(guild_id) = event.message.guild_id
+                        && let Some(storage) = &ctx.data::<crate::Data>().storage
+                    {
+                        let guild_config = storage.get_config(guild_id).await?;
 
-                    if let Some(storage) = &ctx.data::<crate::Data>().storage {
-                        let edited_timestamp = event
-                            .message
-                            .edited_timestamp
-                            .map_or_else(chrono::Utc::now, |ts| ts.to_utc());
+                        let ids = handlers::log::LogMessageIds {
+                            message: event.message.id,
+                            channel: event.message.channel_id,
+                            guild: guild_id,
+                            author: event.message.author.id,
+                        };
 
-                        let prev_data = storage.get_message_log(event.message.id).await?;
+                        if !handlers::log::is_excluded(ctx, &guild_config, ids).await? {
+                            let edited_timestamp = event
+                                .message
+                                .edited_timestamp
+                                .map_or_else(chrono::Utc::now, |ts| ts.to_utc());
 
-                        let new_content = event.message.content.as_str();
-                        let attachments = event.message.attachments.to_vec();
+                            let prev_data = storage.get_message_log(event.message.id).await?;
 
-                        storage
-                            .set_message_log(
-                                event.message.id,
-                                &MessageLog {
-                                    content: new_content.to_owned(),
-                                    author: event.message.author.id,
-                                    attachments: attachments.clone(),
-                                },
-                            )
-                            .await?;
+                            let new_content = event.message.content.as_str();
+                            let attachments = event.message.attachments.to_vec();
 
-                        if let Some(prev_content) = &prev_data.map(|p| p.content) {
-                            handlers::log::edit(
-                                ctx,
-                                handlers::log::LogMessageIds {
-                                    message: event.message.id,
-                                    channel: event.message.channel_id,
-                                    guild: event.message.guild_id,
-                                    author: Some(event.message.author.id),
-                                },
-                                prev_content,
-                                new_content,
-                                &attachments,
-                                &edited_timestamp,
-                            )
-                            .await?;
+                            if let Some(prev) = &prev_data {
+                                handlers::log::edit(
+                                    ctx,
+                                    &guild_config,
+                                    ids,
+                                    &prev.content,
+                                    new_content,
+                                    &attachments,
+                                    &edited_timestamp,
+                                )
+                                .await?;
+                            }
+
+                            storage
+                                .set_message_log(
+                                    event.message.id,
+                                    &MessageLog {
+                                        content: new_content.to_owned(),
+                                        author: event.message.author.id,
+                                        attachments,
+                                    },
+                                )
+                                .await?;
                         }
                     }
 
@@ -222,26 +227,30 @@ impl serenity::EventHandler for EventHandler {
                     guild_id,
                     ..
                 } => {
-                    if guild_id.is_none() {
-                        return Ok(());
-                    }
-
-                    if let Some(storage) = &ctx.data::<crate::Data>().storage
+                    if let Some(guild_id) = guild_id
+                        && let Some(storage) = &ctx.data::<crate::Data>().storage
                         && let Some(logged_data) =
                             storage.get_message_log(*deleted_message_id).await?
                     {
-                        handlers::log::delete(
-                            ctx,
-                            handlers::log::LogMessageIds {
-                                message: *deleted_message_id,
-                                channel: *channel_id,
-                                guild: *guild_id,
-                                author: Some(logged_data.author),
-                            },
-                            &logged_data,
-                            &chrono::Utc::now(),
-                        )
-                        .await?;
+                        let guild_config = storage.get_config(*guild_id).await?;
+
+                        let ids = handlers::log::LogMessageIds {
+                            message: *deleted_message_id,
+                            channel: *channel_id,
+                            guild: *guild_id,
+                            author: logged_data.author,
+                        };
+
+                        if !handlers::log::is_excluded(ctx, &guild_config, ids).await? {
+                            handlers::log::delete(
+                                ctx,
+                                &guild_config,
+                                ids,
+                                &logged_data,
+                                &chrono::Utc::now(),
+                            )
+                            .await?;
+                        }
 
                         storage.del_message_log(*deleted_message_id).await?;
                     }
@@ -264,27 +273,32 @@ impl serenity::EventHandler for EventHandler {
                     guild_id,
                     ..
                 } => {
-                    if guild_id.is_none() {
-                        return Ok(());
-                    }
+                    if let Some(guild_id) = guild_id
+                        && let Some(storage) = &ctx.data::<crate::Data>().storage
+                    {
+                        let guild_config = storage.get_config(*guild_id).await?;
 
-                    if let Some(storage) = &ctx.data::<crate::Data>().storage {
                         for deleted_message_id in multiple_deleted_messages_ids {
                             if let Some(logged_data) =
                                 storage.get_message_log(*deleted_message_id).await?
                             {
-                                handlers::log::delete(
-                                    ctx,
-                                    handlers::log::LogMessageIds {
-                                        message: *deleted_message_id,
-                                        channel: *channel_id,
-                                        guild: *guild_id,
-                                        author: Some(logged_data.author),
-                                    },
-                                    &logged_data,
-                                    &chrono::Utc::now(),
-                                )
-                                .await?;
+                                let ids = handlers::log::LogMessageIds {
+                                    message: *deleted_message_id,
+                                    channel: *channel_id,
+                                    guild: *guild_id,
+                                    author: logged_data.author,
+                                };
+
+                                if !handlers::log::is_excluded(ctx, &guild_config, ids).await? {
+                                    handlers::log::delete(
+                                        ctx,
+                                        &guild_config,
+                                        ids,
+                                        &logged_data,
+                                        &chrono::Utc::now(),
+                                    )
+                                    .await?;
+                                }
 
                                 storage.del_message_log(*deleted_message_id).await?;
                             }
