@@ -26,11 +26,9 @@
         METADATA_LAST_MODIFIED = self.lastModified or 0;
       };
 
-      doCheck = true;
-
       cargoLock.outputHashes = {
-        "poise-0.6.1" = "sha256-aVf70WF1Hr5ctgw2Gy8Xq9FbYbQh+775QPq07l8B79k=";
-        "serenity-0.12.5" = "sha256-YHi8i/F82kao8TsFXloIyXayg/65k/zI1C8i3LBidHA=";
+        "poise-0.7.0" = "sha256-WPBuxFtTkEqBfMGJWCJS8fb+R8O2xOofpHLMhJ7WFoE=";
+        "serenity-0.12.5" = "sha256-GMMFTd/8keuzBh+Py3NMO+0cQ9jrrlnTRKsEeslONWw=";
       };
 
       flake.legacyPackages = lib.genAttrs lib.systems.flakeExposed (
@@ -42,28 +40,22 @@
             "x86_64" = "amd64";
             "aarch64" = "arm64";
           };
-          pkgFor = arch: self.legacyPackages.${system}."valfisk-static-${arch}-unknown-linux-musl";
 
           dockerImageFor =
             arch:
-            pkgs.dockerTools.buildImage {
+            pkgs.dockerTools.buildLayeredImage {
               name = "valfisk";
               tag = "latest-${arch}";
               architecture = dockerArchFor.${arch};
 
-              copyToRoot = pkgs.buildEnv {
-                name = "image-root";
-                paths = [
-                  pkgs.dockerTools.caCertificates
-                  pkgs.curl-impersonate
-                ];
-                pathsToLink = [
-                  "/bin"
-                  "/etc"
-                ];
-              };
+              contents = [
+                pkgs.dockerTools.caCertificates
+                pkgs.curl-impersonate
+              ];
 
-              config.Cmd = [ (lib.getExe (pkgFor arch)) ];
+              config.Cmd = [
+                (lib.getExe self.legacyPackages.${system}."valfisk-static-${arch}-unknown-linux-musl")
+              ];
             };
         in
         lib.genAttrs' (builtins.attrNames dockerArchFor) (

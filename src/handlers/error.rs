@@ -14,7 +14,7 @@ pub async fn error(err: FrameworkError<'_, Data, eyre::Report>) {
         }
 
         FrameworkError::CommandPanic { payload, ctx, .. } => {
-            ValfiskError::panic(payload.as_deref(), &ctx)
+            ValfiskError::panic(payload.as_deref().map(|s| s.as_str()), &ctx)
                 .handle_all()
                 .await;
         }

@@ -13,6 +13,15 @@ updates:
       minor-patch:
         update-types: ["minor", "patch"]
 
+  - package-ecosystem: "nix"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      nix:
+        patterns:
+          - "*"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

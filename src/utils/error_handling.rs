@@ -21,7 +21,7 @@ use super::serenity::format_mentionable;
 pub enum ReportOrPanic<'a> {
     /// A reference to a report, [`eyre::Report`]
     Report(&'a eyre::Report),
-    /// A reference to a panic string, [`Option<String>`]
+    /// A reference to a panic string, [`Option<&'a str>`]
     Panic(Option<&'a str>),
 }
 
