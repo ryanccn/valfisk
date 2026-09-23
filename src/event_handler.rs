@@ -370,6 +370,12 @@ impl serenity::EventHandler for EventHandler {
                     .await?;
                 }
 
+                FullEvent::GuildAuditLogEntryCreate {
+                    entry, guild_id, ..
+                } => {
+                    handlers::audit_log::handle(ctx, entry, *guild_id).await?;
+                }
+
                 FullEvent::GuildCreate { guild, .. } => {
                     if CONFIG
                         .allowed_guilds

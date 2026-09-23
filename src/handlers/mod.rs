@@ -7,6 +7,7 @@ use poise::serenity_prelude as serenity;
 
 use crate::analytics;
 
+pub mod audit_log;
 mod autoreply;
 pub mod code_expansion;
 pub mod config;

@@ -9,6 +9,63 @@ use poise::serenity_prelude::{self as serenity, Mentionable as _};
 
 use crate::{Context, config::GuildConfig, utils};
 
+pub fn container(
+    title: &str,
+    user: serenity::UserId,
+    accent_color: u32,
+) -> serenity::CreateContainer<'static> {
+    serenity::CreateContainer::new(vec![serenity::CreateContainerComponent::TextDisplay(
+        serenity::CreateTextDisplay::new(format!(
+            "### {title}\n{}",
+            utils::serenity::format_mentionable(Some(user))
+        )),
+    )])
+    .accent_color(accent_color)
+}
+
+pub fn field(
+    container: serenity::CreateContainer<'static>,
+    name: &str,
+    value: impl Display,
+) -> serenity::CreateContainer<'static> {
+    container.add_component(serenity::CreateContainerComponent::TextDisplay(
+        serenity::CreateTextDisplay::new(format!("**{name}**\n{value}")),
+    ))
+}
+
+/// Posts the action to the configured moderation logs channel.
+pub async fn log(
+    http: &serenity::Http,
+    guild_config: &GuildConfig,
+    container: serenity::CreateContainer<'static>,
+    moderator: serenity::UserId,
+    source: Option<&str>,
+) -> Result<()> {
+    if let Some(logs_channel) = guild_config.moderation_logs_channel {
+        let log_container =
+            container.add_component(serenity::CreateContainerComponent::TextDisplay(
+                serenity::CreateTextDisplay::new(format!(
+                    "-# {}{} \u{00B7} {}",
+                    moderator.mention(),
+                    source.map_or_else(String::new, |s| format!(" \u{00B7} {s}")),
+                    serenity::FormattedTimestamp::now()
+                )),
+            ));
+
+        logs_channel
+            .send_message(
+                http,
+                serenity::CreateMessage::default()
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+                    .allowed_mentions(serenity::CreateAllowedMentions::new())
+                    .components(vec![serenity::CreateComponent::Container(log_container)]),
+            )
+            .await?;
+    }
+
+    Ok(())
+}
+
 pub struct ModerationAction<'a> {
     ctx: Context<'a>,
     guild: serenity::PartialGuild,
@@ -34,20 +91,11 @@ impl<'a> ModerationAction<'a> {
             None
         };
 
-        let container =
-            serenity::CreateContainer::new(vec![serenity::CreateContainerComponent::TextDisplay(
-                serenity::CreateTextDisplay::new(format!(
-                    "### {title}\n{}",
-                    utils::serenity::format_mentionable(Some(user))
-                )),
-            )])
-            .accent_color(accent_color);
-
         Ok(ModerationAction {
             ctx,
             guild,
             guild_config,
-            container,
+            container: container(title, user, accent_color),
         })
     }
 
@@ -61,12 +109,7 @@ impl<'a> ModerationAction<'a> {
 
     #[must_use]
     pub fn field(mut self, name: &str, value: impl Display) -> Self {
-        self.container =
-            self.container
-                .add_component(serenity::CreateContainerComponent::TextDisplay(
-                    serenity::CreateTextDisplay::new(format!("**{name}**\n{value}")),
-                ));
-
+        self.container = field(self.container, name, value);
         self
     }
 
@@ -109,30 +152,16 @@ impl<'a> ModerationAction<'a> {
         self.field("User notified", if notified { "Yes" } else { "Failed" })
     }
 
-    /// Posts the action to the configured moderation logs channel.
     pub async fn log(&self) -> Result<()> {
-        if let Some(guild_config) = &self.guild_config
-            && let Some(logs_channel) = guild_config.moderation_logs_channel
-        {
-            let log_container = self.container.clone().add_component(
-                serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                    format!(
-                        "-# {} \u{00B7} {}",
-                        self.ctx.author().mention(),
-                        serenity::FormattedTimestamp::now()
-                    ),
-                )),
-            );
-
-            logs_channel
-                .send_message(
-                    self.ctx.http(),
-                    serenity::CreateMessage::default()
-                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                        .allowed_mentions(serenity::CreateAllowedMentions::new())
-                        .components(vec![serenity::CreateComponent::Container(log_container)]),
-                )
-                .await?;
+        if let Some(guild_config) = &self.guild_config {
+            log(
+                self.ctx.http(),
+                guild_config,
+                self.container.clone(),
+                self.ctx.author().id,
+                None,
+            )
+            .await?;
         }
 
         Ok(())

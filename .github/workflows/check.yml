@@ -59,7 +59,7 @@ jobs:
 
       - name: Upload Clippy results
         if: ${{ matrix.check == 'clippy' }}
-        uses: github/codeql-action/upload-sarif@977e6ceaea7361825998245d787fa3b4d6b9e5df # ratchet:github/codeql-action/upload-sarif@codeql-bundle-v2.27.0
+        uses: github/codeql-action/upload-sarif@416ff0dea110f80f0f56f0046500dbf7420e4bb0 # ratchet:github/codeql-action/upload-sarif@codeql-bundle-v2.27.1
         with:
           sarif_file: result
           wait-for-processing: true

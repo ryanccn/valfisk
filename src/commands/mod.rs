@@ -6,7 +6,7 @@ use crate::Data;
 
 mod admin;
 mod fun;
-mod moderation;
+pub mod moderation;
 mod useful;
 mod utils;
 
