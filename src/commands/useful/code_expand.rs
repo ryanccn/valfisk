@@ -24,7 +24,7 @@ pub async fn code_expand(
 }
 
 async fn run(ctx: Context<'_>, content: &str) -> Result<()> {
-    let components = code_expansion::resolve(content).await?;
+    let components = code_expansion::resolve(content).await;
 
     if components.is_empty() {
         ctx.say("No supported code links detected!").await?;
