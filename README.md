@@ -15,7 +15,7 @@ Valfisk is a next-generation general purpose Discord app, built with [Poise](htt
 ## Features
 
 - Expand source code links from GitHub, Tangled, Tangled strings, Codeberg, GitLab, and the Rust and Go playgrounds
-- Expand links to issue and pull request comments from GitHub
+- Expand links to issues, pull requests, commits, comments, reviews, review comments, and diff lines from GitHub
 - Fetch [Lighthouse](https://developer.chrome.com/docs/lighthouse) metrics for websites
 - Make DNS queries to a variety of DNS-over-HTTPS resolvers
 - Reminders (public by default when installed in servers, private when not)
@@ -48,8 +48,8 @@ Valfisk reads its configuration from environment variables:
 - `ADMIN_GUILD_ID` is a guild in which commands to manage Valfisk itself will be registered. `OWNERS` is a comma-separated list of user IDs that are allowed to run these commands; by default it is inferred from the Discord application's metadata.
 - `ERROR_LOGS_CHANNEL` is a channel where internal errors from Valfisk will be logged. `DM_LOGS_CHANNEL` is one where direct messages sent to Valfisk will be logged.
 - `PAGESPEED_API_KEY` and `SAFE_BROWSING_API_KEY` are [Google Cloud API keys](https://cloud.google.com/api-keys/docs/overview) for accessing the APIs required for certain features. (They can be set to the same key.)
-- `HOST` and `PORT` form the address that the API server listens to. It defaults to `0.0.0.0:8080`.
+- `GITHUB_TOKEN` is a GitHub token used for expanding GitHub links, which raises the API rate limit. Since anyone can have Valfisk expand links, the token should not have access to any private repositories.
 
-## Privacy
+## Legal
 
-See `PRIVACY.md`.
+See [`docs/terms.md`](/docs/terms.md) and [`docs/privacy.md`](/docs/privacy.md).
