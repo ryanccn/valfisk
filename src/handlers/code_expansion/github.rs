@@ -201,7 +201,15 @@ pub async fn file(captures: regex::Captures<'_>) -> Result<Expansion> {
     let (repo, r#ref, file) = (&captures["repo"], &captures["ref"], &captures["file"]);
     let url = format!("https://raw.githubusercontent.com/{repo}/{ref}/{file}");
 
-    expand_file(url, repo, file, line_range(&captures)?, "GitHub", &captures[0]).await
+    expand_file(
+        url,
+        repo,
+        file,
+        line_range(&captures)?,
+        "GitHub",
+        &captures[0],
+    )
+    .await
 }
 
 pub static COMMENT: LazyLock<Regex> = LazyLock::new(|| {

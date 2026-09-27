@@ -20,7 +20,15 @@ pub async fn tangled(captures: regex::Captures<'_>) -> Result<Expansion> {
     let (repo, r#ref, file) = (&captures["repo"], &captures["ref"], &captures["file"]);
     let url = format!("https://tangled.org/{repo}/raw/{ref}/{file}");
 
-    expand_file(url, repo, file, line_range(&captures)?, "Tangled", &captures[0]).await
+    expand_file(
+        url,
+        repo,
+        file,
+        line_range(&captures)?,
+        "Tangled",
+        &captures[0],
+    )
+    .await
 }
 
 pub static TANGLED_STRINGS: LazyLock<Regex> = LazyLock::new(|| {
@@ -72,7 +80,15 @@ pub async fn codeberg(captures: regex::Captures<'_>) -> Result<Expansion> {
     );
     let url = format!("https://codeberg.org/{repo}/raw/{ref_type}/{ref}/{file}");
 
-    expand_file(url, repo, file, line_range(&captures)?, "Codeberg", &captures[0]).await
+    expand_file(
+        url,
+        repo,
+        file,
+        line_range(&captures)?,
+        "Codeberg",
+        &captures[0],
+    )
+    .await
 }
 
 pub static GITLAB: LazyLock<Regex> = LazyLock::new(|| {
@@ -83,5 +99,13 @@ pub async fn gitlab(captures: regex::Captures<'_>) -> Result<Expansion> {
     let (repo, r#ref, file) = (&captures["repo"], &captures["ref"], &captures["file"]);
     let url = format!("https://gitlab.com/{repo}/-/raw/{ref}/{file}");
 
-    expand_file(url, repo, file, line_range(&captures)?, "GitLab", &captures[0]).await
+    expand_file(
+        url,
+        repo,
+        file,
+        line_range(&captures)?,
+        "GitLab",
+        &captures[0],
+    )
+    .await
 }
