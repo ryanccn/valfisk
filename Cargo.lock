@@ -1777,7 +1777,7 @@ checksum = "f6b464fbc74e149a392436b17d523f769e057cb6877f6a5c4618bc6f11800548"
 [[package]]
 name = "poise"
 version = "0.7.0"
-source = "git+https://github.com/serenity-rs/poise.git?branch=serenity-next#e762abbdf210ef77ab46187f5d9710d7fca22c3e"
+source = "git+https://github.com/serenity-rs/poise.git?branch=serenity-next#a1d0e3ee23e0a95b1192378acad27fa51a2bb8f0"
 dependencies = [
  "async-trait",
  "derive-where",
@@ -1794,7 +1794,7 @@ dependencies = [
 [[package]]
 name = "poise_macros"
 version = "0.7.0"
-source = "git+https://github.com/serenity-rs/poise.git?branch=serenity-next#e762abbdf210ef77ab46187f5d9710d7fca22c3e"
+source = "git+https://github.com/serenity-rs/poise.git?branch=serenity-next#a1d0e3ee23e0a95b1192378acad27fa51a2bb8f0"
 dependencies = [
  "darling 0.24.1",
  "proc-macro2",
@@ -2387,7 +2387,7 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.12.5"
-source = "git+https://github.com/serenity-rs/serenity?branch=next#ad216ee1669a61c0d5c052fa7e2080b7f65951e0"
+source = "git+https://github.com/serenity-rs/serenity?branch=next#f2b6648837e03ba3bf9d43bd7cad116db87b29c7"
 dependencies = [
  "aformat",
  "arrayvec",
