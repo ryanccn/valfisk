@@ -58,7 +58,12 @@ pub async fn rotate_color_roles_global(http: &Http, data: &Data) -> Result<()> {
 
     loop {
         let guilds = http
-            .get_guilds(cursor.map(GuildPagination::After), Some(50.try_into()?))
+            .get_guilds(
+                cursor.map(GuildPagination::After),
+                Some(50.try_into()?),
+                None,
+                None,
+            )
             .await?;
 
         if guilds.is_empty() {

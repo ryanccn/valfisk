@@ -53,7 +53,9 @@ pub async fn handle(
             };
 
             if let Some(guild_config) = guild_config
-                && let Some(logs_channel) = guild_config.message_logs_channel
+                && let Some(logs_channel) = guild_config
+                    .message_logs_channel
+                    .or(guild_config.moderation_logs_channel)
             {
                 let mut components = vec![];
 

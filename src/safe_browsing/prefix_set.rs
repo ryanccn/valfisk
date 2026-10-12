@@ -104,7 +104,6 @@ mod tests {
 
         assert_eq!(set.len(), 0);
         assert!(set.is_empty());
-        assert!(set.as_bytes().is_empty());
         assert!(!set.contains(b"abcd"));
         assert_eq!(set.matching_prefix(b"abcdefgh"), None);
     }

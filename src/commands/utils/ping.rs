@@ -16,7 +16,7 @@ use crate::Context;
 pub async fn ping(ctx: Context<'_>) -> Result<()> {
     ctx.say(format!(
         "Pong! `{}`",
-        humantime::format_duration(ctx.ping().await.unwrap_or_default())
+        humantime::format_duration(ctx.ping().unwrap_or_default())
     ))
     .await?;
 

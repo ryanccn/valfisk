@@ -41,7 +41,10 @@ pub async fn handle(
         .await
         .is_ok();
 
-        if let Some(logs_channel) = config.message_logs_channel {
+        if let Some(logs_channel) = config
+            .message_logs_channel
+            .or(config.moderation_logs_channel)
+        {
             let mut container = serenity::CreateContainer::new(vec![
                 serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
                     "### Honeypot",
