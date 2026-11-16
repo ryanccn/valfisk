@@ -36,7 +36,7 @@
       flake.legacyPackages = lib.genAttrs lib.systems.flakeExposed (
         system:
         let
-          pkgs = nixpkgs.legacyPackages.${system};
+          pkgsBuild = nixpkgs.legacyPackages.${system};
 
           dockerArchFor = {
             "x86_64" = "amd64";
@@ -45,18 +45,22 @@
 
           dockerImageFor =
             arch:
-            pkgs.dockerTools.buildLayeredImage {
+            let
+              systemHost = "${arch}-linux";
+              pkgsHost = nixpkgs.legacyPackages.${systemHost};
+            in
+            pkgsBuild.dockerTools.buildLayeredImage {
               name = "valfisk";
               tag = "latest-${arch}";
               architecture = dockerArchFor.${arch};
 
               contents = [
-                pkgs.dockerTools.caCertificates
-                pkgs.curl-impersonate
+                pkgsBuild.dockerTools.caCertificates
+                pkgsHost.curl-impersonate
               ];
 
               config.Cmd = [
-                (lib.getExe self.legacyPackages.${system}."valfisk-static-${arch}-unknown-linux-musl")
+                (lib.getExe self.packages.${systemHost}.valfisk)
               ];
             };
         in
