@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use tokio::{task, time};
 
 use eyre::Result;
@@ -68,12 +68,23 @@ pub async fn remind(
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
-    let Ok(duration) = humantime::parse_duration(&duration) else {
+    let Ok(duration) = duration.parse::<jiff::Span>() else {
         ctx.say("Invalid duration provided!").await?;
         return Ok(());
     };
 
-    let timestamp = chrono::Utc::now() + duration;
+    let now = jiff::Timestamp::now();
+    let Some(timestamp) = now
+        .to_zoned(jiff::tz::TimeZone::UTC)
+        .checked_add(duration)
+        .ok()
+        .map(|end| end.timestamp())
+        .filter(|end| *end > now)
+    else {
+        ctx.say("Invalid duration provided!").await?;
+        return Ok(());
+    };
+
     let channel = if let Some(member) = ctx.author_member().await
         && let Some(guild_channel) = ctx.channel().await.and_then(|ch| ch.guild())
         && !private
@@ -105,7 +116,8 @@ pub async fn remind(
             let reminder = reminder.clone();
 
             async move {
-                time::sleep(duration).await;
+                time::sleep(Duration::try_from(now.duration_until(timestamp)).unwrap_or_default())
+                    .await;
                 if let Err(err) = dispatch(&ctxish, Some(&data), &reminder).await {
                     tracing::error!("{err:?}");
                 }
@@ -126,7 +138,7 @@ pub async fn remind(
                         serenity::CreateContainerComponent::TextDisplay(
                             serenity::CreateTextDisplay::new(format!(
                                 "**Time**\n<t:{0}:F> (<t:{0}:R>)",
-                                timestamp.timestamp(),
+                                timestamp.as_second(),
                             )),
                         ),
                     ])
@@ -156,8 +168,7 @@ pub async fn restore(ctx: &serenity::Context) -> Result<()> {
                 let ctxish = PartialContext::from(ctx);
                 let reminder = reminder.clone();
 
-                let duration = (reminder.timestamp - chrono::Utc::now())
-                    .to_std()
+                let duration = Duration::try_from(reminder.timestamp - jiff::Timestamp::now())
                     .unwrap_or_default();
 
                 async move {

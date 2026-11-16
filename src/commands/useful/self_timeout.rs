@@ -25,7 +25,19 @@ pub async fn self_timeout(
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
-    let Ok(duration) = humantime::parse_duration(&duration) else {
+    let Ok(duration) = duration.parse::<jiff::Span>() else {
+        ctx.say("Invalid duration!").await?;
+        return Ok(());
+    };
+
+    let start = jiff::Timestamp::now();
+    let Some(end) = start
+        .to_zoned(jiff::tz::TimeZone::UTC)
+        .checked_add(duration)
+        .ok()
+        .map(|end| end.timestamp())
+        .filter(|end| *end > start)
+    else {
         ctx.say("Invalid duration!").await?;
         return Ok(());
     };
@@ -35,9 +47,6 @@ pub async fn self_timeout(
         .await
         .ok_or_else(|| eyre!("could not find member for author"))?;
 
-    let start = chrono::Utc::now();
-    let end = start + duration;
-
     let (confirmed, reply) = utils::serenity::interaction_confirm(
         &ctx,
         serenity::CreateContainer::new(&[
@@ -45,10 +54,10 @@ pub async fn self_timeout(
                 "### Requesting self-timeout",
             )),
             serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                format!("**Start**\n<t:{0}:F>", start.timestamp()),
+                format!("**Start**\n<t:{0}:F>", start.as_second()),
             )),
             serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(
-                format!("**End**\n<t:{0}:F> (<t:{0}:R>)", end.timestamp()),
+                format!("**End**\n<t:{0}:F> (<t:{0}:R>)", end.as_second()),
             )),
         ])
         .accent_color(0xffd43b),
@@ -64,10 +73,7 @@ pub async fn self_timeout(
                     .disable_communication_until(end.into())
                     .audit_log_reason(format!(
                         "Requested self timeout{}",
-                        reason
-                            .as_ref()
-                            .map(|r| format!(": {r}"))
-                            .unwrap_or_default()
+                        reason.as_ref().map_or_default(|r| format!(": {r}"))
                     )),
             )
             .await?;
@@ -85,13 +91,13 @@ pub async fn self_timeout(
                             serenity::CreateContainerComponent::TextDisplay(
                                 serenity::CreateTextDisplay::new(format!(
                                     "**Start**\n<t:{0}:F>",
-                                    start.timestamp()
+                                    start.as_second()
                                 )),
                             ),
                             serenity::CreateContainerComponent::TextDisplay(
                                 serenity::CreateTextDisplay::new(format!(
                                     "**End**\n<t:{0}:F> (<t:{0}:R>)",
-                                    end.timestamp()
+                                    end.as_second()
                                 )),
                             ),
                         ])
@@ -113,13 +119,13 @@ pub async fn self_timeout(
                             serenity::CreateContainerComponent::TextDisplay(
                                 serenity::CreateTextDisplay::new(format!(
                                     "**Start**\n<t:{0}:F>",
-                                    start.timestamp()
+                                    start.as_second()
                                 )),
                             ),
                             serenity::CreateContainerComponent::TextDisplay(
                                 serenity::CreateTextDisplay::new(format!(
                                     "**End**\n<t:{0}:F> (<t:{0}:R>)",
-                                    end.timestamp()
+                                    end.as_second()
                                 )),
                             ),
                         ])

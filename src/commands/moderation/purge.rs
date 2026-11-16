@@ -54,7 +54,7 @@ pub async fn purge(
         let messages = fetched
             .iter()
             .filter(|m| {
-                *m.timestamp >= chrono::Utc::now() - chrono::Duration::weeks(2)
+                *m.timestamp >= jiff::Timestamp::now() - jiff::SignedDuration::from_hours(24 * 14)
                     && m.kind != serenity::MessageType::ThreadStarterMessage
             })
             .map(|m| m.id)

@@ -4,7 +4,6 @@
 
 use std::str::FromStr;
 
-use chrono::TimeDelta;
 use eyre::{Result, eyre};
 use poise::serenity_prelude::{self as serenity, Mentionable as _};
 
@@ -235,7 +234,7 @@ pub async fn handle(
     guild_id: Option<serenity::GuildId>,
     message: &serenity::Message,
 ) -> Result<()> {
-    if chrono::Utc::now() - message.timestamp.to_utc() > TimeDelta::weeks(1) {
+    if jiff::Timestamp::now() >= *message.timestamp + jiff::SignedDuration::from_hours(24 * 7) {
         return Ok(());
     }
 

@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 use eyre::Result;
-use std::time::Duration;
 use tokio::time::sleep;
 
 use poise::{
@@ -32,11 +31,11 @@ pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
     let refresh_kind = RefreshKind::default()
-        .with_cpu(CpuRefreshKind::default().with_cpu_usage())
+        .with_cpu(CpuRefreshKind::default().with_usage())
         .with_memory(MemoryRefreshKind::default().with_ram())
         .with_processes(ProcessRefreshKind::default().with_cpu().with_memory());
 
-    let mut sys = System::new();
+    let mut sys = System::new()?;
 
     sys.refresh_specifics(refresh_kind);
     sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL).await;
@@ -59,7 +58,7 @@ pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
             utils::format_bytes(sys.used_memory()),
             utils::format_bytes(sys.total_memory()),
             (sys.used_memory() as f64) / (sys.total_memory() as f64) * 100.,
-            System::long_os_version().unwrap_or_else(|| "Unknown".into()),
+            System::long_os_version().unwrap_or_else(|_| "Unknown".into()),
             System::cpu_arch(),
         )),
     ));
@@ -69,10 +68,17 @@ pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
             CreateTextDisplay::new(format!(
                 r"**Process CPU usage**: {:.2}%
 **Process memory**: {}
-**Process uptime**: {}",
+**Process uptime**: {:#}",
                 proc.cpu_usage(),
                 utils::format_bytes(proc.memory()),
-                humantime::format_duration(Duration::from_secs(proc.run_time()))
+                jiff::Span::try_from(jiff::SignedDuration::from_secs(
+                    proc.run_time().cast_signed()
+                ))?
+                .round(
+                    jiff::SpanRound::new()
+                        .largest(jiff::Unit::Day)
+                        .days_are_24_hours()
+                )?
             )),
         ));
     }

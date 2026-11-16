@@ -263,7 +263,7 @@ mod ucd {
     }
 
     fn get_prop(map: &HashMap<String, Vec<(u32, u32)>>, name: &str) -> Vec<(u32, u32)> {
-        map.get(name).cloned().map(merge_ranges).unwrap_or_default()
+        map.get(name).cloned().map_or_default(merge_ranges)
     }
 
     fn named_props_to_ranges(map: &HashMap<String, Vec<(u32, u32)>>) -> Vec<(u32, u32, String)> {

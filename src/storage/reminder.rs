@@ -9,5 +9,5 @@ pub struct ReminderData {
     pub channel: serenity::GenericChannelId,
     pub user: serenity::UserId,
     pub content: Option<String>,
-    pub timestamp: chrono::DateTime<chrono::Utc>,
+    pub timestamp: jiff::Timestamp,
 }

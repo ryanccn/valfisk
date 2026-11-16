@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use chrono::{DateTime, Utc};
 use eyre::{Result, bail, eyre};
 use regex::Regex;
 use reqwest::header;
@@ -76,7 +75,7 @@ impl Summary {
             let meta = format!(
                 "-# {state} · {} · opened <t:{}:R> · {}\n-# +{} −{} · {} · `{}` ← `{}`",
                 pull.user,
-                pull.created_at.timestamp(),
+                pull.created_at.as_second(),
                 plural(pull.comments, "comment"),
                 pull.additions,
                 pull.deletions,
@@ -105,7 +104,7 @@ impl Summary {
             let meta = format!(
                 "-# {state} · {} · opened <t:{}:R> · {}",
                 issue.user,
-                issue.created_at.timestamp(),
+                issue.created_at.as_second(),
                 plural(issue.comments, "comment"),
             );
 
@@ -130,7 +129,7 @@ impl Summary {
                 .author
                 .as_ref()
                 .map_or_else(|| commit.data.author.name.clone(), ToString::to_string),
-            commit.data.author.date.timestamp(),
+            commit.data.author.date.as_second(),
         );
 
         if let Some(stats) = &commit.stats {
@@ -220,7 +219,7 @@ pub static COMMENT: LazyLock<Regex> = LazyLock::new(|| {
 struct Comment {
     body: String,
     user: User,
-    created_at: DateTime<Utc>,
+    created_at: jiff::Timestamp,
 }
 
 pub async fn comment(captures: regex::Captures<'_>) -> Result<Expansion> {
@@ -238,7 +237,7 @@ pub async fn comment(captures: regex::Captures<'_>) -> Result<Expansion> {
         format!(
             "-# {} · <t:{}:R>",
             comment.user,
-            comment.created_at.timestamp()
+            comment.created_at.as_second()
         ),
         &comment.body,
         &captures[0],
@@ -253,7 +252,7 @@ pub static REVIEW_COMMENT: LazyLock<Regex> = LazyLock::new(|| {
 struct ReviewComment {
     body: String,
     user: User,
-    created_at: DateTime<Utc>,
+    created_at: jiff::Timestamp,
     path: String,
     diff_hunk: String,
     original_line: Option<usize>,
@@ -287,7 +286,7 @@ pub async fn review_comment(captures: regex::Captures<'_>) -> Result<Expansion> 
     let mut meta = format!(
         "-# {} · <t:{}:R> · `{}`",
         comment.user,
-        comment.created_at.timestamp(),
+        comment.created_at.as_second(),
         comment.path
     );
 
@@ -307,7 +306,7 @@ struct Review {
     body: String,
     user: User,
     state: String,
-    submitted_at: Option<DateTime<Utc>>,
+    submitted_at: Option<jiff::Timestamp>,
 }
 
 pub async fn review(captures: regex::Captures<'_>) -> Result<Expansion> {
@@ -329,7 +328,7 @@ pub async fn review(captures: regex::Captures<'_>) -> Result<Expansion> {
     let mut meta = format!("-# {state} · {}", review.user);
 
     if let Some(submitted_at) = review.submitted_at {
-        let _ = write!(meta, " · <t:{}:R>", submitted_at.timestamp());
+        let _ = write!(meta, " · <t:{}:R>", submitted_at.as_second());
     }
 
     Ok(parent.card(meta, &review.body, &captures[0]))
@@ -350,13 +349,13 @@ struct Issue {
     user: User,
     labels: Vec<Label>,
     comments: u64,
-    created_at: DateTime<Utc>,
+    created_at: jiff::Timestamp,
     pull_request: Option<IssuePullRequest>,
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
 struct IssuePullRequest {
-    merged_at: Option<DateTime<Utc>>,
+    merged_at: Option<jiff::Timestamp>,
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
@@ -368,7 +367,7 @@ struct PullRequest {
     user: User,
     labels: Vec<Label>,
     comments: u64,
-    created_at: DateTime<Utc>,
+    created_at: jiff::Timestamp,
     additions: u64,
     deletions: u64,
     changed_files: u64,
@@ -416,7 +415,7 @@ struct CommitData {
 #[derive(serde::Deserialize, Debug, Clone)]
 struct CommitAuthor {
     name: String,
-    date: DateTime<Utc>,
+    date: jiff::Timestamp,
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]

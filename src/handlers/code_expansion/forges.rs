@@ -52,8 +52,7 @@ pub async fn tangled_strings(captures: regex::Captures<'_>) -> Result<Expansion>
         .and_then(|v| v.to_str().ok())
         .and_then(|s| s.strip_prefix("inline; filename=\""))
         .and_then(|s| s.strip_suffix("\""))
-        .map(|s| extension_of(s).to_owned())
-        .unwrap_or_default();
+        .map_or_default(|s| extension_of(s).to_owned());
 
     let source = resp.text().await?;
     let body = select_lines(&source, start, end)?;

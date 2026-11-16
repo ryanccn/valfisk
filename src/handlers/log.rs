@@ -109,7 +109,7 @@ pub async fn edit(
     prev_content: &str,
     new_content: &str,
     attachments: &[serenity::Attachment],
-    timestamp: &chrono::DateTime<chrono::Utc>,
+    timestamp: &jiff::Timestamp,
 ) -> Result<()> {
     if prev_content != new_content
         && let Some(logs_channel) = guild_config.message_logs_channel
@@ -181,7 +181,7 @@ pub async fn delete(
     guild_config: &GuildConfig,
     ids: LogMessageIds,
     log: &MessageLog,
-    timestamp: &chrono::DateTime<chrono::Utc>,
+    timestamp: &jiff::Timestamp,
 ) -> Result<()> {
     if let Some(logs_channel) = guild_config.message_logs_channel {
         let mut container = serenity::CreateContainer::new(vec![

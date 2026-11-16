@@ -2,11 +2,12 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
+use jiff::ToSpan as _;
 use poise::serenity_prelude::{self as serenity, Mentionable as _};
 use regex::Regex;
-use std::sync::LazyLock;
 
 use eyre::Result;
+use std::sync::LazyLock;
 
 use crate::{analytics, config::GuildConfig, utils};
 
@@ -44,7 +45,7 @@ pub async fn handle(
                 member
                     .disable_communication_until(
                         &ctx.http,
-                        (chrono::Utc::now() + chrono::TimeDelta::hours(1)).into(),
+                        (jiff::Timestamp::now() + 1.hours()).into(),
                     )
                     .await
                     .is_ok()

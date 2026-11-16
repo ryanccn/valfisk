@@ -134,8 +134,7 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
                 let context = storage
                     .get_intelligence_context(message.author.id, message.channel_id)
                     .await?
-                    .map(|v| v.0)
-                    .unwrap_or_default();
+                    .map_or_default(|v| v.0);
 
                 messages.extend(context);
             }
@@ -171,7 +170,7 @@ pub async fn handle(ctx: &serenity::Context, message: &serenity::Message) -> Res
             let data = anthropic::messages(serde_json::json!({
                 "model": "claude-sonnet-4-6",
                 "max_tokens": 2048,
-                "system": SYSTEM_PROMPT.replace("{{currentDateTime}}", &chrono::Utc::now().to_rfc3339()),
+                "system": SYSTEM_PROMPT.replace("{{currentDateTime}}", &jiff::Timestamp::now().to_string()),
                 "messages": api_messages,
             }))
             .await?;

@@ -193,7 +193,7 @@ async fn fetch_revolut(from: &str, to: &str, amount: f64) -> Result<RevolutQuote
 }
 
 async fn fetch_visa(from: &str, to: &str, amount: f64) -> Result<f64> {
-    let today = chrono::Utc::now().format("%m/%d/%Y").to_string();
+    let today = jiff::Timestamp::now().strftime("%m/%d/%Y").to_string();
 
     let args = vec![
         "--compressed".to_owned(),

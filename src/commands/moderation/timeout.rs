@@ -26,17 +26,27 @@ pub async fn timeout(
 ) -> Result<()> {
     ctx.defer_ephemeral().await?;
 
-    let Ok(duration) = humantime::parse_duration(&duration) else {
+    let Ok(duration) = duration.parse::<jiff::Span>() else {
         ctx.say("Invalid duration provided!").await?;
         return Ok(());
     };
 
-    if duration > std::time::Duration::from_hours(28 * 24) {
+    let now = jiff::Timestamp::now();
+    let Some(end) = now
+        .to_zoned(jiff::tz::TimeZone::UTC)
+        .checked_add(duration)
+        .ok()
+        .map(|end| end.timestamp())
+        .filter(|end| *end > now)
+    else {
+        ctx.say("Invalid duration provided!").await?;
+        return Ok(());
+    };
+
+    if end > now + jiff::SignedDuration::from_hours(24 * 28) {
         ctx.say("Duration must not exceed 28 days!").await?;
         return Ok(());
     }
-
-    let end = chrono::Utc::now() + duration;
 
     let mut action = ModerationAction::new(ctx, "Timeout", user.id, 0x9775fa).await?;
 
@@ -48,7 +58,17 @@ pub async fn timeout(
         action = action.field("Reason", reason);
     }
 
-    action = action.field("Duration", humantime::format_duration(duration));
+    action = action.field(
+        "Duration",
+        format!(
+            "{:#}",
+            (end - now).round(
+                jiff::SpanRound::new()
+                    .largest(jiff::Unit::Day)
+                    .days_are_24_hours()
+            )?
+        ),
+    );
 
     action = action.notify(&user, dm.unwrap_or(true)).await;
     action.log().await?;

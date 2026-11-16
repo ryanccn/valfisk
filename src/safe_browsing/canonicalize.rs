@@ -42,8 +42,7 @@ pub fn canonicalize(input: &str) -> eyre::Result<Url> {
 
     let segments = url
         .path_segments()
-        .map(|path| path.collect::<Vec<_>>())
-        .unwrap_or_default();
+        .map_or_default(|path| path.collect::<Vec<_>>());
 
     let mut final_segments = Vec::new();
 

@@ -17,9 +17,9 @@ use crate::{Context, template_channel::Template};
 /// messages older than Discord's 14-day bulk-delete cutoff. Failures are logged and
 /// skipped rather than aborting the whole clear operation.
 async fn delete_batch(ctx: Context<'_>, channel: GenericChannelId, batch: Vec<Message>) {
-    let (bulk_eligible, too_old): (Vec<_>, Vec<_>) = batch
-        .into_iter()
-        .partition(|m| *m.timestamp >= chrono::Utc::now() - chrono::Duration::weeks(2));
+    let (bulk_eligible, too_old): (Vec<_>, Vec<_>) = batch.into_iter().partition(|m| {
+        *m.timestamp >= jiff::Timestamp::now() - jiff::SignedDuration::from_hours(24 * 14)
+    });
 
     if bulk_eligible.len() >= 2 {
         let ids = bulk_eligible.iter().map(|m| m.id).collect::<Vec<_>>();

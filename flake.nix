@@ -24,11 +24,13 @@
       env = {
         METADATA_REVISION = self.rev or self.dirtyRev or null;
         METADATA_LAST_MODIFIED = self.lastModified or 0;
+
+        dontCargoUseSystemLibs = "1";
       };
 
       cargoLock.outputHashes = {
-        "poise-0.7.0" = "sha256-hX4Vxu0EPw2UQKCPeg12UHcmYwdPNZ4Knst66y7QmYM=";
-        "serenity-0.12.5" = "sha256-tp49Roiorx2W2QrishET3nCdwx+HJ6IyqQeVQFpYC2s=";
+        "poise-0.7.0" = "sha256-GXz9Um6roX74AbzgGKEN786oCPe+DPwfxFC1lnx8hl0=";
+        "serenity-0.12.5" = "sha256-1L6tlTnC2llcKYn9zpmO0FFlXnqmaa9CD5PD6YW0MXU=";
       };
 
       flake.legacyPackages = lib.genAttrs lib.systems.flakeExposed (

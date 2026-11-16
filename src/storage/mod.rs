@@ -247,7 +247,7 @@ impl Storage {
     pub async fn add_reminders(&self, value: &ReminderData) -> RedisResult<()> {
         let mut conn = self.conn.clone();
         () = conn
-            .zadd(keys::REMINDERS, value, value.timestamp.timestamp())
+            .zadd(keys::REMINDERS, value, value.timestamp.as_second())
             .await?;
 
         Ok(())
@@ -256,7 +256,7 @@ impl Storage {
     pub async fn clean_reminders(&self) -> RedisResult<()> {
         let mut conn = self.conn.clone();
         () = conn
-            .zrembyscore(keys::REMINDERS, 0, chrono::Utc::now().timestamp() - 1)
+            .zrembyscore(keys::REMINDERS, 0, jiff::Timestamp::now().as_second() - 1)
             .await?;
 
         Ok(())

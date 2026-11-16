@@ -68,8 +68,8 @@ pub async fn user(ctx: Context<'_>, user: serenity::UserId) -> Result<()> {
                                     .collect::<Vec<_>>()
                                     .join(", ")
                             },
-                            user.id.created_at().timestamp(),
-                            user.id.created_at().timestamp()
+                            user.id.created_at().as_second(),
+                            user.id.created_at().as_second()
                         )),
                     ),
                 ],

@@ -2,13 +2,13 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
+use jiff::{RoundMode, ToSpan, Unit, Zoned, ZonedRound, tz::TimeZone};
 use poise::serenity_prelude::{EditRole, GuildId, GuildPagination, Http, RoleId};
 
 use std::{collections::HashSet, sync::Arc, time::Duration};
 use tokio::{task::JoinSet, time};
 
-use chrono::{NaiveTime, TimeDelta, Timelike, Utc};
-use eyre::{Result, eyre};
+use eyre::Result;
 use tracing::Instrument as _;
 
 use crate::Data;
@@ -92,16 +92,11 @@ pub async fn run(http: Arc<Http>, data: Arc<Data>) -> Result<()> {
 
         async move {
             loop {
-                let now = Utc::now();
-
-                let next = (now + TimeDelta::days(1))
-                    .with_time(NaiveTime::MIN)
-                    .single()
-                    .ok_or_else(|| eyre!("could not obtain next run time"))?;
-
+                let now = Zoned::now().with_time_zone(TimeZone::UTC);
+                let next = (&now + 1.day()).start_of_day()?;
                 tracing::trace!(?next, "next run at");
 
-                time::sleep((next - now).to_std()?).await;
+                time::sleep(Duration::try_from(next - now)?).await;
 
                 if let Err(err) = rotate_color_roles_global(&http, &data).await {
                     tracing::error!("{err:?}");
@@ -118,17 +113,15 @@ pub async fn run(http: Arc<Http>, data: Arc<Data>) -> Result<()> {
 
         async move {
             loop {
-                let now = Utc::now();
-
-                let next = (now + TimeDelta::hours(1))
-                    .with_minute(0)
-                    .and_then(|t| t.with_second(0))
-                    .and_then(|t| t.with_nanosecond(0))
-                    .ok_or_else(|| eyre!("could not obtain next run time"))?;
-
+                let now = Zoned::now().with_time_zone(TimeZone::UTC);
+                let next = (&now + 1.hour()).round(
+                    ZonedRound::new()
+                        .smallest(Unit::Hour)
+                        .mode(RoundMode::Trunc),
+                )?;
                 tracing::trace!(?next, "next run at");
 
-                time::sleep((next - now).to_std()?).await;
+                time::sleep(Duration::try_from(next - now)?).await;
 
                 if let Some(safe_browsing) = &data.safe_browsing
                     && let Err(err) = safe_browsing.update().await

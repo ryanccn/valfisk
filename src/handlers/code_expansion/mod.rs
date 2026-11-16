@@ -133,7 +133,7 @@ fn select_lines(source: &str, start: usize, end: Option<usize>) -> Result<String
 fn heading_with_range(prefix: &str, start: usize, end: Option<usize>) -> String {
     format!(
         "{prefix} L{start}{}",
-        end.map(|end| format!("-{end}")).unwrap_or_default()
+        end.map_or_default(|end| format!("-{end}"))
     )
 }
 

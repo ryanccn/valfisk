@@ -15,8 +15,11 @@ use crate::Context;
 )]
 pub async fn ping(ctx: Context<'_>) -> Result<()> {
     ctx.say(format!(
-        "Pong! `{}`",
-        humantime::format_duration(ctx.ping().unwrap_or_default())
+        "Pong! {:#}",
+        jiff::SignedDuration::try_from(ctx.ping().unwrap_or_default())
+            .ok()
+            .and_then(|d| d.round(jiff::Unit::Millisecond).ok())
+            .unwrap_or_default()
     ))
     .await?;
 

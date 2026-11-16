@@ -185,7 +185,7 @@ impl serenity::EventHandler for EventHandler {
                             let edited_timestamp = event
                                 .message
                                 .edited_timestamp
-                                .map_or_else(chrono::Utc::now, |ts| ts.to_utc());
+                                .map_or_else(jiff::Timestamp::now, |ts| *ts);
 
                             let prev_data = storage.get_message_log(event.message.id).await?;
 
@@ -247,7 +247,7 @@ impl serenity::EventHandler for EventHandler {
                                 &guild_config,
                                 ids,
                                 &logged_data,
-                                &chrono::Utc::now(),
+                                &jiff::Timestamp::now(),
                             )
                             .await?;
                         }
@@ -295,7 +295,7 @@ impl serenity::EventHandler for EventHandler {
                                         &guild_config,
                                         ids,
                                         &logged_data,
-                                        &chrono::Utc::now(),
+                                        &jiff::Timestamp::now(),
                                     )
                                     .await?;
                                 }
@@ -380,9 +380,9 @@ impl serenity::EventHandler for EventHandler {
                     if CONFIG
                         .allowed_guilds
                         .as_ref()
-                        .is_some_and(|a| !a.contains(&guild.id))
+                        .is_some_and(|a| !a.contains(&guild.id()))
                     {
-                        guild.id.leave(&ctx.http).await?;
+                        guild.id().leave(&ctx.http).await?;
                     }
                 }
 
