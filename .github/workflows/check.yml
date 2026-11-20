@@ -22,12 +22,12 @@ jobs:
     steps:
       - parallel:
           - name: Checkout repository
-            uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7.0.1
+            uses: actions/checkout@v7.0.1
             with:
               persist-credentials: false
 
           - name: Install Nix
-            uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # ratchet:cachix/install-nix-action@v31.11.5
+            uses: cachix/install-nix-action@v31.11.5
 
       - name: Collect checks
         id: checks
@@ -49,19 +49,19 @@ jobs:
     steps:
       - parallel:
           - name: Checkout repository
-            uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7.0.1
+            uses: actions/checkout@v7.0.1
             with:
               persist-credentials: false
 
           - name: Install Nix
-            uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # ratchet:cachix/install-nix-action@v31
+            uses: cachix/install-nix-action@v31.11.5
 
       - name: Check
         run: nix build --fallback --print-build-logs '.#checks.x86_64-linux.${{ matrix.check }}'
 
       - name: Upload Clippy results
         if: ${{ matrix.check == 'clippy' }}
-        uses: github/codeql-action/upload-sarif@d208ec71e39ae46397cbf6569bef8439b9aab974 # ratchet:github/codeql-action/upload-sarif@codeql-bundle-v2.27.2
+        uses: github/codeql-action/upload-sarif@38112626f97ac1fd7acf3df7ebca51f4677c1b38 # ratchet:github/codeql-action/upload-sarif@codeql-bundle-v2.27.6
         with:
           sarif_file: result
           wait-for-processing: true

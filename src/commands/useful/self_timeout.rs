@@ -32,7 +32,7 @@ pub async fn self_timeout(
 
     let start = jiff::Timestamp::now();
     let Some(end) = start
-        .to_zoned(jiff::tz::TimeZone::UTC)
+        .to_zoned_datetime(jiff::tz::TimeZone::UTC)
         .checked_add(duration)
         .ok()
         .map(|end| end.timestamp())

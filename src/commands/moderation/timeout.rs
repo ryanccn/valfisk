@@ -33,7 +33,7 @@ pub async fn timeout(
 
     let now = jiff::Timestamp::now();
     let Some(end) = now
-        .to_zoned(jiff::tz::TimeZone::UTC)
+        .to_zoned_datetime(jiff::tz::TimeZone::UTC)
         .checked_add(duration)
         .ok()
         .map(|end| end.timestamp())
@@ -62,9 +62,10 @@ pub async fn timeout(
         "Duration",
         format!(
             "{:#}",
-            (end - now).round(
+            jiff::Span::try_from(end - now)?.round(
                 jiff::SpanRound::new()
                     .largest(jiff::Unit::Day)
+                    .smallest(jiff::Unit::Second)
                     .days_are_24_hours()
             )?
         ),

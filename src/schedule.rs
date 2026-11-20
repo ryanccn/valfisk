@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-only
 
-use jiff::{RoundMode, ToSpan, Unit, Zoned, ZonedRound, tz::TimeZone};
+use jiff::{RoundMode, ToSpan, Unit, ZonedDateTime, ZonedDateTimeRound, tz::TimeZone};
 use poise::serenity_prelude::{EditRole, GuildId, GuildPagination, Http, RoleId};
 
 use std::{collections::HashSet, sync::Arc, time::Duration};
@@ -92,7 +92,7 @@ pub async fn run(http: Arc<Http>, data: Arc<Data>) -> Result<()> {
 
         async move {
             loop {
-                let now = Zoned::now().with_time_zone(TimeZone::UTC);
+                let now = ZonedDateTime::now().with_time_zone(TimeZone::UTC);
                 let next = (&now + 1.day()).start_of_day()?;
                 tracing::trace!(?next, "next run at");
 
@@ -113,9 +113,9 @@ pub async fn run(http: Arc<Http>, data: Arc<Data>) -> Result<()> {
 
         async move {
             loop {
-                let now = Zoned::now().with_time_zone(TimeZone::UTC);
+                let now = ZonedDateTime::now().with_time_zone(TimeZone::UTC);
                 let next = (&now + 1.hour()).round(
-                    ZonedRound::new()
+                    ZonedDateTimeRound::new()
                         .smallest(Unit::Hour)
                         .mode(RoundMode::Trunc),
                 )?;

@@ -71,14 +71,14 @@ pub async fn sysinfo(ctx: Context<'_>) -> Result<()> {
 **Process uptime**: {:#}",
                 proc.cpu_usage(),
                 utils::format_bytes(proc.memory()),
-                jiff::Span::try_from(jiff::SignedDuration::from_secs(
-                    proc.run_time().cast_signed()
-                ))?
-                .round(
-                    jiff::SpanRound::new()
-                        .largest(jiff::Unit::Day)
-                        .days_are_24_hours()
-                )?
+                jiff::Span::new()
+                    .seconds(proc.run_time().cast_signed())
+                    .round(
+                        jiff::SpanRound::new()
+                            .largest(jiff::Unit::Day)
+                            .smallest(jiff::Unit::Second)
+                            .days_are_24_hours()
+                    )?
             )),
         ));
     }

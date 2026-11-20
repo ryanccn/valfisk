@@ -20,12 +20,12 @@ jobs:
     steps:
       - parallel:
           - name: Checkout repository
-            uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7.0.1
+            uses: actions/checkout@v7.0.1
             with:
               persist-credentials: false
 
           - name: Install Nix
-            uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # ratchet:cachix/install-nix-action@v31
+            uses: cachix/install-nix-action@v31.11.5
 
       - name: Build
         run: nix build --fallback --print-build-logs '.#valfisk'

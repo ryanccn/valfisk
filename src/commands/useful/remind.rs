@@ -75,7 +75,7 @@ pub async fn remind(
 
     let now = jiff::Timestamp::now();
     let Some(timestamp) = now
-        .to_zoned(jiff::tz::TimeZone::UTC)
+        .to_zoned_datetime(jiff::tz::TimeZone::UTC)
         .checked_add(duration)
         .ok()
         .map(|end| end.timestamp())
